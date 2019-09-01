@@ -1,0 +1,11 @@
+#!/bin/sh -e
+
+rootdir=$(git rev-parse --show-toplevel)
+(
+    cd $rootdir
+    rm -rf dist .cache *.egg-info _build *.tests
+    find ./ -name '*.pyc' -delete
+    tox
+    python setup.py check -r
+    which rst2html && python setup.py --long-description | rst2html > /dev/null
+)

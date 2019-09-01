@@ -1,0 +1,13 @@
+*.egg
+*.egg/
+*.egg-info/
+*.pyc
+.tox/
+_build/
+build
+dist/
+.coverage
+.cache
+htmlcov
+*requirement*.txt
+*.pickle

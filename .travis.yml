@@ -1,0 +1,24 @@
+dist: xenial
+language: python
+sudo: false
+env:
+  - TOX_ENV=py37
+install:
+  - pip install coveralls tox
+script:
+  - tox -e $TOX_ENV
+  - python setup.py check -r
+after_success:
+  - coveralls --verbose
+
+matrix:
+  allow_failures:
+    - python: pypy
+      env: TOX_ENV=pypy
+    - python: pypy3.5
+      env: TOX_ENV=pypy3
+    - python: py3.7-dev
+      env: TOX_ENV=py37
+  include:
+    - python: 3.7
+      env: TOX_ENV=py37
