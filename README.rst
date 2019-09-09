@@ -28,13 +28,6 @@ Setup
 Usage
 =====
 
-ToDo: Rewrite me.
+For usage examples, explore the scripts in the examples folder.
 
-::
-
-  $ python
-  >>> import zhivago
-  >>> zhivago.sample.hello()
-  'hello'
-  >>>
 

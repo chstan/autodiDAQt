@@ -11,3 +11,11 @@ dist/
 htmlcov
 *requirement*.txt
 *.pickle
+
+.DS_Store
+DS_Store
+
+# PyCharm Related
+.idea
+out/
+logs/

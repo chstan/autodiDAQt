@@ -1,32 +1,16 @@
-# -*- coding: utf-8 -*-
-"""setup.py"""
+"""
+Package setup.py
+"""
 
 import os
-import sys
+from pathlib import Path
 from setuptools import setup
-from setuptools.command.test import test as TestCommand
 
-class Tox(TestCommand):
-    user_options = [('tox-args=', 'a', 'Arguments to pass to tox')]
+about = {}
+with open(str(Path(__file__).parent.absolute() / 'zhivago' / 'version.py')) as fp:
+    exec(fp.read(), about)
 
-    def initialize_options(self):
-        TestCommand.initialize_options(self)
-        self.tox_args = None
-
-    def finalize_options(self):
-        TestCommand.finalize_options(self)
-        self.test_args = []
-        self.test_suite = True
-
-    def run_tests(self):
-        import tox
-        import shlex
-        if self.tox_args:
-            errno = tox.cmdline(args=shlex.split(self.tox_args))
-        else:
-            errno = tox.cmdline(self.test_args)
-        sys.exit(errno)
-
+VERSION = about['VERSION']
 
 def read_content(filepath):
     with open(filepath) as fobj:
@@ -35,13 +19,22 @@ def read_content(filepath):
 
 classifiers = [
     "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.7",
     "Programming Language :: Python :: Implementation :: CPython",
-    "Programming Language :: Python :: Implementation :: PyPy",
+    "Natural Language :: English",
+    'Operating System :: MacOS :: MacOS X',
+    'Operating System :: Microsoft :: Windows :: Windows 7',
+    'Operating System :: Microsoft :: Windows :: Windows 8',
+    'Operating System :: Microsoft :: Windows :: Windows 10',
+    'Operating System :: Unix',
+    'Operating System :: POSIX :: Linux',
+    'Topic :: Scientific/Engineering',
+    'Topic :: Software Development :: Libraries :: Python Modules',
 ]
 
 
@@ -49,26 +42,46 @@ long_description = (
     read_content("README.rst") +
     read_content(os.path.join("docs/source", "CHANGELOG.rst")))
 
-requires = ['setuptools']
+requirements = [
+    'setuptools',
+    'PyQt5>=5.13.0',
+    'Quamash>=0.6.1',
+    'matplotlib>=3.1.1',
+    'python-dotenv>=0.10.3',
+    'pyqt-led>=0.0.6',
+    'slackclient>=2.1.0',
+    'loguru>=0.3.2',
+    'rx>=3.0.1',
+
+    # Instruments
+    'python-ivi>=0.14.9',
+    'instrumentkit>=0.5.0',
+    'pyvisa',
+    'pyvisa-sim',
+
+    # zarr + xarray support
+    'xarray',
+    'zarr',
+    'dask',
+    'toolz',
+]
 
 extras_require = {
     'reST': ['Sphinx'],
     }
-if os.environ.get('READTHEDOCS', None):
-    extras_require['reST'].append('recommonmark')
 
 setup(name='zhivago',
-      version='0.1.0',
-      description='##### ToDo: Rewrite me #####',
+      version=VERSION,
+      description='Zhivago = asyncio + PyQt5 UI Generation + RxPy: A simple scientific DAQ framework.',
       long_description=long_description,
+      python_requires='>=3.7.0',
       author='Conrad Stansbury',
       author_email='chstansbury@gmail.com',
       url='https://zhivago.readthedocs.org',
       classifiers=classifiers,
       packages=['zhivago'],
       data_files=[],
-      install_requires=requires,
+      install_requires=requirements,
       include_package_data=True,
       extras_require=extras_require,
-      tests_require=['tox'],
-      cmdclass={'test': Tox},)
+)

@@ -7,5 +7,5 @@ rootdir=$(git rev-parse --show-toplevel)
     find ./ -name '*.pyc' -delete
     tox
     python setup.py check -r
-    which rst2html && python setup.py --long-description | rst2html > /dev/null
+    python setup.py --long-description | rst2html5 > /dev/null
 )

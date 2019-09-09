@@ -3,3 +3,5 @@ include README.rst
 include LICENSE
 recursive-include docs *.rst conf.py Makefile
 recursive-include zhivago *.py
+
+recursive-include zhivago/resources *.json

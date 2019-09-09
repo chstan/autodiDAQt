@@ -2,11 +2,10 @@ References
 ==========
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
 
-.. automodule:: zhivago.sample
+.. automodule:: zhivago
    :members:
    :show-inheritance:
    :inherited-members:
 
-.. ##### ToDo: Rewrite this automodule section. ####
