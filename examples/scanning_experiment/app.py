@@ -8,6 +8,8 @@ from zhivago import Zhivago
 from zhivago.mock import MockMotionController, MockDetector
 from zhivago.experiment import Experiment
 
+# Generate some fake instruments, here we make a fake 100px by 100px camera
+# and a fake scalar detector (in this case a "power meter")
 class MockImageDetector(MockDetector):
     def generate(self):
         return np.random.random((100,100,))
@@ -17,6 +19,16 @@ class MockSimpleDetector(MockDetector):
         return np.random.normal() + 5
 
 
+"""
+Next we set up scan modes, here are two common types of scans,
+a single degree of freedom scan and a two degree of freedom scan
+we also illustrate that you can control the internal function and
+sequencing, such as by measuring while motors are moving or not.
+
+By using `with experiment.point:` we demarcate which DAQ and motion
+sequences are grouped together. These points are collected together
+due to the optional invokation of `experiment.collate`.
+"""
 class SimpleScanMode(Enum):
     MOVE_WHILE_MEASURING = 0
     MOVE_THEN_MEASURE = 1
@@ -29,11 +41,28 @@ class SimpleScan:
     stop: float = 20
     mode: SimpleScanMode = SimpleScanMode.MOVE_THEN_MEASURE
 
+    """
+    A scan mode consists of a generator 'sequence', which computes
+    the DAQ steps for the experiment. You can perform whatever logic you like 
+    in here, even adjusting the experimental course depending on the measurement 
+    so far.    
+    """
     def sequence(self, experiment, mc, ccd, power_meter, **kwargs):
         """
         An example measurement sequence, here we scan over a stage,
         at each step, we take data from a Power Meter (a DAQ device reading a scalar) and
         a CCD (a DAQ device that reads an image).
+
+        Using experiment.collate, we can name various DAQ devices in the output
+        and form an array-like output by grouping depenndent variables to independent
+        variables.
+
+        At the end of the run here, we will produce an xr.Dataset with the structure
+
+        power: dims=['dx'], shape=[len(dx')]
+        spectrum: dims=['dx', 'spectrum-dim_0', 'spectrum-dim_1'], shape=[len('dx'), 100, 100]
+
+        Additionally, we record the full metadata and DAQ sequence, always.
         """
         experiment.collate(
             independent=[[mc.stages[0], 'dx']],
@@ -61,7 +90,9 @@ class SimpleScan:
                 else:
                     yield list(itertools.chain(motions, daq))
 
-
+"""
+Another scan mode we implement: here a two axis scan.
+"""
 @dataclass
 class TwoAxisScan:
     n_steps_x: int = 10

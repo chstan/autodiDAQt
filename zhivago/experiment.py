@@ -300,6 +300,11 @@ class Run:
     point_ended: List[Dict[str, Any]] = field(default_factory=list)
     daq_values: Dict[str, Any] = field(default_factory=lambda: defaultdict(list))
 
+    # used for updating UI, represents the accumulated "flat" value
+    # or the most recent value for
+    streaming_daq_xs: Dict[str, Any] = field(default_factory=lambda: defaultdict(list))
+    streaming_daq_ys: Dict[str, Any] = field(default_factory=lambda: defaultdict(list))
+
     async def save(self, app, extra=None):
         save_directory = Path(str(app.app_root / app.config.data_directory / app.config.data_format).format(
             user=self.user,
@@ -409,7 +414,7 @@ class Experiment(FSM):
     panel_cls = ExperimentPanel
     scan_methods = []
 
-    async def enter_running(self, *_):
+    async def idle_to_running(self, *_):
         """
         Experiment is starting
         :return:
@@ -420,6 +425,7 @@ class Experiment(FSM):
             self.run_number += 1
 
         config = copy(self.scan_configuration[self.use_method])
+        print(config)
         all_scopes = itertools.chain(self.app.actors.keys(), self.app.managed_instruments.keys())
         sequence = config.sequence(self, **{
             s: ScopedAccessRecorder(s) for s in all_scopes if s != 'experiment'})  # TODO fixthis
@@ -428,6 +434,9 @@ class Experiment(FSM):
         self.current_run = Run(
             number=self.run_number, user='test_user', session='test_session',
             config=config, sequence=sequence)
+
+    async def enter_running(self, *_):
+        self.ui.enter_running()
 
     def collate(self, independent: List[Tuple[AccessRecorder, str]] = None,
                 dependent: List[Tuple[AccessRecorder, str]] = None):
@@ -444,6 +453,7 @@ class Experiment(FSM):
 
     async def enter_paused(self, *_):
         self.comment('Paused')
+        self.ui.enter_paused()
 
     async def leave_paused(self, *_):
         self.comment('Unpaused')
@@ -453,6 +463,7 @@ class Experiment(FSM):
 
     async def running_to_idle(self, *_):
         await self.save()
+        self.ui.running_to_idle()
 
     async def running_to_shutdown(self, *_):
         await self.save()
@@ -475,29 +486,33 @@ class Experiment(FSM):
             else:
                 instrument = getattr(instrument, p)
 
-        #qual_name = '-'.join([str(x) for x in ([scope] + path)])
         qual_name = tuple([scope] + path)
 
         if write is None:
             value = await instrument.read()
+            time = datetime.datetime.now()
             self.current_run.daq_values[qual_name].append({
                 'data': value,
-                'time': datetime.datetime.now(),
+                'time': time,
                 'step': self.current_run.step,
                 'point': self.current_run.point,
             })
+            self.current_run.streaming_daq_xs[qual_name].append(self.current_run.point)
+            self.current_run.streaming_daq_ys[qual_name].append(value)
         else:
             if self.collation:
                 self.collation.receive(qual_name, write)
 
             await instrument.write(write)
+            time = datetime.datetime.now()
             self.current_run.daq_values[qual_name].append({
                 'data': write,
-                'time': datetime.datetime.now(),
+                'time': time,
                 'step': self.current_run.step,
                 'point': self.current_run.point,
             })
-
+            self.current_run.streaming_daq_xs[qual_name].append(self.current_run.point)
+            self.current_run.streaming_daq_ys[qual_name].append(write)
 
     async def take_step(self, step):
         self.current_run.steps_taken.append({
@@ -514,6 +529,9 @@ class Experiment(FSM):
 
     async def run_idle(self, *_):
         return
+
+    async def enter_idle(self, *_):
+        self.ui.enter_idle()
 
     async def run_startup(self, *_):
         # You can do any startup here if needed
@@ -545,12 +563,16 @@ class Experiment(FSM):
         self.current_run.point += 1
         self.current_run.point_ended.append(datetime.datetime.now())
 
+        if self.ui is not None:
+            self.ui.soft_update()
+
     def __init__(self, app):
         super().__init__(app)
 
         self.run_number = None
         self.current_run = None
         self.collation = None
+        self.ui = None # reference to the mounted UI
 
         self.scan_configuration = {S.__name__: S() for S in self.scan_methods}
         self.use_method = self.scan_methods[0].__name__
