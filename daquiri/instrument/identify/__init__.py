@@ -1,6 +1,6 @@
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
-from zhivago.utils import run_on_loop, gather_dict, find_conflict_free_matches
+from daquiri.utils import run_on_loop, gather_dict, find_conflict_free_matches
 from ..resource_manager import resource_manager
 from collections import defaultdict
 

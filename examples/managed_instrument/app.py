@@ -4,9 +4,9 @@ from random import random
 from instruments.newport.newportesp301 import NewportESP301
 from instruments.lakeshore.lakeshore340 import Lakeshore340
 
-from zhivago import Zhivago, Actor
+from daquiri import Daquiri, Actor
 
-from zhivago.instrument.spec import (
+from daquiri.instrument.spec import (
     ManagedInstrument,
     AxisListSpecification, AxisSpecification,
     Properties, Generate,
@@ -58,7 +58,7 @@ class RandomlyMove(Actor):
             print(temp)
 
 
-app = Zhivago(__name__, {}, {
+app = Daquiri(__name__, {}, {
     'randomly_move': RandomlyMove,
 }, managed_instruments={
     'motion_controller': ManagedNewportESP301,

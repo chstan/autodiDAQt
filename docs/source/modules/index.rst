@@ -4,7 +4,7 @@ References
 .. toctree::
    :maxdepth: 3
 
-.. automodule:: zhivago
+.. automodule:: daquiri
    :members:
    :show-inheritance:
    :inherited-members:

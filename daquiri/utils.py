@@ -7,12 +7,12 @@ import asyncio
 from typing import Dict, List, Type, TypeVar
 
 __all__ = (
-    'ZHIVAGO_LIB_ROOT', 'run_on_loop', 'find_conflict_free_matches',
+    'DAQUIRI_LIB_ROOT', 'run_on_loop', 'find_conflict_free_matches',
     'gather_dict', 'find_conflict_free_matches',
     'enum_option_names', 'enum_mapping',
 )
 
-ZHIVAGO_LIB_ROOT = Path(__file__).parent.absolute()
+DAQUIRI_LIB_ROOT = Path(__file__).parent.absolute()
 
 def enum_option_names(enum_cls: Type[enum.Enum]) -> List[str]:
     return [x for x in dir(enum_cls) if '__' not in x]

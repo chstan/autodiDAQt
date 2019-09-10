@@ -2,6 +2,6 @@ include MANIFEST.in
 include README.rst
 include LICENSE
 recursive-include docs *.rst conf.py Makefile
-recursive-include zhivago *.py
+recursive-include daquiri *.py
 
-recursive-include zhivago/resources *.json
+recursive-include daquiri/resources *.json

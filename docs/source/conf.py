@@ -17,7 +17,7 @@
 
 # -- Project information -----------------------------------------------------
 
-project = 'zhivago'
+project = 'daquiri'
 copyright = '2019, Conrad Stansbury'
 author = 'Conrad Stansbury'
 

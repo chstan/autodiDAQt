@@ -3,8 +3,8 @@ from PyQt5 import QtCore
 from loguru import logger
 from pyqt_led import Led
 
-from zhivago.panel import Panel
-from zhivago.ui import grid, CollectUI, horizontal, vertical, button, led
+from daquiri.panel import Panel
+from daquiri.ui import grid, CollectUI, horizontal, vertical, button, led
 
 __all__ = ('InstrumentManager',)
 

@@ -1,5 +1,5 @@
 =========
- zhivago
+ DAQuiri
 =========
 
 TODO: Rewrite me. Append your package's long description.
@@ -21,9 +21,9 @@ Setup
 
 ::
 
-  $ python -m pip install --user zhivago
+  $ pip install daquiri
   or
-  (venv)$ python -m pip install zhivago
+  (venv)$ python -m pip install daquiri
 
 Usage
 =====

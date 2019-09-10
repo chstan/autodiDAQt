@@ -1,8 +1,8 @@
 """
 A simple, reactive two panel (window) application.
 """
-from zhivago import Zhivago, Panel
-from zhivago.ui import CollectUI, vertical, button, text_edit, radio_button, line_edit, submit
+from daquiri import Daquiri, Panel
+from daquiri.ui import CollectUI, vertical, button, text_edit, radio_button, line_edit, submit
 
 class Monitor(Panel):
     DEFAULT_OPEN = True
@@ -37,7 +37,7 @@ class Log(Panel):
             widget=self,
         )
 
-app = Zhivago(__name__, {
+app = Daquiri(__name__, {
     'Monitor': Monitor,
     'Log': Log,
 })

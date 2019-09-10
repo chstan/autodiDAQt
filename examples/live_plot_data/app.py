@@ -3,9 +3,9 @@ import datetime
 
 import numpy as np
 
-from zhivago import Zhivago, Panel, Actor
-from zhivago.data import reactive_frame, ReactivePlot
-from zhivago.ui import vertical
+from daquiri import Daquiri, Panel, Actor
+from daquiri.data import reactive_frame, ReactivePlot
+from daquiri.ui import vertical
 
 
 class BasicPlot(Panel):
@@ -43,7 +43,7 @@ class PublishData(Actor):
                 'time': datetime.datetime.now(),
             })
 
-app = Zhivago(__name__, {
+app = Daquiri(__name__, {
     'Plot': BasicPlot,
 }, { 'pub': PublishData, })
 app.start()

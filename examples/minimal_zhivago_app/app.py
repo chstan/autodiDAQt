@@ -1,7 +1,7 @@
 """
 The absolute, bare minimum. Open an application with no panels.
 """
-from zhivago import Zhivago
+from daquiri import Daquiri
 
-app = Zhivago(__name__, {})
+app = Daquiri(__name__, {})
 app.start()

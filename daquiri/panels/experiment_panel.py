@@ -4,8 +4,8 @@ import pyqtgraph as pg
 pg.setConfigOption('background', 'w')
 pg.setConfigOption('foreground', 'k')
 
-from zhivago.panel import Panel
-from zhivago.ui import (
+from daquiri.panel import Panel
+from daquiri.ui import (
     CollectUI, tabs, vertical, horizontal,
     combo_box, button,
     label, bind_dataclass,

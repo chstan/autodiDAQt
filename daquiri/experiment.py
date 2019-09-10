@@ -14,9 +14,9 @@ import numpy as np
 import itertools
 from loguru import logger
 
-from zhivago.utils import RichEncoder
-from zhivago.actor import Actor
-from zhivago.panels import ExperimentPanel
+from daquiri.utils import RichEncoder
+from daquiri.actor import Actor
+from daquiri.panels import ExperimentPanel
 
 class AccessRecorder:
     def __init__(self, scope):
@@ -449,7 +449,10 @@ class Experiment(FSM):
             independent={k.full_path_(): v for k, v in independent},
             dependent={k.full_path_(): v for k, v in dependent})
 
-        self.comment(f'Collating with: independent={independent}, dependent={dependent}')
+        self.comment('Collating with: independent={}, dependent={}'.format(
+            {k.full_path_(): v for k, v in independent},
+            {k.full_path_(): v for k, v in dependent},
+        ))
 
     async def enter_paused(self, *_):
         self.comment('Paused')

@@ -1,7 +1,7 @@
 """
 The absolute, bare minimum. Open an application with no panels.
 """
-from zhivago import Zhivago, Actor
+from daquiri import Daquiri, Actor
 from asyncio import sleep
 from loguru import logger
 
@@ -20,7 +20,7 @@ class Listener(Actor):
             message = await self.messages.get()
             logger.info(message)
 
-app = Zhivago(__name__, {}, {
+app = Daquiri(__name__, {}, {
     'speaks': Speaker,
     'listens': Listener,
 })

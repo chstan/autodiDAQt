@@ -55,8 +55,8 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtCore import Qt
 from PyQt5 import QtGui
 
-from zhivago.widgets import *
-from zhivago.utils import enum_mapping, enum_option_names
+from daquiri.widgets import *
+from daquiri.utils import enum_mapping, enum_option_names
 
 __all__ = (
     'CollectUI',

@@ -2,10 +2,8 @@ import asyncio
 from enum import IntEnum
 import inspect
 from functools import reduce
-from typing import List
 
-from zhivago.actor import Actor
-from .axis import Axis, Detector
+from daquiri.actor import Actor
 
 __all__ = ('InstrumentTypes', 'serialize_signature', 'FrontPanelCommon', 'FrontPanelBase', 'ALLOWABLE_BASES',)
 

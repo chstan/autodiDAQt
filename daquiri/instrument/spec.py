@@ -5,9 +5,9 @@ from typing import List
 
 from dataclasses import dataclass
 
-from zhivago.collections import AttrDict, map_treelike_nodes
-from zhivago.panels.basic_instrument_panel import BasicInstrumentPanel
-from zhivago.actor import Actor
+from daquiri.collections import AttrDict, map_treelike_nodes
+from daquiri.panels.basic_instrument_panel import BasicInstrumentPanel
+from daquiri.actor import Actor
 from .axis import Axis, Detector, TestAxis, TestDetector
 
 
@@ -181,7 +181,7 @@ class TestInstrument:
 
         return current_tree
 
-class ZhivagoInstrumentMeta(type):
+class DaquiriInstrumentMeta(type):
     """
     Represents a wrapped physical instrument. This metaclass is
     responsible for:
@@ -208,7 +208,7 @@ class ZhivagoInstrumentMeta(type):
 
         return super().__new__(cls, name, bases, namespace)
 
-class ManagedInstrument(Actor, metaclass=ZhivagoInstrumentMeta):
+class ManagedInstrument(Actor, metaclass=DaquiriInstrumentMeta):
     panel_cls = BasicInstrumentPanel
     driver_cls = None
     test_cls = None

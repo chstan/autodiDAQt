@@ -1,4 +1,4 @@
-zhivago's documentation
+DAQuiri's documentation
 =======================
 
 Contents:

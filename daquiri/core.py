@@ -15,19 +15,19 @@ from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget
 from PyQt5 import QtCore
 from quamash import QEventLoop
 
-from zhivago.utils import ZHIVAGO_LIB_ROOT
-from zhivago.config import Config, MetaData
-from zhivago.panel import Panel
+from daquiri.utils import DAQUIRI_LIB_ROOT
+from daquiri.config import Config, MetaData
+from daquiri.panel import Panel
 
-from zhivago.actor import Actor
-from zhivago.instrument.spec import ManagedInstrument
-from zhivago.panels import InstrumentManager
-from zhivago.ui import led, button, vertical, horizontal, CollectUI
+from daquiri.actor import Actor
+from daquiri.instrument.spec import ManagedInstrument
+from daquiri.panels import InstrumentManager
+from daquiri.ui import led, button, vertical, horizontal, CollectUI
 
 
-__all__ = ('Zhivago',)
+__all__ = ('Daquiri',)
 
-class ZhivagoMainWindow(QMainWindow):
+class DaquiriMainWindow(QMainWindow):
     """
     Internal, the PyQt main window
     """
@@ -58,7 +58,7 @@ class ZhivagoMainWindow(QMainWindow):
         indicator.update()
 
     def __init__(self, loop, app):
-        super(ZhivagoMainWindow, self).__init__()
+        super(DaquiriMainWindow, self).__init__()
         self.app = app
 
         self._panels = {
@@ -100,7 +100,7 @@ class ZhivagoMainWindow(QMainWindow):
             self._panels[k]['restart'] = ui[f'restart-{k}']
 
         self.win.show()
-        self.win.setWindowTitle('Zhivago')
+        self.win.setWindowTitle('DAQuiri')
 
         for panel_name, panel_cls in self.app.panel_definitions.items():
             if panel_cls.DEFAULT_OPEN:
@@ -108,11 +108,11 @@ class ZhivagoMainWindow(QMainWindow):
 
         self.loop = loop
 
-class Zhivago:
+class Daquiri:
     """
-    The main application instance for your Zhivago apps.
+    The main application instance for your Daquiri apps.
 
-    Lifecycle hooks. Zhivago does not explicitly provide lifecycle hooks.
+    Lifecycle hooks. Daquiri does not explicitly provide lifecycle hooks.
     Instead, there observable streams that you can filter and subscribe on
     various events as you need them.
 
@@ -131,8 +131,8 @@ class Zhivago:
                  actors: Optional[Dict[str, Type[Actor]]] = None,
                  managed_instruments: Optional[Dict[str, Type[ManagedInstrument]]] = None,
                  DEBUG: Optional[bool] = None):
-        import zhivago.globals
-        zhivago.globals.APP = self
+        import daquiri.globals
+        daquiri.globals.APP = self
 
         if panel_definitions is None:
             panel_definitions = {}
@@ -179,7 +179,7 @@ class Zhivago:
     def handle_exception(self, loop, context, old):
         """
         Attempts to recover from, log, or otherwise deal with an exception inside the
-        async portions of Zhivago.
+        async portions of Daquiri.
 
         :param loop:
         :param context:
@@ -252,7 +252,7 @@ class Zhivago:
             load_dotenv(str(dotenv_files[0]))
 
     def load_config(self):
-        defaults_path = ZHIVAGO_LIB_ROOT / 'resources' / 'default_config.json'
+        defaults_path = DAQUIRI_LIB_ROOT / 'resources' / 'default_config.json'
         config_files = list(itertools.chain(*[p.glob('config.json') for p in self.search_paths])) + [defaults_path]
         self.config = Config(config_files[0])
 
@@ -281,7 +281,7 @@ class Zhivago:
         for s in (signal.SIGHUP, signal.SIGTERM, signal.SIGINT):
             loop.add_signal_handler(s, lambda s=s: loop.create_task(self.shutdown(loop, s)))
 
-        self.main_window = ZhivagoMainWindow(loop=loop, app=self)
+        self.main_window = DaquiriMainWindow(loop=loop, app=self)
 
         asyncio.ensure_future(self.master())
 

@@ -1,7 +1,7 @@
 import json
 
-from zhivago.ui import grid, tabs, vertical, group, horizontal, label, line_edit, button
-from zhivago.panel import Panel
+from daquiri.ui import grid, tabs, vertical, group, horizontal, label, line_edit, button
+from daquiri.panel import Panel
 
 class UIEncoder(json.JSONEncoder):
     def default(self, o):

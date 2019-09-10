@@ -1,4 +1,4 @@
-from zhivago.instrument.spec import (
+from daquiri.instrument.spec import (
     ManagedInstrument, Generate,
     AxisListSpecification, AxisSpecification,
     Properties

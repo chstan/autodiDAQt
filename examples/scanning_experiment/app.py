@@ -4,9 +4,9 @@ from enum import Enum
 import itertools
 import numpy as np
 
-from zhivago import Zhivago
-from zhivago.mock import MockMotionController, MockDetector
-from zhivago.experiment import Experiment
+from daquiri import Daquiri
+from daquiri.mock import MockMotionController, MockDetector
+from daquiri.experiment import Experiment
 
 # Generate some fake instruments, here we make a fake 100px by 100px camera
 # and a fake scalar detector (in this case a "power meter")
@@ -135,7 +135,7 @@ class MyExperiment(Experiment):
     scan_methods = [SimpleScan, TwoAxisScan]
 
 
-app = Zhivago(__name__, actors={
+app = Daquiri(__name__, actors={
     'experiment': MyExperiment,
 }, managed_instruments={
     'mc': MockMotionController,

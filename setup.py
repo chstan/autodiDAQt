@@ -7,7 +7,7 @@ from pathlib import Path
 from setuptools import setup
 
 about = {}
-with open(str(Path(__file__).parent.absolute() / 'zhivago' / 'version.py')) as fp:
+with open(str(Path(__file__).parent.absolute() / 'daquiri' / 'version.py')) as fp:
     exec(fp.read(), about)
 
 VERSION = about['VERSION']
@@ -71,16 +71,16 @@ extras_require = {
     'reST': ['Sphinx'],
     }
 
-setup(name='zhivago',
+setup(name='daquiri',
       version=VERSION,
-      description='Zhivago = asyncio + PyQt5 UI Generation + RxPy: A simple scientific DAQ framework.',
+      description='DAQuiri = DAQ + UI Generation + Reactivity + Instruments: A simple scientific DAQ framework.',
       long_description=long_description,
       python_requires='>=3.7.0',
       author='Conrad Stansbury',
       author_email='chstansbury@gmail.com',
-      url='https://zhivago.readthedocs.org',
+      url='https://daquiri.readthedocs.org',
       classifiers=classifiers,
-      packages=['zhivago'],
+      packages=['daquiri'],
       data_files=[],
       install_requires=requirements,
       include_package_data=True,

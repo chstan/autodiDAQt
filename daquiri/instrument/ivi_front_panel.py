@@ -6,8 +6,8 @@ import inspect
 
 from functools import reduce
 
-from zhivago.actor import Actor
-from zhivago.instrument.utils import (
+from daquiri.actor import Actor
+from daquiri.instrument.utils import (
     serialize_signature, InstrumentTypes, FrontPanelBase,
     ALLOWABLE_BASES, FrontPanelCommon, is_leaf, is_property
 )

@@ -1,8 +1,8 @@
 from loguru import logger
 from PyQt5.QtWidgets import QPlainTextEdit
 
-from zhivago.panel import Panel
-from zhivago.ui import grid
+from daquiri.panel import Panel
+from daquiri.ui import grid
 
 __all__ = ('LogPanel',)
 
