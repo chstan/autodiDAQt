@@ -52,6 +52,7 @@ requirements = [
     'slackclient>=2.1.0',
     'loguru>=0.3.2',
     'rx>=3.0.1',
+    'pyqtgraph',
 
     # Instruments
     'python-ivi>=0.14.9',

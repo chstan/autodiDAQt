@@ -49,6 +49,7 @@ from typing import Dict, List, Optional
 import functools
 from PyQt5.QtWidgets import (
     QGridLayout, QWidget, QVBoxLayout, QHBoxLayout, QTabWidget,
+    QSplitter,
     QGroupBox, QLabel,
 )
 from PyQt5.QtCore import Qt
@@ -62,6 +63,8 @@ __all__ = (
 
     # layouts
     'layout', 'grid', 'vertical', 'horizontal',
+
+    'splitter',
 
     # widgets
     'group', 'label', 'tabs', 'button', 'check_box', 'combo_box', 'file_dialog',
@@ -133,6 +136,22 @@ def layout(*children, layout_cls=None, widget=None):
 grid = functools.partial(layout, layout_cls=QGridLayout)
 vertical = functools.partial(layout, layout_cls=QVBoxLayout)
 horizontal = functools.partial(layout, layout_cls=QHBoxLayout)
+
+@ui_builder
+def splitter(first, second, direction=Qt.Vertical, size=None):
+    split_widget = QSplitter(direction)
+
+    split_widget.addWidget(first)
+    split_widget.addWidget(second)
+
+    if size is not None:
+        split_widget.setSizes(size)
+
+    return split_widget
+
+splitter.Vertical = Qt.Vertical
+splitter.Horizontal = Qt.Horizontal
+
 
 @ui_builder
 def group(*args, label=None, layout_cls=None):
@@ -353,15 +372,15 @@ def bind_dataclass(dataclass_instance, prefix: str, ui: Dict[str, QWidget]):
         w.subject.on_next(current_value)
 
         # close over the translation function
-        def build_setter(translate):
+        def build_setter(translate, name):
             def setter(value):
                 try:
                     value = translate(value)
                 except ValueError:
                     return
 
-                setattr(dataclass_instance, field_name, value)
+                setattr(dataclass_instance, name, value)
 
             return setter
 
-        w.subject.subscribe(build_setter(translate_to_field))
+        w.subject.subscribe(build_setter(translate_to_field, field_name))
