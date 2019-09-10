@@ -41,4 +41,6 @@ app = Daquiri(__name__, {
     'Monitor': Monitor,
     'Log': Log,
 })
-app.start()
+
+if __name__ == '__main__':
+    app.start()

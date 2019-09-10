@@ -46,4 +46,6 @@ class PublishData(Actor):
 app = Daquiri(__name__, {
     'Plot': BasicPlot,
 }, { 'pub': PublishData, })
-app.start()
+
+if __name__ == '__main__':
+    app.start()

@@ -12,7 +12,7 @@ from daquiri.experiment import Experiment
 # and a fake scalar detector (in this case a "power meter")
 class MockImageDetector(MockDetector):
     def generate(self):
-        return np.random.random((100,100,))
+        return np.random.random((800,800,))
 
 class MockSimpleDetector(MockDetector):
     def generate(self):
@@ -142,4 +142,6 @@ app = Daquiri(__name__, actors={
     'ccd': MockImageDetector,
     'power_meter': MockSimpleDetector,
 })
-app.start()
+
+if __name__ == '__main__':
+    app.start()

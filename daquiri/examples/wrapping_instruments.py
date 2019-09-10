@@ -64,4 +64,6 @@ app = Daquiri(__name__, {}, {
     'motion_controller': ManagedNewportESP301,
     'temp_controller': ManagedTemperatureController,
 })
-app.start()
+
+if __name__ == '__main__':
+    app.start()

@@ -425,7 +425,6 @@ class Experiment(FSM):
             self.run_number += 1
 
         config = copy(self.scan_configuration[self.use_method])
-        print(config)
         all_scopes = itertools.chain(self.app.actors.keys(), self.app.managed_instruments.keys())
         sequence = config.sequence(self, **{
             s: ScopedAccessRecorder(s) for s in all_scopes if s != 'experiment'})  # TODO fixthis
@@ -445,13 +444,19 @@ class Experiment(FSM):
         if dependent is None:
             dependent = []
 
+        def unwrap(c):
+            if isinstance(c, list):
+                return tuple(c)
+
+            return c.full_path_()
+
         self.collation = Collation(
-            independent={k.full_path_(): v for k, v in independent},
-            dependent={k.full_path_(): v for k, v in dependent})
+            independent={unwrap(k): v for k, v in independent},
+            dependent={unwrap(k): v for k, v in dependent})
 
         self.comment('Collating with: independent={}, dependent={}'.format(
-            {k.full_path_(): v for k, v in independent},
-            {k.full_path_(): v for k, v in dependent},
+            {unwrap(k): v for k, v in independent},
+            {unwrap(k): v for k, v in dependent},
         ))
 
     async def enter_paused(self, *_):
@@ -528,7 +533,6 @@ class Experiment(FSM):
 
         await gather(*[self.perform_single_daq(**spec) for spec in step])
         self.current_run.step += 1
-        await sleep(0.05)
 
     async def run_idle(self, *_):
         return
