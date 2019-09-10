@@ -61,4 +61,21 @@ Installation
 Usage
 =====
 
-For usage examples, explore the scripts in the examples folder.
+For usage examples, explore the scripts in the examples folder. You can run them with
+
+::
+
+  $ python -m daquiri.examples.[example_name]
+
+
+replacing [example_name] with one of:
+
+1. minimal_app
+2. plot_data
+3. simple_actors
+4. wrapping_instruments
+5. scanning_experiment
+6. scanning_experiment_revisited
+
+
+
