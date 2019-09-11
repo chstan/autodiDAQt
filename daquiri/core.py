@@ -3,6 +3,7 @@ import sys
 import warnings
 import itertools
 import signal
+import appdirs
 from typing import Dict, Optional, Type
 
 from pathlib import Path
@@ -237,7 +238,8 @@ class Daquiri:
 
     @property
     def file(self):
-        return getattr(sys.modules[self.import_name], '__file__', None)
+        return getattr(sys.modules[self.import_name], '__file__',
+                       appdirs.user_config_dir())
 
     @property
     def search_paths(self):
@@ -252,7 +254,9 @@ class Daquiri:
             load_dotenv(str(dotenv_files[0]))
 
     def load_config(self):
-        defaults_path = DAQUIRI_LIB_ROOT / 'resources' / 'default_config.json'
+        configs = {'win32': 'default_config_windows.json',}
+        cfile = configs.get(sys.platform, 'default_config.json')
+        defaults_path = DAQUIRI_LIB_ROOT / 'resources' / cfile
         config_files = list(itertools.chain(*[p.glob('config.json') for p in self.search_paths])) + [defaults_path]
         self.config = Config(config_files[0])
 

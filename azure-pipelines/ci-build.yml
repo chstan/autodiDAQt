@@ -1,0 +1,46 @@
+trigger:
+- master
+
+jobs:
+- job: 'Build_and_Test_Windows'
+  displayName: 'Build and Test Windows'
+  strategy:
+    matrix:
+      Python37:
+        python.version: '3.7'
+    maxParallel: 1
+  pool:
+    vmImage: 'vs2017-win2016'
+
+  steps:
+  - ...STEPS HERE
+
+- job: 'Build_and_Test_Ubuntu'
+  displayName: 'Build and Test Ubuntu'
+  strategy:
+    matrix:
+      Python37:
+        python.version: '3.7'
+    maxParallel: 1
+  pool:
+    vmImage: 'ubuntu-16.04'
+
+  steps:
+  - template: templates/unix-configure.yml
+
+  - ... STEPS Here
+
+
+- job: 'Build_and_Test_Mac_OS_X'
+  displayName: 'Build and Test Mac OS X'
+  strategy:
+    matrix:
+      Python37:
+        python.version: '3.7'
+    maxParallel: 1
+
+  pool:
+    vmImage: 'macOS-10.13'
+
+  steps:
+  - template: templates/unix-configure.yml

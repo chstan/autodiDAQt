@@ -1,0 +1,31 @@
+trigger:
+- master
+- release
+
+pool:
+  name: Hosted Ubuntu 1604
+variables:
+  python.version: '3.7'
+
+steps:
+- template: templates/unix-configure.yml
+
+- bash |
+    python setup.py sdist
+    python setup.py bdist_wheel
+
+- task: CopyFiles@2
+  inputs:
+    contents: dist/**
+    targetFolder: $(Build.ArtifactStagingDirectory)
+
+- task: PublishBuildArtifacts@1
+  inputs:
+    pathtoPublish: $(Build.ArtifactStagingDirectory)
+    artifactName: DAQuiri_PyPI
+
+- bash: |
+    pip install twine
+    twine upload -u $(pypi.user) -p $(pypi.password) dist/*
+  displayName: 'Upload to PyPI'
+  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/release'))

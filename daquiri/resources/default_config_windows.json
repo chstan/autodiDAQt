@@ -1,0 +1,17 @@
+{
+  "debug": true,
+
+  "logging": true,
+  "logging_directory": "out\\logs",
+  "log_format": "{time}-{user}-{session}",
+
+  "data_directory": "out\\data",
+  "data_format": "{user}\\{date}-{session}-{run}",
+
+  "instruments": {
+    "simulate_instruments": true
+  },
+
+  "use_profiles": false,
+  "profiles": {}
+}

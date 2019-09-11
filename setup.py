@@ -54,6 +54,8 @@ requirements = [
     'rx>=3.0.1',
     'pyqtgraph',
 
+    'appdirs',
+
     # Instruments
     'python-ivi>=0.14.9',
     'instrumentkit>=0.5.0',
