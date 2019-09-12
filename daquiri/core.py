@@ -282,7 +282,10 @@ class Daquiri:
 
         asyncio.set_event_loop(loop)
 
-        for s in (signal.SIGHUP, signal.SIGTERM, signal.SIGINT):
+        signal_set = {
+            'win32': lambda: tuple(), # windows has no signals, but will raise exceptions
+        }.get(sys.platform, lambda: (signal.SIGHUP, signal.SIGTERM, signal.SIGINT))()
+        for s in signal_set:
             loop.add_signal_handler(s, lambda s=s: loop.create_task(self.shutdown(loop, s)))
 
         self.main_window = DaquiriMainWindow(loop=loop, app=self)
