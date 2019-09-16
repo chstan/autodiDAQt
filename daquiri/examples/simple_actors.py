@@ -5,6 +5,7 @@ from daquiri import Daquiri, Actor
 from asyncio import sleep
 from loguru import logger
 
+
 class Speaker(Actor):
     async def run(self):
         logger.info('Starting speaker.')
@@ -19,6 +20,7 @@ class Listener(Actor):
         while True:
             message = await self.messages.get()
             logger.info(message)
+
 
 app = Daquiri(__name__, {}, {
     'speaks': Speaker,

@@ -3,16 +3,27 @@ from random import random
 
 from instruments.newport.newportesp301 import NewportESP301
 from instruments.lakeshore.lakeshore340 import Lakeshore340
+from pymeasure.instruments.signalrecovery import dsp7265
 
 from daquiri import Daquiri, Actor
 
 from daquiri.instrument.spec import (
     ManagedInstrument,
     AxisListSpecification, AxisSpecification,
-    Properties, Generate,
-    DetectorSpecification,
-    PolledWrite, PolledRead,
+    Generate, DetectorSpecification, PolledWrite, PolledRead,
 )
+
+
+class ManagedDSP7265(ManagedInstrument):
+    driver_cls = dsp7265.DSP7265
+    test_cls = Generate()
+
+    phase = AxisSpecification(float, where=['phase'])
+    # you can also omit where if it is the same as the specified name
+    x = AxisSpecification(float)
+    y = AxisSpecification(float)
+    mag = AxisSpecification(float)
+
 
 class ManagedNewportESP301(ManagedInstrument):
     driver_cls = NewportESP301
@@ -26,8 +37,6 @@ class ManagedNewportESP301(ManagedInstrument):
         where='axis',
     )
 
-    properties = Properties()
-
 
 class ManagedTemperatureController(ManagedInstrument):
     driver_cls = Lakeshore340
@@ -35,8 +44,6 @@ class ManagedTemperatureController(ManagedInstrument):
 
     sensor_a = DetectorSpecification(float, where=['sensor', 0], read='temperature')
     sensor_b = DetectorSpecification(float, where=['sensor', 1], read='temperature')
-
-    properties = Properties()
 
 
 class RandomlyMove(Actor):

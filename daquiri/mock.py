@@ -1,10 +1,9 @@
-from daquiri.instrument.spec import (
-    ManagedInstrument, Generate,
-    AxisListSpecification, AxisSpecification,
-    Properties
-)
+import numpy as np
 
-__all__ = ('MockMotionController', 'MockDetector',)
+from daquiri.instrument.spec import (
+    ManagedInstrument, Generate, AxisListSpecification, AxisSpecification)
+
+__all__ = ('MockMotionController', 'MockDetector', 'MockScalarDetector')
 
 class MockDriver:
     """
@@ -23,8 +22,6 @@ class MockMotionController(ManagedInstrument):
         where='axis',
     )
 
-    properties = Properties()
-
 
 class MockDetector(ManagedInstrument):
     driver_cls = MockDriver
@@ -34,3 +31,8 @@ class MockDetector(ManagedInstrument):
 
     def generate(self):
         return 3.14159
+
+
+class MockScalarDetector(MockDetector):
+    def generate(self):
+        return np.random.normal() + 5

@@ -14,9 +14,11 @@ import numpy as np
 import itertools
 from loguru import logger
 
+from daquiri.interlock import InterlockException
 from daquiri.utils import RichEncoder
 from daquiri.actor import Actor
 from daquiri.panels import ExperimentPanel
+
 
 class AccessRecorder:
     def __init__(self, scope):
@@ -45,6 +47,13 @@ class AccessRecorder:
             'scope': self.scope,
         }
 
+    def __call__(self, *args, **kwargs):
+        return {
+            'call': (args, kwargs),
+            'path': self.path,
+            'scope': self.scope,
+        }
+
     def full_path_(self):
         return tuple([self.scope] + self.path)
 
@@ -58,6 +67,27 @@ class ScopedAccessRecorder:
 
     def __getitem__(self, item):
         return AccessRecorder(self.scope)[item]
+
+
+def tokenize_access_path(str_or_list) -> Tuple[Union[str, int]]:
+    """
+    Turns a string-like accessor into a list of tokens
+
+    a.b[0].c -> ['a', 'b', 0, 'c']
+
+    :param str_or_list:
+    :return:
+    """
+    if isinstance(str_or_list, (tuple, list)):
+        return str_or_list
+
+    def safe_unwrap_int(value):
+        try:
+            return int(value)
+        except ValueError:
+            return str(value)
+
+    return tuple([safe_unwrap_int(x) for x in str_or_list.replace('[', '.').replace(']', '').split('.') if x])
 
 
 class FSM(Actor):
@@ -99,7 +129,6 @@ class FSM(Actor):
         from_state = self.state.lower()
         logger.info(f'{transition}, {trigger}')
         to_state = transition['to'].lower()
-
         try:
             f = getattr(self, f'leave_{from_state}')
         except AttributeError:
@@ -293,6 +322,9 @@ class Run:
     step: int = 0
     point: int = 0
 
+    # UI Configuration
+    additional_plots: List[Dict] = field(default_factory=list)
+
     # DAQ
     metadata: List[Dict[str, Any]] = field(default_factory=list)
     steps_taken: List[Dict[str, Any]] = field(default_factory=list)
@@ -413,29 +445,53 @@ class Experiment(FSM):
 
     panel_cls = ExperimentPanel
     scan_methods = []
+    interlocks = []
 
     async def idle_to_running(self, *_):
         """
         Experiment is starting
         :return:
         """
-        if self.run_number is None:
-            self.run_number = 0
-        else:
-            self.run_number += 1
+        interlocks_passed = True
+        try:
+            for interlock in self.interlocks:
+                status = await interlock()
+                logger.info(status)
+        except InterlockException as e:
+            interlocks_passed = False
+            logger.error(f'Interlock failed: {e}')
+            self.messages.put_nowait('stop')
 
-        config = copy(self.scan_configuration[self.use_method])
-        all_scopes = itertools.chain(self.app.actors.keys(), self.app.managed_instruments.keys())
-        sequence = config.sequence(self, **{
-            s: ScopedAccessRecorder(s) for s in all_scopes if s != 'experiment'})  # TODO fixthis
+        if interlocks_passed:
+            if self.run_number is None:
+                self.run_number = 0
+            else:
+                self.run_number += 1
 
-        self.collation = None
-        self.current_run = Run(
-            number=self.run_number, user='test_user', session='test_session',
-            config=config, sequence=sequence)
+            config = copy(self.scan_configuration[self.use_method])
+            all_scopes = itertools.chain(self.app.actors.keys(), self.app.managed_instruments.keys())
+            sequence = config.sequence(self, **{
+                s: ScopedAccessRecorder(s) for s in all_scopes if s != 'experiment'})  # TODO fixthis
+
+            self.collation = None
+            self.current_run = Run(
+                number=self.run_number, user='test_user', session='test_session',
+                config=config, sequence=sequence)
 
     async def enter_running(self, *_):
         self.ui.enter_running()
+
+    def plot(self, dependent: str, independent: List[str], name, **kwargs):
+        assert self.current_run is not None
+        if isinstance(independent, str):
+            independent = [independent]
+
+        self.current_run.additional_plots.append({
+            'dependent': tokenize_access_path(dependent),
+            'independent': [tokenize_access_path(ind) for ind in independent],
+            'name': name,
+            **kwargs,
+        })
 
     def collate(self, independent: List[Tuple[AccessRecorder, str]] = None,
                 dependent: List[Tuple[AccessRecorder, str]] = None):
@@ -485,9 +541,22 @@ class Experiment(FSM):
             # We're done! Time to save your data.
             self.messages.put_nowait('stop')
 
+    async def perform_single_daq(self, scope=None, path=None, read=None, write=None, preconditions=None, call=None):
+        try:
+            if preconditions:
+                all_scopes = {k: v for k, v in itertools.chain(self.app.actors.items(), self.app.managed_instruments.items())
+                              if k != 'experiment'}
+                for precondition in preconditions:
+                    await precondition(self, **all_scopes)
+        except Exception as e:
+            logger.error(f'Failed precondition: {e}.')
+            self.messages.put_nowait('stop')
 
-    async def perform_single_daq(self, scope, path, read=None, write=None):
+        if scope is None:
+            return
+
         instrument = self.app.managed_instruments[scope]
+
         for p in path:
             if isinstance(p, int):
                 instrument = instrument[p]
@@ -496,7 +565,11 @@ class Experiment(FSM):
 
         qual_name = tuple([scope] + path)
 
-        if write is None:
+        if call is not None:
+            args, kwargs = call
+            instrument(*args, **kwargs)
+
+        elif write is None:
             value = await instrument.read()
             time = datetime.datetime.now()
             self.current_run.daq_values[qual_name].append({
@@ -552,6 +625,9 @@ class Experiment(FSM):
         return
 
     async def save(self, *_):
+        if self.current_run is None:
+            return
+
         collated_data = None
         try:
             if self.collation:

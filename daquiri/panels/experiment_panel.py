@@ -1,9 +1,6 @@
 import numpy as np
 import pyqtgraph as pg
 
-pg.setConfigOption('background', 'w')
-pg.setConfigOption('foreground', 'k')
-
 from daquiri.panel import Panel
 from daquiri.ui import (
     CollectUI, tabs, vertical, horizontal,
@@ -13,35 +10,28 @@ from daquiri.ui import (
 
 __all__ = ('ExperimentPanel',)
 
+pg.setConfigOption('background', 'w')
+pg.setConfigOption('foreground', 'k')
 
-if False:
-    app = None
-    QtCore = None
-
-    p = pg.plot()
-    p.setWindowTitle('pyqtgraph example: PlotSpeedTest')
-    p.setRange(QtCore.QRectF(0, -10, 5000, 20))
-    p.setLabel('bottom', 'Index', units='B')
-    curve = p.plot()
-
-    data = np.random.normal(size=(50,5000))
-    ptr = 0
-
-    def update():
-        global curve, data, ptr, p
-        curve.setData(data[ptr%10])
-        ptr += 1
-
-        app.processEvents()
 
 class ExperimentPanel(Panel):
     SIZE = (900, 450)
     TITLE = 'Experiment'
     DEFAULT_OPEN = True
     RESTART = True
+    LEFT_PANEL_SIZE: int = 200
 
-    def layout_scan_methods(self, methods):
-        return [[m.__name__ , layout_dataclass(m)] for m in methods]
+    dynamic_state_mounted: bool = False
+    built_widgets = None
+    pg_widgets = None
+    pg_plots = None
+    plot_type = None
+    additional_plots = None
+    ui = None
+
+    @staticmethod
+    def layout_scan_methods(methods):
+        return [[m.__name__, layout_dataclass(m)] for m in methods]
 
     @property
     def experiment(self):
@@ -95,48 +85,105 @@ class ExperimentPanel(Panel):
                                            for k in ks]).replace('. ', '').replace(' .', '').strip()
                              for ks in key_sequences}
 
+            # TODO we can clean this up so that there is a common way of collecting and plotting everything
+            # currently we special case what happens for user plots in order to avoid computational expense at the
+            # expense of memory and code length
             self.built_widgets = {}
             self.pg_widgets = {}
             self.pg_plots = {}
-            self.image_like = {
-                k: isinstance(self.experiment.current_run.streaming_daq_ys[k][0], np.ndarray)
+            self.user_pg_widgets = {}
+            self.user_pg_plots = {}
+
+            self.plot_type = {
+                k: 'image' if isinstance(self.experiment.current_run.streaming_daq_ys[k][0], np.ndarray) else 'line'
                 for k in display_names
             }
+            self.additional_plots = self.experiment.current_run.additional_plots
 
-            def build_widget_for(key_name, display_name, image_like=False):
-                if image_like:
-                    pg_widget = pg.ImageView()
-                    img = pg.ImageItem()
-                    pg_widget.addItem(img)
-                    self.pg_plots[key_name] = img
+            for additional_plot in self.additional_plots:
+                dependent_is_image_like = isinstance(self.experiment.current_run.streaming_daq_ys[additional_plot['dependent']][0], np.ndarray)
+                assert not dependent_is_image_like and 'Cannot plot 1D/2D vs 2D data currently'
+                independent_is_image_like = len(additional_plot['independent']) >= 2
+
+                if dependent_is_image_like:
+                    self.plot_type[additional_plot['name']] = 'image'
+                elif independent_is_image_like:
+                    self.plot_type[additional_plot['name']] = '2d-scatter'
                 else:
+                    self.plot_type[additional_plot['name']] = 'line'
+
+            def build_widget_for(display_name, plot_type: str = 'line'):
+                if plot_type == 'image':
+                    pg_widget = pg.ImageView()
+                    pg_plt = pg.ImageItem()
+                    pg_widget.addItem(pg_plt)
+                elif plot_type == 'line':
                     pg_widget = pg.PlotWidget()
-                    self.pg_plots[key_name] = pg_widget.plot()#np.ndarray((0,),dtype=float), np.ndarray((0,),dtype=float))
+                    pg_plt = pg_widget.plot()
                     pg_widget.setTitle(display_name)
+                else:
+                    assert plot_type == '2d-scatter'
+                    pg_widget = pg.PlotWidget()
+                    pg_plt = pg.ScatterPlotItem()
+                    pg_widget.addItem(pg_plt)
 
-                widget = vertical(
-                    pg_widget,
-                )
-                self.built_widgets[key_name] = widget
-                self.pg_widgets[key_name] = pg_widget
-                return widget
+                return vertical(pg_widget), pg_widget, pg_plt
 
-            data_stream_views = tabs(
-                *[[v, build_widget_for(k, v, self.image_like[k])] for k, v in display_names.items()]
-            )
+            tab_widgets = []
+
+            for additional_plot in self.additional_plots:
+                name, ind, dep = [additional_plot[k] for k in ['name', 'independent', 'dependent']]
+                widget, pg_widget, pg_plt = build_widget_for(name, self.plot_type[name])
+                self.built_widgets[name] = widget
+                self.user_pg_widgets[name] = pg_widget
+                self.user_pg_plots[name] = pg_plt
+                tab_widgets.append((name, widget,))
+
+            for k, display_name in display_names.items():
+                widget, pg_widget, pg_plt = build_widget_for(display_name, self.plot_type[k])
+                self.built_widgets[k] = widget
+                self.pg_widgets[k] = pg_widget
+                self.pg_plots[k] = pg_plt
+                tab_widgets.append((display_name, widget,))
+
+            data_stream_views = tabs(*tab_widgets)
             dynamic_layout.addWidget(data_stream_views)
 
-        for k in self.built_widgets:
+        for k in self.pg_plots:
             pg_plot = self.pg_plots[k]
 
             xs, ys = (self.experiment.current_run.streaming_daq_xs[k],
                       self.experiment.current_run.streaming_daq_ys[k])
-            if self.image_like[k]:
+            if self.plot_type[k] == 'image':
                 pg_plot.setImage(ys[-1])
             else:
+                assert self.plot_type[k] == 'line'
                 pg_plot.setData(np.asarray(xs), np.asarray(ys))
 
-        # force UI rerender
+        for additional_plot in self.additional_plots:
+            name, ind, dep = [additional_plot[k] for k in ['name', 'independent', 'dependent']]
+            pg_plot = self.user_pg_plots[name]
+            if len(ind) > 1:
+                last_index = additional_plot.get('last_index', 0)
+                color = additional_plot.get('color')
+                size = additional_plot.get('size', np.abs)
+
+                xss = np.stack([self.experiment.current_run.streaming_daq_ys[indi][last_index:] for indi in ind])
+                ys = self.experiment.current_run.streaming_daq_ys[dep][last_index:]
+
+                additional_plot['last_index'] = last_index + len(ys)
+
+                def make_spot(index, y):
+                    s = {'pos': xss[:, index], 'data': y, 'size': size(y)}
+                    if color:
+                        s['color'] = color(y)
+                    return s
+
+                pg_plot.addPoints([make_spot(i, y) for i, y in enumerate(ys)])
+            else:
+                xs, ys = (self.experiment.current_run.streaming_daq_ys[ind[0]],
+                          self.experiment.current_run.streaming_daq_ys[dep])
+                pg_plot.setData(np.asarray(xs), np.asarray(ys))
 
     def running_to_idle(self):
         self.dynamic_state_mounted = False
@@ -147,7 +194,6 @@ class ExperimentPanel(Panel):
         scan_methods = experiment.scan_methods
 
         ui = {}
-        LEFT_PANEL_SIZE = 200
         with CollectUI(ui):
             vertical(
                 horizontal(
@@ -174,7 +220,7 @@ class ExperimentPanel(Panel):
                         id='dynamic-layout',
                     ),
                     direction=splitter.Horizontal,
-                    size=[LEFT_PANEL_SIZE, self.SIZE[0] - LEFT_PANEL_SIZE]
+                    size=[self.LEFT_PANEL_SIZE, self.SIZE[0] - self.LEFT_PANEL_SIZE]
                 ),
                 widget=self,
             )

@@ -19,6 +19,7 @@ def figure(figsize=None, toolbar=None):
 
     return canvas, built_figure, bar
 
+
 class Panel(QWidget):
     """
     A base class for windows that attach to the main application.

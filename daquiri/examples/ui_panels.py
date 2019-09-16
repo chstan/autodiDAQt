@@ -4,6 +4,7 @@ A simple, reactive two panel (window) application.
 from daquiri import Daquiri, Panel
 from daquiri.ui import CollectUI, vertical, button, text_edit, radio_button, line_edit, submit
 
+
 class Monitor(Panel):
     DEFAULT_OPEN = True
     TITLE = 'Monitor'

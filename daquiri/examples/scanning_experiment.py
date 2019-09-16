@@ -8,11 +8,14 @@ from daquiri import Daquiri
 from daquiri.mock import MockMotionController, MockDetector
 from daquiri.experiment import Experiment
 
-# Generate some fake instruments, here we make a fake 100px by 100px camera
-# and a fake scalar detector (in this case a "power meter")
 class MockImageDetector(MockDetector):
+    """
+    Generate some fake instruments, here we make a fake 100px by 100px camera
+    and a fake scalar detector (in this case a "power meter").
+    """
     def generate(self):
         return np.random.random((800,800,))
+
 
 class MockSimpleDetector(MockDetector):
     def generate(self):
@@ -29,6 +32,8 @@ By using `with experiment.point:` we demarcate which DAQ and motion
 sequences are grouped together. These points are collected together
 due to the optional invokation of `experiment.collate`.
 """
+
+
 class SimpleScanMode(Enum):
     MOVE_WHILE_MEASURING = 0
     MOVE_THEN_MEASURE = 1
@@ -36,17 +41,18 @@ class SimpleScanMode(Enum):
 
 @dataclass
 class SimpleScan:
+    """
+    A scan mode consists of a generator 'sequence', which computes
+    the DAQ steps for the experiment. You can perform whatever logic you like
+    in here, even adjusting the experimental course depending on the measurement
+    so far.
+    """
+
     n_steps: int = 10
     start: float = 0
     stop: float = 20
     mode: SimpleScanMode = SimpleScanMode.MOVE_THEN_MEASURE
 
-    """
-    A scan mode consists of a generator 'sequence', which computes
-    the DAQ steps for the experiment. You can perform whatever logic you like 
-    in here, even adjusting the experimental course depending on the measurement 
-    so far.    
-    """
     def sequence(self, experiment, mc, ccd, power_meter, **kwargs):
         """
         An example measurement sequence, here we scan over a stage,
@@ -90,11 +96,11 @@ class SimpleScan:
                 else:
                     yield list(itertools.chain(motions, daq))
 
-"""
-Another scan mode we implement: here a two axis scan.
-"""
+
 @dataclass
 class TwoAxisScan:
+    "Another scan mode we implement: here a two axis scan."
+
     n_steps_x: int = 10
     n_steps_y: int = 3
     start_x: float = 0

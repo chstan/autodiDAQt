@@ -62,6 +62,9 @@ requirements = [
     'pyvisa',
     'pyvisa-sim',
 
+    # other numerics
+    'numpy',
+
     # zarr + xarray support
     'xarray',
     'zarr',

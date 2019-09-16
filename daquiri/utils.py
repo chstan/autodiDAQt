@@ -90,12 +90,14 @@ def find_conflict_free_matches(constraints: Dict[str, List[T]]) -> Dict[str, T]:
 
     return results
 
+
 class RichEncoder(JSONEncoder):
     def default(self, o):
         if isinstance(o, (datetime.datetime, datetime.date, datetime.time)):
             return o.isoformat()
-
         elif isinstance(o, datetime.timedelta):
             return (datetime.datetime.min + o).time().isoformat()
+        elif callable(o):
+            return o.__name__
 
         return super().default(o)
