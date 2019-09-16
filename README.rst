@@ -73,9 +73,14 @@ replacing [example_name] with one of:
 1. minimal_app
 2. plot_data
 3. simple_actors
-4. wrapping_instruments
-5. scanning_experiment
-6. scanning_experiment_revisited
+4. ui_panels
+5. wrapping_instruments
+6. scanning_experiment
+7. scanning_experiment_revisited
+8. scanning_interlocks
+9. scanning_custom_plots
+10. scanning_setup_and_teardown
+11. scanning_properties_and_profiles
 
 
 
