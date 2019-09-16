@@ -1,4 +1,5 @@
 import asyncio
+import functools
 from enum import IntEnum
 import inspect
 from functools import reduce
@@ -15,6 +16,7 @@ class InstrumentTypes(IntEnum):
     PIEZO_CONTROLLER = 4
     TEMPERATURE_CONTROLLER = 5
     LOCKIN_AMPLIFIER = 6
+
 
 def is_property(tree):
     try:
@@ -202,3 +204,10 @@ ALLOWABLE_BASES = {
     FrontPanelBase, FrontPanelCommon, Actor,
 }
 
+
+def mock_print(f):
+    @functools.wraps(f)
+    def wrapped(*args, **kwargs):
+        print(f'{f.__name__}: {args}, {kwargs}')
+
+    return wrapped

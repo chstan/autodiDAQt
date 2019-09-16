@@ -8,7 +8,8 @@ from daquiri.mock import MockMotionController
 from daquiri.scan import ScanAxis, scan
 
 from daquiri.instrument.spec import (
-    ManagedInstrument, Generate, AxisSpecification, ChoiceProperty)
+    ManagedInstrument, Generate, AxisSpecification)
+from daquiri.instrument.property import ChoiceProperty
 
 
 class ManagedDSP7265(ManagedInstrument):

@@ -10,11 +10,10 @@ import instruments
 from instruments.util_fns import ProxyList
 
 from daquiri.actor import Actor
-from daquiri.utils import mock_print
 from daquiri.instrument.utils import (
     serialize_signature, FrontPanelBase, FrontPanelCommon, ALLOWABLE_BASES,
-    is_leaf, is_property, InstrumentTypes
-)
+    is_leaf, is_property, InstrumentTypes,
+    mock_print)
 
 __all__ = ('FrontPanel',)
 

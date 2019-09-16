@@ -1,37 +1,44 @@
 import datetime
 from json import JSONEncoder
-import functools
 from pathlib import Path
 import enum
 import asyncio
 from typing import Dict, List, Type, TypeVar
 
+from daquiri.instrument.property import ChoiceProperty
+
 __all__ = (
     'DAQUIRI_LIB_ROOT', 'run_on_loop', 'find_conflict_free_matches',
     'gather_dict', 'find_conflict_free_matches',
     'enum_option_names', 'enum_mapping',
+    'AccessRecorder',
+    'ScanAccessRecorder',
+    'InstrumentScanAccessRecorder',
 )
 
 DAQUIRI_LIB_ROOT = Path(__file__).parent.absolute()
 
+def _try_unwrap_value(v):
+    try:
+        return v.value
+    except AttributeError:
+        return v
+
+
 def enum_option_names(enum_cls: Type[enum.Enum]) -> List[str]:
-    return [x for x in dir(enum_cls) if '__' not in x]
+    names = [x for x in dir(enum_cls) if '__' not in x]
+    values = [_try_unwrap_value(getattr(enum_cls, n)) for n in names]
+
+    return [x[0] for x in sorted(zip(names, values), key=lambda x: x[1])]
+
 
 def enum_mapping(enum_cls: Type[enum.Enum], invert=False):
     options = enum_option_names(enum_cls)
-    d = dict([[o, getattr(enum_cls, o)] for o in options])
+    d = dict([[o, _try_unwrap_value(getattr(enum_cls, o))] for o in options])
     if invert:
         d = {v: k for k, v in d.items()}
     return d
 
-
-
-def mock_print(f):
-    @functools.wraps(f)
-    def wrapped(*args, **kwargs):
-        print(f'{f.__name__}: {args}, {kwargs}')
-
-    return wrapped
 
 def run_on_loop(coroutine_fn, *args, **kwargs):
     loop = asyncio.new_event_loop()
@@ -101,3 +108,78 @@ class RichEncoder(JSONEncoder):
             return o.__name__
 
         return super().default(o)
+
+
+class AccessRecorder:
+    def __init__(self, scope=None):
+        self.path = []
+        self.scope = scope
+
+    def __getattr__(self, item):
+        self.path.append(item)
+        return self
+
+    def __getitem__(self, item):
+        self.path.append(item)
+        return self
+
+    def name_(self):
+        return '.'.join(map(str, self.full_path_()))
+
+    def full_path_(self):
+        return tuple(([] if self.scope is None else [self.scope]) + self.path)
+
+
+class ScanAccessRecorder(AccessRecorder):
+    def write(self, value):
+        return {
+            'write': value,
+            'path': self.path,
+            'scope': self.scope
+        }
+
+    def read(self):
+        return {
+            'read': None,
+            'path': self.path,
+            'scope': self.scope,
+        }
+
+    def __call__(self, *args, **kwargs):
+        return {
+            'call': (args, kwargs),
+            'path': self.path,
+            'scope': self.scope,
+        }
+
+
+class InstrumentScanAccessRecorder(AccessRecorder):
+    def __init__(self, instrument, axis_specifications, properties):
+        self.axis_spec_ = axis_specifications
+        self.properties_ = properties
+
+        super().__init__(instrument)
+
+    def values_(self):
+        first = self.path[0]
+        if first in self.properties_:
+            prop = self.properties_[first]
+            assert len(self.path) == 1 and "You can scan a property, but properties have no sub-attributes or items"
+
+            if isinstance(prop, ChoiceProperty):
+                labels, choices = prop.labels, prop.choices
+                if isinstance(labels, list):
+                    return dict(zip(labels, choices))
+                elif callable(labels):
+                    return dict(zip(map(labels, choices), choices))
+                elif labels is None:
+                    return dict(zip(map(str, choices), choices))
+
+            return None
+
+    def limits_(self):
+        return None
+
+    def is_property_(self):
+        return len(self.path) == 1 and self.path[0] in self.properties_
+

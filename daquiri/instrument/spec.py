@@ -1,13 +1,17 @@
 import asyncio
 import copy
 import functools
-from typing import Any, List, Optional, Union
+from typing import Any, List, Union
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+
+from loguru import logger
 
 from daquiri.collections import AttrDict, map_treelike_nodes
+from daquiri.instrument.property import Property, ChoiceProperty
 from daquiri.panels.basic_instrument_panel import BasicInstrumentPanel
 from daquiri.actor import Actor
+from daquiri.utils import InstrumentScanAccessRecorder
 from .axis import Axis, Detector, TestAxis, TestDetector
 
 
@@ -18,16 +22,6 @@ class Generate:
 
     def __init__(self, capture=None):
         self.capture = capture
-
-
-@dataclass
-class Property:
-    where: Optional[str] = None
-
-
-@dataclass
-class ChoiceProperty(Property):
-    choices: List[Any] = field(default_factory=list)
 
 
 class Specification:
@@ -169,15 +163,26 @@ class TestInstrument:
             self.wheremap[spec_name] = _unwrapped_where(spec.where or [spec_name])
         self.axis_tree = map_treelike_nodes(self.axis_tree, AttrDict)
 
+    def __setattr__(self, key, value):
+        if self.properties and key in self.properties:
+            logger.info(f'Writing attribute {key} -> {value}')
+
+        # should be pretty harmless
+        super().__setattr__(key, value)
+
     def __getattr__(self, item):
         if item in self.proxy_methods:
             def test_proxy_method(*args, **kwargs):
-                print(f'Called proxy method {item} with {args}, {kwargs}.')
+                logger.info(f'Called proxy method {item} with {args}, {kwargs}.')
 
             return test_proxy_method
 
         if item in self.properties:
-            return super().__getattribute__(self, item)
+            logger.info(f'Reading attribute {item}')
+            try:
+                return super().__getattribute__(item)
+            except AttributeError:
+                return None
 
         return functools.reduce(safe_lookup, self.wheremap[item], self.axis_tree)
 
@@ -238,6 +243,7 @@ class DaquiriInstrumentMeta(type):
                     namespace[name] = build_instrument_property(prop, name)
 
             namespace['profiles_'] = namespace.pop('profiles', {})
+            namespace['scan'] = lambda s: InstrumentScanAccessRecorder(s, specification, namespace.get('properties', {}))
 
             if 'proxy_methods' in namespace:
                 for proxy_method in namespace['proxy_methods']:

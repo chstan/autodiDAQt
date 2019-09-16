@@ -16,7 +16,6 @@ from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget
 from PyQt5 import QtCore
 from quamash import QEventLoop
 
-from daquiri.utils import DAQUIRI_LIB_ROOT
 from daquiri.config import Config, MetaData
 from daquiri.panel import Panel
 
@@ -254,6 +253,8 @@ class Daquiri:
             load_dotenv(str(dotenv_files[0]))
 
     def load_config(self):
+        from daquiri.utils import DAQUIRI_LIB_ROOT
+
         configs = {'win32': 'default_config_windows.json',}
         cfile = configs.get(sys.platform, 'default_config.json')
         defaults_path = DAQUIRI_LIB_ROOT / 'resources' / cfile

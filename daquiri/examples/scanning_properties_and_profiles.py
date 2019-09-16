@@ -1,13 +1,12 @@
-import numpy as np
-
 from pymeasure.instruments.signalrecovery.dsp7265 import DSP7265
 
 from daquiri import Daquiri, Experiment
-from daquiri.mock import MockMotionController, MockDetector
+from daquiri.mock import MockMotionController, MockScalarDetector
 from daquiri.scan import ScanAxis, scan
 
 from daquiri.instrument.spec import (
-    ManagedInstrument, Generate, AxisSpecification, ChoiceProperty)
+    ManagedInstrument, Generate, AxisSpecification)
+from daquiri.instrument.property import ChoiceProperty
 
 
 class ManagedDSP7265(ManagedInstrument):
@@ -21,39 +20,33 @@ class ManagedDSP7265(ManagedInstrument):
     mag = AxisSpecification(float)
 
     properties = {
-        'sensitivity': ChoiceProperty(choices=DSP7265.SENSITIVITIES),
-        'time_constant': ChoiceProperty(choices=DSP7265.TIME_CONSTANTS),
+        'sensitivity': ChoiceProperty(choices=DSP7265.SENSITIVITIES, labels=lambda x: f'{x} V'),
+        'time_constant': ChoiceProperty(choices=DSP7265.TIME_CONSTANTS, labels=lambda x: f'{x} s'),
     }
 
     profiles = {
         'Fast': {
             'sensitivity': DSP7265.SENSITIVITIES[8],
-            'time_constant': DSP7265.SENSITIVITIES[9],
+            'time_constant': DSP7265.TIME_CONSTANTS[9],
         },
         'Slow': {
             'sensitivity': DSP7265.SENSITIVITIES[8],
-            'time_constant': DSP7265.SENSITIVITIES[13],
+            'time_constant': DSP7265.TIME_CONSTANTS[13],
         }
     }
 
     proxy_methods = ['auto_sensitivity', 'auto_phase']
 
 
-# As before, a fake detector
-class MockSimpleDetector(MockDetector):
-    def generate(self):
-        return np.random.normal() + 5
+dx = MockMotionController.scan('mc').stages[0]
+sensitivity = ManagedDSP7265.scan('lockin').sensitivity
+time_constant = ManagedDSP7265.scan('lockin').time_constant
+
+read_power = {'power': 'power_meter.device', }
 
 
 class MyExperiment(Experiment):
-    dx = ScanAxis(MockMotionController.stages[0])
-    sensitivity = ScanAxis(ManagedDSP7265.sensitivity)
-    time_constant = ScanAxis(ManagedDSP7265.time_constant)
-
-    read_power = {'power': 'power_meter.device', }
-
     scan_methods = [
-        scan(x=dx, name='dx Scan', read=read_power),
         scan(x=dx, sensitivity=sensitivity, name='Sensitivity Scan', read=read_power),
         scan(x=dx, tc=time_constant, name='Time Constant Scan', read=read_power),
 
@@ -64,7 +57,7 @@ class MyExperiment(Experiment):
 
 app = Daquiri(__name__, {}, {'experiment': MyExperiment}, {
     'mc': MockMotionController,
-    'power_meter': MockSimpleDetector,
+    'power_meter': MockScalarDetector,
     'lockin': ManagedDSP7265,
 })
 

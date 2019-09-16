@@ -15,47 +15,9 @@ import itertools
 from loguru import logger
 
 from daquiri.interlock import InterlockException
-from daquiri.utils import RichEncoder
+from daquiri.utils import RichEncoder, ScanAccessRecorder
 from daquiri.actor import Actor
 from daquiri.panels import ExperimentPanel
-
-
-class AccessRecorder:
-    def __init__(self, scope):
-        self.path = []
-        self.scope = scope
-
-    def __getattr__(self, item):
-        self.path.append(item)
-        return self
-
-    def __getitem__(self, item):
-        self.path.append(item)
-        return self
-
-    def write(self, value):
-        return {
-            'write': value,
-            'path': self.path,
-            'scope': self.scope
-        }
-
-    def read(self):
-        return {
-            'read': None,
-            'path': self.path,
-            'scope': self.scope,
-        }
-
-    def __call__(self, *args, **kwargs):
-        return {
-            'call': (args, kwargs),
-            'path': self.path,
-            'scope': self.scope,
-        }
-
-    def full_path_(self):
-        return tuple([self.scope] + self.path)
 
 
 class ScopedAccessRecorder:
@@ -63,10 +25,10 @@ class ScopedAccessRecorder:
         self.scope = scope
 
     def __getattr__(self, item):
-        return getattr(AccessRecorder(self.scope), item)
+        return getattr(ScanAccessRecorder(self.scope), item)
 
     def __getitem__(self, item):
-        return AccessRecorder(self.scope)[item]
+        return ScanAccessRecorder(self.scope)[item]
 
 
 def tokenize_access_path(str_or_list) -> Tuple[Union[str, int]]:
@@ -493,15 +455,15 @@ class Experiment(FSM):
             **kwargs,
         })
 
-    def collate(self, independent: List[Tuple[AccessRecorder, str]] = None,
-                dependent: List[Tuple[AccessRecorder, str]] = None):
+    def collate(self, independent: List[Tuple[ScanAccessRecorder, str]] = None,
+                dependent: List[Tuple[ScanAccessRecorder, str]] = None):
         if independent is None:
             independent = []
         if dependent is None:
             dependent = []
 
         def unwrap(c):
-            if isinstance(c, list):
+            if isinstance(c, (list, tuple,)):
                 return tuple(c)
 
             return c.full_path_()
@@ -536,12 +498,13 @@ class Experiment(FSM):
     async def run_running(self, *_):
         try:
             next_step = next(self.current_run.sequence)
+            #print(next_step)
             await self.take_step(next_step)
         except StopIteration:
             # We're done! Time to save your data.
             self.messages.put_nowait('stop')
 
-    async def perform_single_daq(self, scope=None, path=None, read=None, write=None, preconditions=None, call=None):
+    async def perform_single_daq(self, scope=None, path=None, read=None, write=None, preconditions=None, is_property=False, call=None):
         try:
             if preconditions:
                 all_scopes = {k: v for k, v in itertools.chain(self.app.actors.items(), self.app.managed_instruments.items())
@@ -556,8 +519,11 @@ class Experiment(FSM):
             return
 
         instrument = self.app.managed_instruments[scope]
+        last_instrument = instrument
 
-        for p in path:
+        for p in (path[:-1] if is_property else path):
+            last_instrument = instrument
+
             if isinstance(p, int):
                 instrument = instrument[p]
             else:
@@ -584,7 +550,11 @@ class Experiment(FSM):
             if self.collation:
                 self.collation.receive(qual_name, write)
 
-            await instrument.write(write)
+            if is_property:
+                setattr(last_instrument, path[-1], write)
+            else:
+                await instrument.write(write)
+
             time = datetime.datetime.now()
             self.current_run.daq_values[qual_name].append({
                 'data': write,

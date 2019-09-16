@@ -352,7 +352,6 @@ def bind_dataclass(dataclass_instance, prefix: str, ui: Dict[str, QWidget]):
     :return:
     """
     relevant_widgets = {k.split(prefix)[1]: v  for k, v in ui.items() if k.startswith(prefix)}
-
     for field_name, field in dataclass_instance.__dataclass_fields__.items():
         translate_from_field, translate_to_field = {
             int: (lambda x: str(x), lambda x: int(x)),
@@ -360,7 +359,7 @@ def bind_dataclass(dataclass_instance, prefix: str, ui: Dict[str, QWidget]):
         }.get(field.type, (lambda x: x, lambda x: x))
 
         if issubclass(field.type, Enum):
-            forward_mapping = enum_mapping(field.type)
+            forward_mapping = dict(sorted(enum_mapping(field.type).items(), key=lambda x: int(x[1])))
             inverse_mapping = {v: k for k, v in forward_mapping.items()}
             translate_to_field = lambda x: forward_mapping[x]
             translate_from_field = lambda x: inverse_mapping[x]

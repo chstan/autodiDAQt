@@ -1,7 +1,12 @@
 from dataclasses import make_dataclass, field
+from enum import Enum
+
+from typing import Optional, Union, Iterator, Any
 
 import numpy as np
 import itertools
+
+from daquiri.utils import AccessRecorder, InstrumentScanAccessRecorder
 
 __all__ = ('ScanAxis', 'scan')
 
@@ -26,41 +31,67 @@ def str_device_to_list(device_name):
 
 
 class ScanAxis:
-    def __init__(self, device_name, limits=None, is_property=False):
-        self.devices = str_device_to_list(device_name)
-        self.limits = limits
-        self.name = device_name
-        self.is_property = is_property
+    def __init__(self, device_name: Union[str, AccessRecorder], limits=None, values=None, is_property=False):
+        if isinstance(device_name, InstrumentScanAccessRecorder):
+            self.devices = device_name.full_path_()
+            self.limits = device_name.limits_()
+            self.values = device_name.values_()
+            self.name = device_name.name_()
+            self.is_property = device_name.is_property_()
+        else:
+            self.devices = str_device_to_list(device_name)
+            self.name = device_name
+            self.is_property = is_property
+
+        if limits is not None:
+            self.limits = limits
+        if values is not None:
+            self.values = values
+
+    def to_fields(self, base_name):
+        if self.values is None:
+            return [(f'n_{base_name}', int, field(default=5)),
+                    (f'start_{base_name}', float, field(default=0)),
+                    (f'stop_{base_name}', float, field(default=10))]
+        else:
+            # TODO need to be careful here as the labels we present in the UI need to be massaged.
+            ValuesEnum = Enum(f'{base_name}Values', {k: i + 1 for i, (k, _) in enumerate(self.values.items())})
+
+            return [
+                (f'start_{base_name}', ValuesEnum, field(default=1)),
+                (f'stop_{base_name}', ValuesEnum, field(default=len(self.values)))
+            ]
+
+    def write(self, value):
+        return {'write': value, 'path': list(self.devices[1:]), 'scope': self.devices[0], 'is_property': self.is_property}
+
+    def iterate(self, fields, base_name) -> Iterator[Any]:
+        if self.values is None:
+            return np.linspace(getattr(fields, f'start_{base_name}'),
+                               getattr(fields, f'stop_{base_name}'),
+                               getattr(fields, f'n_{base_name}'), endpoint=True)
+        else:
+            start, stop = getattr(fields, f'start_{base_name}'), getattr(fields, f'stop_{base_name}')
+            return list(self.values.values())[start:stop]
 
     def __repr__(self):
-        return f'ScanAxis(device_name={self.devices}, limits={self.limits}, is_property={self.is_property})'
-
-    def __mul__(self, other):
-        multiplied = ScanAxis('')
-        multiplied.devices = self.devices + other.devices
-        multiplied.limits = self.limits + other.limits
-        return multiplied
+        return f'ScanAxis(device_name={self.devices}, limits={self.limits}, values={self.values})'
 
 
 def scan(name=None, read=None, profiles=None, setup=None, teardown=None,
-         preconditions=None, **axes: ScanAxis):
+         preconditions=None, **axes: Union[str, ScanAxis, AccessRecorder]):
     if name is None:
         raise ValueError('You must provide a name for the scan.')
 
     if read is None:
         read = {}
 
-    def build_field(base_name, axis):
-        return [(f'n_{base_name}', int, field(default=5)),
-                (f'start_{base_name}', float, field(default=0)),
-                (f'stop_{base_name}', float, field(default=10))]
-
-    fields = {ax_name: build_field(ax_name, axis) for ax_name, axis in axes.items()}
+    axes = {name: ax if isinstance(ax, ScanAxis) else ScanAxis(ax) for name, ax in axes.items()}
+    fields = {name: ax.to_fields(name) for name, ax in axes.items()}
 
     def sequence_scan(self, experiment, **kwargs):
         dependent = {read_name: str_device_to_list(read_device)
                      for read_name, read_device in read.items()}
-
         experiment.collate(
             independent=[[axis.devices, name]
                          for name, axis in axes.items()],
@@ -69,12 +100,7 @@ def scan(name=None, read=None, profiles=None, setup=None, teardown=None,
         )
 
         ax_names = list(axes.keys())
-        device_spaces = [
-            np.linspace(getattr(self, f'start_{ax_name}'),
-                        getattr(self, f'stop_{ax_name}'),
-                        getattr(self, f'n_{ax_name}'), endpoint=True)
-            for ax_name in ax_names
-        ]
+        device_spaces = [axis.iterate(fields=self, base_name=name) for name, axis in axes.items()]
 
         if preconditions:
             yield [{'preconditions': preconditions}]
@@ -88,10 +114,7 @@ def scan(name=None, read=None, profiles=None, setup=None, teardown=None,
         for locations in itertools.product(*device_spaces):
             with experiment.point():
                 experiment.comment(f'Moving {ax_names} to {locations}')
-                yield [
-                    {'write': location, 'path': axes[ax_name].devices[1:], 'scope': axes[ax_name].devices[0]}
-                    for ax_name, location in zip(ax_names, locations)
-                ]
+                yield [axes[ax_name].write(location) for ax_name, location in zip(ax_names, locations)]
                 yield [
                     {'read': None, 'path': dependent[read_name][1:], 'scope': dependent[read_name][0],}
                     for read_name in read.keys()
