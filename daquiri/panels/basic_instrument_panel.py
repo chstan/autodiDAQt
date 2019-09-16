@@ -47,7 +47,6 @@ class AxisSpecificationView:
 
         async def perform_move():
             await true_axis.write(value)
-            await true_axis.read()
 
         asyncio.get_event_loop().create_task(perform_move())
 
@@ -88,8 +87,12 @@ class AxisSpecificationView:
             jog_speed.subject.subscribe(set_speed)
 
             for axis, relative_speed in zip([neg_fast, neg_slow, pos_slow, pos_fast], [-5, -1, 1, 5]):
-                jog = functools.partial(self.jog, owner=owner, rel_speed=relative_speed)
-                axis.subject.subscribe(lambda _: jog())
+                def close_over_jog_info(rel_speed):
+                    def jog(_):
+                        self.jog(owner=owner, rel_speed=rel_speed)
+                    return jog
+
+                axis.subject.subscribe(close_over_jog_info(relative_speed))
 
         sub_value = submit(f'{self.id}-set', [f'{self.id}-edit'], ui)
         sub_value.subscribe(lambda v: self.move(owner, list(v.values())[0]))
