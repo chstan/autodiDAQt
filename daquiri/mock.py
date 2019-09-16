@@ -1,7 +1,8 @@
 import numpy as np
 
 from daquiri.instrument.spec import (
-    ManagedInstrument, Generate, AxisListSpecification, AxisSpecification)
+    ManagedInstrument, Generate)
+from daquiri.instrument.property import AxisListSpecification, AxisSpecification
 
 __all__ = ('MockMotionController', 'MockDetector', 'MockScalarDetector')
 

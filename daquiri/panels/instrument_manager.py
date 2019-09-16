@@ -8,6 +8,7 @@ from daquiri.ui import grid, CollectUI, horizontal, vertical, button, led
 
 __all__ = ('InstrumentManager',)
 
+
 class InstrumentManager(Panel):
     TITLE = 'Instruments'
     SIZE = (50, 50)

@@ -1,6 +1,13 @@
 import asyncio
+from typing import Optional
 
-__all__ = ('Axis', 'Detector',)
+import datetime
+import rx
+from rx.subject import Subject
+from daquiri.data import reactive_frame
+
+__all__ = ('Axis', 'Detector', 'TestAxis', 'TestDetector', 'ProxiedAxis',)
+
 
 class Detector:
     """
@@ -17,9 +24,19 @@ class Detector:
     IDLE = 0
     MOVING = 1
 
-    def __init__(self, name, schema):
+    raw_value_stream: Optional[Subject]
+    collected_value_stream: Optional[rx.Observable]
+
+    def __init__(self, name: str, schema: type):
         self.name = name
         self.schema = schema
+
+        # for scalar schemas we can provide a stream of values
+        if schema in (float, int,):
+            self.raw_value_stream, self.collected_value_stream = reactive_frame()
+        else:
+            self.raw_value_stream = None
+            self.collected_value_stream = None
 
     async def read(self):
         raise NotImplementedError('')
@@ -79,16 +96,21 @@ class ProxiedAxis(Axis):
 
     async def read(self):
         if self._status == Detector.IDLE:
-            return self._bound_read()
+            value = self._bound_read()
+            if self.raw_value_stream:
+                self.raw_value_stream.on_next({'value': value, 'time': datetime.datetime.now().timestamp()})
+            return value
         elif self._status == Detector.MOVING:
-
             sleep_time, sleep_backoff, sleep_maximum = self.backoff
 
             while True:
                 await asyncio.sleep(sleep_time)
                 if self._bound_poll_read():
                     self._status = Detector.IDLE
-                    return self._bound_read()
+                    value = self._bound_read()
+                    if self.raw_value_stream:
+                        self.raw_value_stream.on_next({'value': value, 'time': datetime.datetime.now().timestamp()})
+                    return value
 
                 sleep_time *= sleep_backoff
                 sleep_time = sleep_maximum if sleep_time > sleep_maximum else sleep_time
@@ -148,18 +170,29 @@ class TestDetector(Detector):
 
     async def read(self):
         if self._mock_read:
-            return self._mock_read()
+            value = self._mock_read()
+        else:
+            value = self._value
 
-        return self._value
+        if self.raw_value_stream:
+            self.raw_value_stream.on_next({'value': value, 'time': datetime.datetime.now().timestamp()})
+
+        return value
 
     def sync_read(self):
         if self._mock_read:
-            return self._mock_read()
+            value = self._mock_read()
+        else:
+            value = self._value
 
-        return self._value
+        if self.raw_value_stream:
+            self.raw_value_stream.on_next({'value': value, 'time': datetime.datetime.now().timestamp()})
+
+        return value
 
     async def trigger(self):
         return
+
 
 class TestAxis(TestDetector):
     async def write(self, value):

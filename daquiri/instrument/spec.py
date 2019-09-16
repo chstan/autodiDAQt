@@ -1,17 +1,16 @@
 import asyncio
 import copy
 import functools
-from typing import Any, List, Union
-
-from dataclasses import dataclass
+from typing import List
 
 from loguru import logger
 
 from daquiri.collections import AttrDict, map_treelike_nodes
-from daquiri.instrument.property import Property, ChoiceProperty
+from daquiri.instrument.property import Property, ChoiceProperty, Specification, AxisListSpecification, \
+    AxisSpecification
 from daquiri.panels.basic_instrument_panel import BasicInstrumentPanel
 from daquiri.actor import Actor
-from daquiri.utils import InstrumentScanAccessRecorder
+from daquiri.utils import InstrumentScanAccessRecorder, safe_lookup
 from .axis import Axis, Detector, TestAxis, TestDetector
 
 
@@ -23,76 +22,6 @@ class Generate:
     def __init__(self, capture=None):
         self.capture = capture
 
-
-class Specification:
-    pass
-
-
-class AxisListSpecification(Specification):
-    """
-    Represents the specification for a list of axes, such as is present on
-    a motion controller.
-    """
-    def __init__(self, internal_specification, where=None):
-        self.internal_specification = internal_specification
-        self.name = None
-        self.where = where
-
-    def __repr__(self):
-        return ('AxisListSpecification('
-                f'name={self.name!r},'
-                f'where={self.where!r},'
-                f'internal_specification={self.internal_specification!r},'
-                ')')
-
-
-class AxisSpecification(Specification):
-    """
-    Represents a single axis or detector.
-    """
-    def __init__(self, schema, where=None, range=None, validator=None, axis=True, read=None, write=None):
-        self.name = None
-        self.schema = schema
-        self.range = range
-        self.validator = validator
-        self.is_axis = axis
-        self.read = read
-        self.write = write
-        self.where = where
-
-    def __repr__(self):
-        return ('AxisSpecification('
-                f'name={self.name!r},'
-                f'where={self.where!r},'
-                f'schema={self.schema!r},'
-                f'range={self.range!r},'
-                f'validator={self.validator!r},'
-                f'is_axis={self.is_axis!r},'
-                f'read={self.read}'
-                f'write={self.write}'
-                ')')
-
-
-class DetectorSpecification(AxisSpecification):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs, axis=True)
-
-
-@dataclass
-class PolledWrite:
-    write: str
-    poll: str
-
-
-@dataclass
-class PolledRead:
-    read: str
-    poll: str
-
-
-def _unwrapped_where(where):
-    as_list = where.split('.') if isinstance(where, str) else where
-    return as_list
 
 def _test_axis(axis_specification: AxisSpecification, **kwargs):
     cls = TestAxis if axis_specification.is_axis else TestDetector
@@ -125,7 +54,7 @@ class TestInstrument:
         for spec_name, spec in self.specification.items():
             if isinstance(spec, AxisListSpecification):
                 current_tree = self.axis_tree
-                where = _unwrapped_where(spec.where or [spec_name])
+                where = spec.where_list or [spec_name]
 
                 for key in where[:-1]:
                     if key not in current_tree:
@@ -142,7 +71,7 @@ class TestInstrument:
                     current_tree[where[-1]][i] = _test_axis(spec.internal_specification(i))
             elif isinstance(spec, AxisSpecification):
                 current_tree = self.axis_tree
-                where = _unwrapped_where(spec.where or [spec_name])
+                where = spec.where_list or [spec_name]
 
                 for key in where[:-1]:
                     if key not in current_tree:
@@ -160,7 +89,7 @@ class TestInstrument:
 
                 current_tree[where[-1]] = _test_axis(spec, **test_axis_context)
 
-            self.wheremap[spec_name] = _unwrapped_where(spec.where or [spec_name])
+            self.wheremap[spec_name] = spec.where_list or [spec_name]
         self.axis_tree = map_treelike_nodes(self.axis_tree, AttrDict)
 
     def __setattr__(self, key, value):
@@ -187,14 +116,8 @@ class TestInstrument:
         return functools.reduce(safe_lookup, self.wheremap[item], self.axis_tree)
 
 
-def safe_lookup(d: Any, s: Union[str, int]):
-    if isinstance(s, str):
-        return getattr(d, s)
-    return d[s]
-
-
 def build_instrument_property(prop: Property, name: str):
-    where = _unwrapped_where(prop.where or [name])
+    where = prop.where_list or [name]
 
     def property_getter(self):
         return functools.reduce(safe_lookup, where, self.driver)

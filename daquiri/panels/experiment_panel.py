@@ -15,12 +15,20 @@ pg.setConfigOption('foreground', 'k')
 
 
 class ExperimentPanel(Panel):
+    """
+    Responsible for drawing the UI for an "Experiment".
+
+    You can extend this by subclassing the UI and changing `extra_panels` or by redefining the behavior of
+    the layout function, as is appropriate for your application. If you find yourself needing to make serious
+    modifications you can make a feature request or suggest a reorg of the code.
+    """
     SIZE = (900, 450)
     TITLE = 'Experiment'
     DEFAULT_OPEN = True
     RESTART = True
     LEFT_PANEL_SIZE: int = 200
 
+    extra_panels = []
     dynamic_state_mounted: bool = False
     built_widgets = None
     pg_widgets = None
@@ -209,10 +217,10 @@ class ExperimentPanel(Panel):
                             combo_box([s.__name__ for s in scan_methods], id='selected_scan_method'),
                         ),
                         tabs(
-                            ['Status', vertical('Status')],
                             ['Scans', tabs(
                                 *self.layout_scan_methods(scan_methods)
                             )],
+                            *self.extra_panels,
                         ),
                     ),
                     vertical(
