@@ -31,6 +31,7 @@ def str_device_to_list(device_name):
 
 
 class ScanAxis:
+    values = None
     def __init__(self, device_name: Union[str, AccessRecorder], limits=None, values=None, is_property=False):
         if isinstance(device_name, InstrumentScanAccessRecorder):
             self.devices = device_name.full_path_()
