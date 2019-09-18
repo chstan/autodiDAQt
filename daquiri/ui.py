@@ -361,8 +361,15 @@ def bind_dataclass(dataclass_instance, prefix: str, ui: Dict[str, QWidget]):
         if issubclass(field.type, Enum):
             forward_mapping = dict(sorted(enum_mapping(field.type).items(), key=lambda x: int(x[1])))
             inverse_mapping = {v: k for k, v in forward_mapping.items()}
+
+            def extract_field(v):
+                try:
+                    return v.value
+                except AttributeError:
+                    return v
+
             translate_to_field = lambda x: forward_mapping[x]
-            translate_from_field = lambda x: inverse_mapping[x]
+            translate_from_field = lambda x: inverse_mapping[extract_field(x)]
 
         current_value = translate_from_field(getattr(dataclass_instance, field_name))
         w = relevant_widgets[field_name]
