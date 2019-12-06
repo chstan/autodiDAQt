@@ -82,5 +82,10 @@ replacing [example_name] with one of:
 10. scanning_setup_and_teardown
 11. scanning_properties_and_profiles
 
+You can also get a list of all the available examples by running
+
+::
+
+  $ python -m daquiri.examples
 
 
