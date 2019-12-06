@@ -27,6 +27,7 @@ from daquiri.ui import led, button, vertical, horizontal, CollectUI
 
 __all__ = ('Daquiri',)
 
+
 class DaquiriMainWindow(QMainWindow):
     """
     Internal, the PyQt main window

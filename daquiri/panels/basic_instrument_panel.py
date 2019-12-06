@@ -146,13 +146,12 @@ class BasicInstrumentPanel(Panel):
         self.actor = instrument_actor
         self.id_to_path = {}
         self.axis_views = []
+        self.ui = {}
 
-        print(instrument_description)
         super().__init__(parent, id, app)
 
     def retrieve(self, path: List[Union[str, int]]):
         instrument = self.app.managed_instruments[self.id]
-        print(instrument, path)
         return functools.reduce(safe_lookup, path, instrument)
 
     def write_to_instrument(self):
@@ -173,7 +172,6 @@ class BasicInstrumentPanel(Panel):
         return self.layout_for_single_axis(description, path_to_axis=[key])
 
     def layout(self):
-        self.ui = {}
         with CollectUI(self.ui):
             grid(
                 tabs(

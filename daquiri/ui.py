@@ -117,7 +117,7 @@ class CollectUI:
 
 
 @ui_builder
-def layout(*children, layout_cls=None, widget=None):
+def layout(*children, layout_cls=None, widget=None, min_width=None, min_height=None):
     if layout_cls is None:
         layout_cls = QGridLayout
 
@@ -130,12 +130,18 @@ def layout(*children, layout_cls=None, widget=None):
         internal_layout.addWidget(_wrap_text(child))
 
     widget.setLayout(internal_layout)
+    if min_width:
+        widget.setMinimumWidth(min_width)
+    if min_height:
+        widget.setMinimumHeight(min_height)
 
     return widget
+
 
 grid = functools.partial(layout, layout_cls=QGridLayout)
 vertical = functools.partial(layout, layout_cls=QVBoxLayout)
 horizontal = functools.partial(layout, layout_cls=QHBoxLayout)
+
 
 @ui_builder
 def splitter(first, second, direction=Qt.Vertical, size=None):
@@ -148,6 +154,7 @@ def splitter(first, second, direction=Qt.Vertical, size=None):
         split_widget.setSizes(size)
 
     return split_widget
+
 
 splitter.Vertical = Qt.Vertical
 splitter.Horizontal = Qt.Horizontal

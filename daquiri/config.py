@@ -15,6 +15,7 @@ class Config:
         ret = self._cached_settings[item]
         return AttrDict(ret) if isinstance(ret, dict) else ret
 
+
 class MetaData:
     """
     Some __getattr__ foo here. Note that because we define __getattr__
