@@ -82,11 +82,11 @@ class DetectorSpecification(AxisSpecification):
 
 @dataclass
 class PolledWrite:
-    write: str
-    poll: str
+    write: Optional[str] = None
+    poll: Optional[str] = None
 
 
 @dataclass
 class PolledRead:
     read: str
-    poll: str
+    poll: Optional[str] = None

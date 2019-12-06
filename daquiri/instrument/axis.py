@@ -5,6 +5,7 @@ import datetime
 import rx
 from rx.subject import Subject
 from daquiri.data import reactive_frame
+from daquiri.instrument.property import PolledWrite, PolledRead
 
 __all__ = ('Axis', 'Detector', 'TestAxis', 'TestDetector', 'ProxiedAxis',)
 
@@ -67,12 +68,20 @@ class ProxiedAxis(Axis):
         self.driver = driver
         self._status = Detector.IDLE
 
+        if isinstance(read, str):
+            read = PolledRead(read=read, poll=None)
+
+        if isinstance(write, str) or write is None:
+            write = PolledWrite(write=write, poll=None)
+
         # Exponential backoff constants, wait 30ms initially, then 45ms (30ms x 1.5) up to 200ms maximum
         self.backoff = (0.03, 1.5, 0.2,)
 
         def _bind(function_name):
             d = driver
             for w in where + [function_name]:
+                if w is None:
+                    raise AttributeError()
                 if isinstance(w, str):
                     d = getattr(d, w)
                 else:
@@ -87,16 +96,24 @@ class ProxiedAxis(Axis):
         except AttributeError:
             self._bound_poll_read = None
             self._bound_read = _bind(read.read)
-        try:
-            self._bound_poll_write = _bind(write.poll)
-            self._bound_write = _bind(write.write)
-        except AttributeError:
-            self._bound_poll_write = None
-            self._bound_write = _bind(write.write)
+        if write.write is not None:
+            try:
+                self._bound_poll_write = _bind(write.poll)
+                self._bound_write = _bind(write.write)
+            except AttributeError:
+                self._bound_poll_write = None
+                self._bound_write = _bind(write.write)
+        else:
+            # A proxied detector only...
+            pass
 
     async def read(self):
         if self._status == Detector.IDLE:
             value = self._bound_read()
+
+            if asyncio.iscoroutine(value):
+                value = await value
+
             if self.raw_value_stream:
                 self.raw_value_stream.on_next({'value': value, 'time': datetime.datetime.now().timestamp()})
             return value

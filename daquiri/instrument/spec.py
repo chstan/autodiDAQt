@@ -11,7 +11,7 @@ from daquiri.instrument.property import Property, ChoiceProperty, Specification,
 from daquiri.panels.basic_instrument_panel import BasicInstrumentPanel
 from daquiri.actor import Actor
 from daquiri.utils import InstrumentScanAccessRecorder, safe_lookup
-from .axis import Axis, Detector, TestAxis, TestDetector
+from .axis import Axis, Detector, TestAxis, TestDetector, ProxiedAxis
 
 
 class Generate:
@@ -31,6 +31,7 @@ def _test_axis(axis_specification: AxisSpecification, **kwargs):
 def _axis_from_specification(axis_specification: Specification, driver=None):
     if isinstance(axis_specification, AxisListSpecification):
         pass
+
 
 class TestInstrument:
     specification = None
@@ -197,14 +198,6 @@ class ManagedInstrument(Actor, metaclass=DaquiriInstrumentMeta):
             setattr(self, name, value)
 
     @property
-    def axes(self) -> List[Axis]:
-        return []
-
-    @property
-    def detectors(self) -> List[Detector]:
-        return []
-
-    @property
     def ui_specification(self):
         ui_spec = {
             'axis_root': {},
@@ -221,6 +214,18 @@ class ManagedInstrument(Actor, metaclass=DaquiriInstrumentMeta):
 
         return ui_spec
 
+    def build_axes(self):
+        self.axes_and_detectors = {}
+        for k, v in self.specification_.items():
+            if isinstance(v, AxisSpecification):
+                self.axes_and_detectors[k] = ProxiedAxis(
+                    name=k, schema=v.schema, where=v.where, driver=self.driver, read=v.read, write=v.write
+                )
+            elif isinstance(v, AxisListSpecification):
+                print(k, v)
+            else:
+                raise ValueError(f'Unknown Axis Specification {v}')
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -229,13 +234,16 @@ class ManagedInstrument(Actor, metaclass=DaquiriInstrumentMeta):
             self.driver = self.test_cls(wrapper=self)
         else:
             self.driver = self.driver_cls()
+            self.build_axes()
 
     def __getattribute__(self, name):
-        if name in ['__dict__', 'proxy_to_driver', 'specification_'] or name not in self.specification_:
+        if name in ['__dict__', 'axis_and_detectors', 'proxy_to_driver', 'specification_'] or name not in self.specification_:
             return super().__getattribute__(name)
 
         if self.proxy_to_driver:
             return getattr(self.driver, name)
+        elif name in self.axes_and_detectors:
+            return self.axes_and_detectors[name]
 
         return super().__getattribute__(name)
 
