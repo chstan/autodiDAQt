@@ -59,6 +59,13 @@ class InstrumentManager(Panel):
 
         self.layout()
         self.resize(*self.SIZE)
+        self.open_default_panels()
+
+    def open_default_panels(self):
+        for panel_name in self._panels.keys():
+            panel_cls = self.app.managed_instruments[panel_name].panel_cls
+            if panel_cls.DEFAULT_OPEN:
+                self.launch_panel(panel_name)
 
     def layout(self):
         ui = {}
