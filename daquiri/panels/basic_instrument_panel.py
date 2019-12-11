@@ -10,7 +10,7 @@ from typing import List, Union
 
 from loguru import logger
 
-from daquiri.instrument.property import AxisSpecification
+from daquiri.instrument.axis import ProxiedAxis, LogicalAxis, TestAxis
 from daquiri.utils import safe_lookup
 from daquiri.ui import grid, tabs, vertical, group, horizontal, label, line_edit, button, CollectUI, submit
 from daquiri.panel import Panel
@@ -21,45 +21,53 @@ class TimeAxisItem(pg.AxisItem):
         return [datetime.datetime.fromtimestamp(value) for value in values]
 
 
-class AxisSpecificationView:
-    def __init__(self, spec: AxisSpecification, path_to_axis: List[Union[str, int]]):
-        self.spec = spec
+class AxisView:
+    def __init__(self, axis, path_to_axis: List[Union[str, int]]):
+        self.axis = axis
         self.path_to_axis = path_to_axis
         self.id = '.'.join(map(str, path_to_axis))
-        self.raw_jog_speed = None
-        self.live_plot = None
 
     @property
     def joggable(self):
-        return self.spec.schema in (float,)
+        return self.axis.schema in (float,)
 
     @property
     def live_plottable(self):
-        return self.spec.schema in (float, int,)
+        return self.axis.schema in (float, int,)
 
-    def move(self, owner, raw_value):
+    def attach(self, ui):
+        raise NotImplementedError()
+
+    def layout(self):
+        raise NotImplementedError()
+
+
+class ProxiedAxisView(AxisView):
+    def __init__(self, axis, path_to_axis):
+        super().__init__(axis, path_to_axis)
+
+        self.raw_jog_speed = None
+        self.live_plot = None
+
+    def move(self, raw_value):
         try:
-            value = self.spec.schema(raw_value)
+            value = self.axis.schema(raw_value)
         except ValueError:
             return
 
-        true_axis = owner.retrieve(self.path_to_axis)
-
         async def perform_move():
-            await true_axis.write(value)
+            await self.axis.write(value)
 
         asyncio.get_event_loop().create_task(perform_move())
 
-    def jog(self, owner, rel_speed=1):
+    def jog(self, rel_speed=1):
         try:
             speed = float(self.raw_jog_speed)
             amount = rel_speed * speed
 
-            true_axis = owner.retrieve(self.path_to_axis)
-
             async def perform_jog():
-                current_value = await true_axis.read()
-                await true_axis.write(current_value + amount)
+                current_value = await self.axis.read()
+                await self.axis.write(current_value + amount)
 
             asyncio.get_event_loop().create_task(perform_jog())
 
@@ -69,14 +77,13 @@ class AxisSpecificationView:
     def update_plot(self, value: pd.DataFrame):
         self.live_plot.setData(value['time'], value['value'])
 
-    def attach(self, owner, ui):
-        true_axis = owner.retrieve(self.path_to_axis)
+    def attach(self, ui):
         if self.live_plot:
-            true_axis.collected_value_stream.subscribe(self.update_plot)
+            self.axis.collected_value_stream.subscribe(self.update_plot)
 
-        if true_axis.raw_value_stream:
+        if self.axis.raw_value_stream:
             label_widget = ui[f'{self.id}-last_value']
-            true_axis.raw_value_stream.subscribe(lambda v: label_widget.setText(str(v['value'])))
+            self.axis.raw_value_stream.subscribe(lambda v: label_widget.setText(str(v['value'])))
 
         if self.joggable:
             neg_fast, neg_slow, pos_slow, pos_fast, jog_speed = [
@@ -89,13 +96,13 @@ class AxisSpecificationView:
             for axis, relative_speed in zip([neg_fast, neg_slow, pos_slow, pos_fast], [-5, -1, 1, 5]):
                 def close_over_jog_info(rel_speed):
                     def jog(_):
-                        self.jog(owner=owner, rel_speed=rel_speed)
+                        self.jog(rel_speed=rel_speed)
                     return jog
 
                 axis.subject.subscribe(close_over_jog_info(relative_speed))
 
         sub_value = submit(f'{self.id}-set', [f'{self.id}-edit'], ui)
-        sub_value.subscribe(lambda v: self.move(owner, list(v.values())[0]))
+        sub_value.subscribe(lambda v: self.move(list(v.values())[0]))
 
     def layout(self):
         jog_controls = []
@@ -124,6 +131,27 @@ class AxisSpecificationView:
                 *live_plots,
             ),
         )
+
+
+class LogicalAxisView(AxisView):
+    sub_axes = None
+
+    def attach(self, ui):
+        for view in self.sub_views:
+            view.attach(ui)
+
+    def layout(self):
+        self.sub_axes = [getattr(self.axis, n) for n in self.axis.coordinate_names]
+        self.sub_views = [ProxiedAxisView(axis, self.path_to_axis + [n])
+                          for axis, n in zip(self.sub_axes, self.axis.coordinate_names)]
+
+        return tabs(
+            *[[n, sub_view.layout()] for sub_view, n in zip(self.sub_views, self.axis.coordinate_names)]
+        )
+
+
+class TestAxisView(ProxiedAxisView):
+    pass
 
 
 class UIEncoder(json.JSONEncoder):
@@ -157,8 +185,16 @@ class BasicInstrumentPanel(Panel):
     def write_to_instrument(self):
         pass
 
-    def layout_for_single_axis(self, description: AxisSpecification, path_to_axis):
-        view = AxisSpecificationView(description, path_to_axis)
+    def layout_for_single_axis(self, description: Union[ProxiedAxis, LogicalAxis, TestAxis], path_to_axis):
+        view_cls = {
+            ProxiedAxis: ProxiedAxisView,
+            LogicalAxis: LogicalAxisView,
+            TestAxis: TestAxisView,
+        }.get(type(description))
+
+        print(description, view_cls)
+
+        view = view_cls(description, path_to_axis)
         self.axis_views.append(view)
         return view.layout()
 
@@ -176,11 +212,10 @@ class BasicInstrumentPanel(Panel):
             grid(
                 tabs(
                     *[[k, self.tab_for_axis_group(k)] for k in self.description['axis_root']],
-                    ['Settings', grid('Settings', *[x + ',' for x in
-                                                     json.dumps(self.description['properties'], cls=UIEncoder).split(
-                                                         ',')])],
+                    ['Settings', grid(
+                        'Settings', *[x + ',' for x in json.dumps(
+                            self.description['properties'], cls=UIEncoder).split(',')])],
                     ['Functions', grid('Functions', 'Stuff here eventually.')],
-                    #['Settings', grid('Settings')],
                     #['Connection', grid('Connection')],
                     #['Statistics', grid('Statistics')],
                     #['Terminal', grid('Terminal')],
@@ -188,4 +223,4 @@ class BasicInstrumentPanel(Panel):
                 widget=self)
 
         for axis_view in self.axis_views:
-            axis_view.attach(self, self.ui)
+            axis_view.attach(self.ui)

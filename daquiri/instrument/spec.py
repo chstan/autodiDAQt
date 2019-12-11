@@ -1,120 +1,11 @@
 import asyncio
-import copy
 import functools
-from typing import List
 
-from loguru import logger
-
-from daquiri.collections import AttrDict, map_treelike_nodes
-from daquiri.instrument.property import Property, ChoiceProperty, Specification, AxisListSpecification, \
-    AxisSpecification
+from daquiri.instrument.property import Property, ChoiceProperty, Specification, LogicalAxisSpecification
+from daquiri.mock import MockDriver
 from daquiri.panels.basic_instrument_panel import BasicInstrumentPanel
 from daquiri.actor import Actor
-from daquiri.utils import InstrumentScanAccessRecorder, safe_lookup
-from .axis import Axis, Detector, TestAxis, TestDetector, ProxiedAxis
-
-
-class Generate:
-    """
-    A sentinel for code generation
-    """
-
-    def __init__(self, capture=None):
-        self.capture = capture
-
-
-def _test_axis(axis_specification: AxisSpecification, **kwargs):
-    cls = TestAxis if axis_specification.is_axis else TestDetector
-    return cls(axis_specification.name, axis_specification.schema, **kwargs)
-
-
-def _axis_from_specification(axis_specification: Specification, driver=None):
-    if isinstance(axis_specification, AxisListSpecification):
-        pass
-
-
-class TestInstrument:
-    specification = None
-    context = None
-    properties = None
-    proxy_methods = None
-
-    def __init__(self, wrapper):
-        self.axis_tree = {}
-        self.wheremap = {}
-        self.wrapper = wrapper
-        if self.properties is None:
-            self.properties = {}
-
-        if self.proxy_methods is None:
-            self.proxy_methods = []
-
-        if self.context is None:
-            self.context = {}
-
-        for spec_name, spec in self.specification.items():
-            if isinstance(spec, AxisListSpecification):
-                current_tree = self.axis_tree
-                where = spec.where_list or [spec_name]
-
-                for key in where[:-1]:
-                    if key not in current_tree:
-                        current_tree[key] = {}
-
-                    current_tree = current_tree[key]
-
-                length = self.context[spec_name]['length']
-
-                assert(where[-1] not in current_tree)
-                current_tree[where[-1]] = {}
-
-                for i in range(length):
-                    current_tree[where[-1]][i] = _test_axis(spec.internal_specification(i))
-            elif isinstance(spec, AxisSpecification):
-                current_tree = self.axis_tree
-                where = spec.where_list or [spec_name]
-
-                for key in where[:-1]:
-                    if key not in current_tree:
-                        current_tree[key] = {}
-
-                    current_tree = current_tree[key]
-
-                assert(where[-1]) not in current_tree
-
-                test_axis_context = copy.copy(self.context.get(spec_name, {}))
-                if 'mock_read' in test_axis_context:
-                    test_axis_context['mock_read'] = getattr(self.wrapper, test_axis_context['mock_read'])
-                if 'mock_write' in test_axis_context:
-                    test_axis_context['mock_write'] = getattr(self.wrapper, test_axis_context['mock_write'])
-
-                current_tree[where[-1]] = _test_axis(spec, **test_axis_context)
-
-            self.wheremap[spec_name] = spec.where_list or [spec_name]
-        self.axis_tree = map_treelike_nodes(self.axis_tree, AttrDict)
-
-    def __setattr__(self, key, value):
-        if self.properties and key in self.properties:
-            logger.info(f'Writing attribute {key} -> {value}')
-
-        # should be pretty harmless
-        super().__setattr__(key, value)
-
-    def __getattr__(self, item):
-        if item in self.proxy_methods:
-            def test_proxy_method(*args, **kwargs):
-                logger.info(f'Called proxy method {item} with {args}, {kwargs}.')
-
-            return test_proxy_method
-
-        if item in self.properties:
-            logger.info(f'Reading attribute {item}')
-            try:
-                return super().__getattribute__(item)
-            except AttributeError:
-                return None
-
-        return functools.reduce(safe_lookup, self.wheremap[item], self.axis_tree)
+from daquiri.utils import safe_lookup, tokenize_access_path
 
 
 def build_instrument_property(prop: Property, name: str):
@@ -143,109 +34,64 @@ def build_proxy_method(proxy_name):
     return proxy_method
 
 
-class DaquiriInstrumentMeta(type):
-    """
-    Represents a wrapped physical instrument. This metaclass is
-    responsible for:
-
-    1. Collecting and compiling user specifications for detectors and axes
-    2. Generating a test class if required
-    3. Collecting and making available a schema for the UI
-    """
-
-    def __new__(cls, name, bases, namespace, **kwargs):
-        driver_cls = namespace.get('driver_cls')
-        is_abstract_subclass = driver_cls is None
-
-        if not is_abstract_subclass:
-            specification = {k: v for k, v in namespace.items() if isinstance(v, Specification)}
-            namespace['specification_'] = specification
-
-            if 'properties' in namespace:
-                for name, prop in namespace['properties'].items():
-                    assert name not in namespace
-                    namespace[name] = build_instrument_property(prop, name)
-
-            namespace['profiles_'] = namespace.pop('profiles', {})
-            namespace['scan'] = lambda s: InstrumentScanAccessRecorder(s, specification, namespace.get('properties', {}))
-
-            if 'proxy_methods' in namespace:
-                for proxy_method in namespace['proxy_methods']:
-                    assert proxy_method not in namespace
-
-                    namespace[proxy_method] = build_proxy_method(proxy_method)
-
-            if isinstance(namespace['test_cls'], Generate):
-                class SpecializedTestInstrument(TestInstrument):
-                    specification = namespace['specification_']
-                    context = namespace['test_cls'].capture
-                    properties = namespace.get('properties')
-                    proxy_methods = namespace.get('proxy_methods', [])
-
-                namespace['test_cls'] = SpecializedTestInstrument
-
-        return super().__new__(cls, name, bases, namespace)
-
-
-class ManagedInstrument(Actor, metaclass=DaquiriInstrumentMeta):
+class ManagedInstrument(Actor):
     panel_cls = BasicInstrumentPanel
+
     driver_cls = None
     test_cls = None
-    proxy_to_driver = False
+
+    properties = {}
+    profiles = {}
+    proxy_methods = []
 
     def set_profile(self, profile_name):
-        for name, value in self.profiles_[profile_name].items():
+        for name, value in self.profiles[profile_name].items():
             setattr(self, name, value)
 
     @property
     def ui_specification(self):
-        ui_spec = {
-            'axis_root': {},
-            'properties': {},
+        return {
+            'axis_root': {k: getattr(self, k) for k in self.specification_.keys()},
+            'properties': {}
         }
 
-        for spec_name, spec in self.specification_.items():
-            axis = getattr(self, spec_name)
+    def lookup_axis(self, axis_path):
+        axis_path = tokenize_access_path(axis_path)
 
-            if isinstance(spec, AxisListSpecification):
-                ui_spec['axis_root'][spec_name] = [spec.internal_specification(i) for i in range(len(axis))]
+        current = self
+        for elem in axis_path:
+            if isinstance(elem, str):
+                current = getattr(current, elem)
             else:
-                ui_spec['axis_root'][spec_name] = spec
+                current = current[elem]
 
-        return ui_spec
-
-    def build_axes(self):
-        self.axes_and_detectors = {}
-        for k, v in self.specification_.items():
-            if isinstance(v, AxisSpecification):
-                self.axes_and_detectors[k] = ProxiedAxis(
-                    name=k, schema=v.schema, where=v.where, driver=self.driver, read=v.read, write=v.write
-                )
-            elif isinstance(v, AxisListSpecification):
-                print(k, v)
-            else:
-                raise ValueError(f'Unknown Axis Specification {v}')
+        return current
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        if self.app.config.instruments.simulate_instruments:
-            self.proxy_to_driver = True
-            self.driver = self.test_cls(wrapper=self)
-        else:
-            self.driver = self.driver_cls()
-            self.build_axes()
+        simulate = self.app.config.instruments.simulate_instruments
+        self.driver = MockDriver() if simulate else self.driver_cls()
 
-    def __getattribute__(self, name):
-        if name in ['__dict__', 'axis_and_detectors', 'proxy_to_driver', 'specification_'] or name not in self.specification_:
-            return super().__getattribute__(name)
+        def is_spec(s):
+            try:
+                return isinstance(getattr(self, s), Specification)
+            except:
+                return False
 
-        if self.proxy_to_driver:
-            return getattr(self.driver, name)
-        elif name in self.axes_and_detectors:
-            return self.axes_and_detectors[name]
+        spec_names = [s for s in dir(self) if is_spec(s)]
+        self.specification_ = {spec_name: getattr(self, spec_name) for spec_name in spec_names}
 
-        return super().__getattribute__(name)
+        for spec_name in spec_names:
+            spec = getattr(self, spec_name)
+            if not isinstance(spec, LogicalAxisSpecification):
+                setattr(self, spec_name, spec.realize(spec_name, self.driver, self))
+
+        # logical axes require physical axes instantiated so we do this in a second pass for now
+        for spec_name in spec_names:
+            spec = getattr(self, spec_name)
+            if isinstance(spec, LogicalAxisSpecification):
+                setattr(self, spec_name, spec.realize(spec_name, self.driver, self))
 
     async def run(self):
         while True:

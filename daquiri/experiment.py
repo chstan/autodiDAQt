@@ -15,7 +15,7 @@ import itertools
 from loguru import logger
 
 from daquiri.interlock import InterlockException
-from daquiri.utils import RichEncoder, ScanAccessRecorder
+from daquiri.utils import RichEncoder, ScanAccessRecorder, tokenize_access_path
 from daquiri.actor import Actor
 from daquiri.panels import ExperimentPanel
 
@@ -29,27 +29,6 @@ class ScopedAccessRecorder:
 
     def __getitem__(self, item):
         return ScanAccessRecorder(self.scope)[item]
-
-
-def tokenize_access_path(str_or_list) -> Tuple[Union[str, int]]:
-    """
-    Turns a string-like accessor into a list of tokens
-
-    a.b[0].c -> ['a', 'b', 0, 'c']
-
-    :param str_or_list:
-    :return:
-    """
-    if isinstance(str_or_list, (tuple, list)):
-        return str_or_list
-
-    def safe_unwrap_int(value):
-        try:
-            return int(value)
-        except ValueError:
-            return str(value)
-
-    return tuple([safe_unwrap_int(x) for x in str_or_list.replace('[', '.').replace(']', '').split('.') if x])
 
 
 class FSM(Actor):

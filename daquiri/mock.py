@@ -1,39 +1,39 @@
 import numpy as np
 
-from daquiri.instrument.spec import (
-    ManagedInstrument, Generate)
+from daquiri.instrument.spec import ManagedInstrument
 from daquiri.instrument.property import AxisListSpecification, AxisSpecification
 
-__all__ = ('MockMotionController', 'MockDetector', 'MockScalarDetector')
+__all__ = ('MockMotionController', 'MockScalarDetector')
+
 
 class MockDriver:
     """
     A fake driver
     """
 
+
 class MockMotionController(ManagedInstrument):
     driver_cls = MockDriver
-    test_cls = Generate({'stages': {'length': 3}})
 
     stages = AxisListSpecification(
-        lambda index: AxisSpecification(
-            float, where=['axis', index],
-            read='position',
-            write='move'),
-        where='axis',
+        float,
+        where=lambda i: ['axis', i],
+        read='position',
+        write='move',
+
+        mock=dict(n=3),
     )
 
 
-class MockDetector(ManagedInstrument):
+class MockScalarDetector(ManagedInstrument):
     driver_cls = MockDriver
-    test_cls = Generate({'device': {'mock_read': 'generate'}})
+    device = AxisSpecification(
+        float, where=['device'],
+        mock=dict(read=lambda: np.random.normal() + 5)
+    )
 
-    device = AxisSpecification(float, where=['device'])
-
-    def generate(self):
-        return 3.14159
-
-
-class MockScalarDetector(MockDetector):
-    def generate(self):
-        return np.random.normal() + 5
+    async def run(self):
+        while True:
+            import asyncio
+            await asyncio.sleep(0.1)
+            await self.device.read()

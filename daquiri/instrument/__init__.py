@@ -1,7 +1,6 @@
 from .front_panel import *
 from .ivi_front_panel import *
 from .axis import Axis, Detector
-from .spec import DaquiriInstrumentMeta
 
 
 def open_instrument(instrument_fp_cls, experiment, name, address=None):

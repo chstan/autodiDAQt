@@ -3,20 +3,41 @@ from json import JSONEncoder
 from pathlib import Path
 import enum
 import asyncio
-from typing import Dict, List, Type, TypeVar, Any, Union
-
-from daquiri.instrument.property import ChoiceProperty
+from typing import Dict, List, Type, TypeVar, Any, Union, Tuple
 
 __all__ = (
     'DAQUIRI_LIB_ROOT', 'run_on_loop', 'find_conflict_free_matches',
     'gather_dict', 'find_conflict_free_matches',
     'enum_option_names', 'enum_mapping',
+    'tokenize_access_path',
     'AccessRecorder',
     'ScanAccessRecorder',
     'InstrumentScanAccessRecorder',
 )
 
 DAQUIRI_LIB_ROOT = Path(__file__).parent.absolute()
+
+
+def tokenize_access_path(str_or_list) -> Tuple[Union[str, int]]:
+    """
+    Turns a string-like accessor into a list of tokens
+
+    a.b[0].c -> ['a', 'b', 0, 'c']
+
+    :param str_or_list:
+    :return:
+    """
+    if isinstance(str_or_list, (tuple, list)):
+        return str_or_list
+
+    def safe_unwrap_int(value):
+        try:
+            return int(value)
+        except ValueError:
+            return str(value)
+
+    return tuple([safe_unwrap_int(x) for x in str_or_list.replace('[', '.').replace(']', '').split('.') if x])
+
 
 def _try_unwrap_value(v):
     try:
@@ -161,6 +182,8 @@ class InstrumentScanAccessRecorder(AccessRecorder):
         super().__init__(instrument)
 
     def values_(self):
+        from daquiri.instrument.property import ChoiceProperty
+
         first = self.path[0]
         if first in self.properties_:
             prop = self.properties_[first]
