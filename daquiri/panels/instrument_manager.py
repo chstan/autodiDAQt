@@ -17,7 +17,6 @@ class InstrumentManager(Panel):
     def client_panel_will_close(self, name):
         self._panels[name]['indicator'].set_status(False)
         self._panels[name]['indicator'].update()
-        #self._panels[name]['panel'] = None
 
     def launch_panel(self, name):
         logger.info(f'Instrument Manager: Opening panel {name}')

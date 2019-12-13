@@ -20,7 +20,7 @@ from daquiri.config import Config, MetaData
 from daquiri.panel import Panel
 
 from daquiri.actor import Actor
-from daquiri.instrument.spec import ManagedInstrument
+from daquiri.instrument import ManagedInstrument
 from daquiri.panels import InstrumentManager
 from daquiri.ui import led, button, vertical, horizontal, CollectUI
 

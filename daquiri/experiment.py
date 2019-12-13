@@ -477,13 +477,15 @@ class Experiment(FSM):
     async def run_running(self, *_):
         try:
             next_step = next(self.current_run.sequence)
-            #print(next_step)
+
             await self.take_step(next_step)
         except StopIteration:
             # We're done! Time to save your data.
             self.messages.put_nowait('stop')
 
-    async def perform_single_daq(self, scope=None, path=None, read=None, write=None, preconditions=None, is_property=False, call=None):
+    async def perform_single_daq(self, scope=None, path=None, read=None, write=None,
+                                 set=None,
+                                 preconditions=None, is_property=False, call=None):
         try:
             if preconditions:
                 all_scopes = {k: v for k, v in itertools.chain(self.app.actors.items(), self.app.managed_instruments.items())
@@ -508,13 +510,12 @@ class Experiment(FSM):
             else:
                 instrument = getattr(instrument, p)
 
-        qual_name = tuple([scope] + path)
+        qual_name = tuple([scope] + list(path))
 
         if call is not None:
             args, kwargs = call
             instrument(*args, **kwargs)
-
-        elif write is None:
+        elif write is None and set is None:
             value = await instrument.read()
             time = datetime.datetime.now()
             self.current_run.daq_values[qual_name].append({
@@ -527,22 +528,22 @@ class Experiment(FSM):
             self.current_run.streaming_daq_ys[qual_name].append(value)
         else:
             if self.collation:
-                self.collation.receive(qual_name, write)
+                self.collation.receive(qual_name, write if set is None else set)
 
-            if is_property:
-                setattr(last_instrument, path[-1], write)
+            if set is not None:
+                instrument.set(set)
             else:
                 await instrument.write(write)
 
             time = datetime.datetime.now()
             self.current_run.daq_values[qual_name].append({
-                'data': write,
+                'data': write if set is None else set,
                 'time': time,
                 'step': self.current_run.step,
                 'point': self.current_run.point,
             })
             self.current_run.streaming_daq_xs[qual_name].append(self.current_run.point)
-            self.current_run.streaming_daq_ys[qual_name].append(write)
+            self.current_run.streaming_daq_ys[qual_name].append(write if set is None else set)
 
     async def take_step(self, step):
         self.current_run.steps_taken.append({

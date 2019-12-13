@@ -1,12 +1,26 @@
 import asyncio
-from typing import Optional, Dict, List
+from dataclasses import dataclass
+from typing import Optional, Dict, List, Callable, Any
 
 import datetime
 import rx
 from rx.subject import Subject
 from daquiri.data import reactive_frame
 
-__all__ = ('Axis', 'Detector', 'TestAxis', 'TestDetector', 'ProxiedAxis',)
+__all__ = ('Axis', 'Detector', 'TestAxis', 'ProxiedAxis', 'LogicalAxis',
+           'PolledRead', 'PolledWrite')
+
+
+@dataclass
+class PolledWrite:
+    write: Optional[str] = None
+    poll: Optional[str] = None
+
+
+@dataclass
+class PolledRead:
+    read: str
+    poll: Optional[str] = None
 
 
 class Detector:
@@ -87,29 +101,55 @@ class LogicalSubaxis(Axis):
 
 
 class LogicalAxis(Axis):
-    def __init__(self, name, schema, coordinate_names: List[str], coordinate_indices: List[int],
-                 physical_axes: Dict[str, Axis], forward_transforms, logical_state):
+    physical_axes: Dict[str, Axis]
+
+    logical_coordinate_names: List[str]
+    physical_coordinate_names: List[str]
+
+    forward_transforms: Dict[str, Callable[[Any], Any]]
+    inverse_transforms: Dict[str, Callable[[Any], Any]]
+
+    logical_state: List[Any] = None
+    physical_state: List[Any] = None
+
+    internal_state_cls: type = None
+    internal_state: Any = None
+
+    def __init__(self, name, schema,
+                 physical_axes: Dict[str, Axis], forward_transforms, inverse_transforms,
+                 logical_state, internal_state=None):
+
         self.physical_axes = physical_axes
-        self.coordinate_names = coordinate_names
-        self.coordinate_indices = coordinate_indices
+
+        self.logical_coordinate_names = list(inverse_transforms.keys())
+        self.physical_coordinate_names = list(forward_transforms.keys())
+
         self.forward_transforms = forward_transforms
+        self.inverse_transforms = inverse_transforms
+
         self.logical_state = logical_state
-        self.physical_state = None
+        self.internal_state = internal_state
+
+        if self.internal_state is not None:
+            if type(self.internal_state) == type:
+                self.internal_state_cls = self.internal_state
+                self.internal_state = self.internal_state_cls()
+            else:
+                self.internal_state_cls = type(self.internal_state)
 
         super().__init__(name, schema)
 
-        for subaxis_name, index in zip(self.coordinate_names, self.coordinate_indices):
+        for index, subaxis_name in enumerate(self.logical_coordinate_names):
             subaxis = LogicalSubaxis(f'{self.name}.{subaxis_name}', self.schema, self, subaxis_name, index)
             setattr(self, subaxis_name, subaxis)
 
     async def write(self, value):
         writes = []
-
-        new_physical_state = {}
+        new_physical_state = []
 
         for axis_name, coordinate_transform in self.forward_transforms.items():
-            physical_value = coordinate_transform(self, *value)
-            new_physical_state[axis_name] = physical_value
+            physical_value = coordinate_transform(self.internal_state, *value)
+            new_physical_state.append(physical_value)
             writes.append(self.physical_axes[axis_name].write(physical_value))
 
         await asyncio.gather(*writes)
@@ -117,12 +157,16 @@ class LogicalAxis(Axis):
         self.physical_state = new_physical_state
 
     async def read(self):
-        # NOTE this returns the PHYSICAL state for now unless we need otherwise
         axis_names, axes = zip(*self.physical_axes.items())
         values = await asyncio.gather(*[axis.read() for axis in axes])
 
-        self.physical_state = dict(zip(axis_names, values))
-        return self.physical_state
+        logical_values = []
+        for inverse_transform in self.inverse_transforms.values():
+            logical_values.append(inverse_transform(self.internal_state, *values))
+
+        self.physical_state = values
+        self.logical_state = logical_values
+        return self.logical_state
 
     async def settle(self):
         await asyncio.gather(*[axis.settle() for axis in self.physical_axes.values()])
@@ -130,8 +174,6 @@ class LogicalAxis(Axis):
 
 class ProxiedAxis(Axis):
     def __init__(self, name, schema, driver, where, read, write):
-        from daquiri.instrument.property import PolledWrite, PolledRead
-
         super().__init__(name, schema)
         self.where = where
         self.driver = driver

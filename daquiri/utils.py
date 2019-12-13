@@ -6,16 +6,36 @@ import asyncio
 from typing import Dict, List, Type, TypeVar, Any, Union, Tuple
 
 __all__ = (
-    'DAQUIRI_LIB_ROOT', 'run_on_loop', 'find_conflict_free_matches',
-    'gather_dict', 'find_conflict_free_matches',
+    'DAQUIRI_LIB_ROOT',
+
+    'run_on_loop', 'gather_dict', 'find_conflict_free_matches',
     'enum_option_names', 'enum_mapping',
-    'tokenize_access_path',
+    'tokenize_access_path', 'safe_lookup',
+
     'AccessRecorder',
     'ScanAccessRecorder',
     'InstrumentScanAccessRecorder',
+    'RichEncoder',
 )
 
 DAQUIRI_LIB_ROOT = Path(__file__).parent.absolute()
+
+PathFragmentType = Union[str, int]
+PathType = Union[List[PathFragmentType], Tuple[PathFragmentType]]
+PathlikeType = Union[PathFragmentType, Path]
+
+
+def safe_lookup(d: Any, s: PathlikeType):
+    if isinstance(s, (tuple, list)):
+        if len(s) == 1:
+            return safe_lookup(d, s[0])
+
+        first, rst = s[0], s[1:]
+        return safe_lookup(safe_lookup(d, first), rst)
+
+    elif isinstance(s, str):
+        return getattr(d, s)
+    return d[s]
 
 
 def tokenize_access_path(str_or_list) -> Tuple[Union[str, int]]:
@@ -207,7 +227,3 @@ class InstrumentScanAccessRecorder(AccessRecorder):
         return len(self.path) == 1 and self.path[0] in self.properties_
 
 
-def safe_lookup(d: Any, s: Union[str, int]):
-    if isinstance(s, str):
-        return getattr(d, s)
-    return d[s]

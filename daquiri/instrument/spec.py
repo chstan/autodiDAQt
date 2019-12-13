@@ -1,98 +1,248 @@
-import asyncio
-import functools
+from inspect import Parameter
 
-from daquiri.instrument.property import Property, ChoiceProperty, Specification, LogicalAxisSpecification
-from daquiri.mock import MockDriver
-from daquiri.panels.basic_instrument_panel import BasicInstrumentPanel
-from daquiri.actor import Actor
-from daquiri.utils import safe_lookup, tokenize_access_path
+import numpy as np
 
+from typing import Union, List, Dict, Tuple, Any, Optional, Callable, Type
 
-def build_instrument_property(prop: Property, name: str):
-    where = prop.where_list or [name]
+from daquiri.instrument import Detector
+from daquiri.instrument.method import Method, TestMethod
+from daquiri.instrument.property import ChoiceProperty, Property
+from daquiri.instrument.axis import TestAxis, ProxiedAxis, LogicalAxis
+from daquiri.utils import tokenize_access_path
 
-    def property_getter(self):
-        return functools.reduce(safe_lookup, where, self.driver)
+__all__ = ('MockDriver',
 
-    if isinstance(prop, ChoiceProperty):
-        def property_setter(self, value):
-            assert(value in prop.choices)
-            interim = functools.reduce(safe_lookup, where[:-1], self.driver)
-            setattr(interim, where[-1], value)
-    else:
-        def property_setter(self, value):
-            interim = functools.reduce(safe_lookup, where[:-1], self.driver)
-            setattr(interim, where[-1], value)
+           # axes
+           'Specification',
+           'AxisListSpecification',
+           'AxisSpecification',
+           'LogicalAxisSpecification',
+           'DetectorSpecification',
 
-    return property(property_getter, property_setter, doc=f'Proxy Property for {prop} at {where}.')
+           # properties
+           'PropertySpecification',
+           'ChoicePropertySpecification',
 
-
-def build_proxy_method(proxy_name):
-    def proxy_method(self, *args, **kwargs):
-        return getattr(self.driver, proxy_name)(*args, **kwargs)
-
-    return proxy_method
+           # methods
+           'parameter',
+           'MethodSpecification')
 
 
-class ManagedInstrument(Actor):
-    panel_cls = BasicInstrumentPanel
+class MockDriver:
+    """
+    A fake driver
+    """
 
-    driver_cls = None
-    test_cls = None
 
-    properties = {}
-    profiles = {}
-    proxy_methods = []
-
-    def set_profile(self, profile_name):
-        for name, value in self.profiles[profile_name].items():
-            setattr(self, name, value)
+class Specification:
+    where = None  # path to the appropriate location on the instrument driver
 
     @property
-    def ui_specification(self):
-        return {
-            'axis_root': {k: getattr(self, k) for k in self.specification_.keys()},
-            'properties': {}
-        }
+    def where_list(self) -> Tuple[Union[str, int]]:
+        return tokenize_access_path(self.where or [])
 
-    def lookup_axis(self, axis_path):
-        axis_path = tokenize_access_path(axis_path)
+    def realize(self, key_name, driver_instance, instrument) -> Union[Detector, List[Detector], Dict[str, Detector]]:
+        raise NotImplementedError()
 
-        current = self
-        for elem in axis_path:
-            if isinstance(elem, str):
-                current = getattr(current, elem)
-            else:
-                current = current[elem]
+    def to_scan_axis(self, over, path, *args, **kwargs):
+        raise NotImplementedError()
 
-        return current
 
+class AxisListSpecification(Specification):
+    """
+    Represents the specification for a list of axes, such as is present on
+    a motion controller.
+    """
+    def __init__(self, schema, where=None, read=None, write=None, mock=None):
+        if mock is None:
+            mock = {'n': 5}
+
+        self.mock = mock
+        self.schema = schema
+        self.name = None
+        self.read = read
+        self.write = write
+
+        self.where = where
+
+    def __repr__(self):
+        return ('AxisListSpecification('
+                f'name={self.name!r},'
+                f'schema={self.schema!r},'
+                f'where={self.where("{ index }")!r},'
+                ')')
+
+    def realize(self, key_name, driver_instance, instrument) -> List[Detector]:
+        where_root = tokenize_access_path(self.where(np.nan))
+        where_root = where_root[:where_root.index(np.nan)]
+
+        if isinstance(driver_instance, MockDriver):
+            axis_cls = TestAxis
+            n = self.mock['n']
+        else:
+            axis_cls = ProxiedAxis
+            g = driver_instance
+            for elem in where_root:
+                if isinstance(elem, str):
+                    g = getattr(g, elem)
+                else:
+                    g = g[elem]
+
+            n = len(g)
+
+        return [
+            axis_cls(name=key_name, schema=self.schema, where=self.where(i), driver=driver_instance,
+                        read=self.read, write=self.write)
+            for i in range(n)
+        ]
+
+    def to_scan_axis(self, over, path, rest, *args, **kwargs):
+        from daquiri.scan import ScanAxis
+        return ScanAxis([over] + path + rest, *args, **kwargs)
+
+
+class AxisSpecification(Specification):
+    """
+    Represents a single axis or detector.
+    """
+    def __init__(self, schema, where=None, range=None, validator=None, axis=True, read=None, write=None, mock=None):
+        self.name = None
+        self.schema = schema
+        self.range = range
+        self.validator = validator
+        self.is_axis = axis
+        self.read = read
+        self.write = write
+        self.where = where
+        self.mock = mock or {}
+
+    def __repr__(self):
+        return ('AxisSpecification('
+                f'name={self.name!r},'
+                f'where={self.where!r},'
+                f'schema={self.schema!r},'
+                f'range={self.range!r},'
+                f'validator={self.validator!r},'
+                f'is_axis={self.is_axis!r},'
+                f'read={self.read},'
+                f'write={self.write}'
+                ')')
+
+    def realize(self, key_name, driver_instance, instrument) -> Detector:
+        if isinstance(driver_instance, MockDriver):
+            axis_cls = TestAxis
+            init_kwargs = {'mock': self.mock}
+        else:
+            axis_cls = ProxiedAxis
+            init_kwargs = {}
+
+        return axis_cls(name=key_name, schema=self.schema, where=self.where, driver=driver_instance,
+                        read=self.read, write=self.write, **init_kwargs)
+
+    def to_scan_axis(self, over, path, *args, **kwargs):
+        from daquiri.scan import ScanAxis
+        return ScanAxis([over] + path, *args, **kwargs)
+
+
+class LogicalAxisSpecification(Specification):
+    """
+    TODO, maybe better to allow null initial_state if we can artfully
+    build it or load it from somewhere
+
+    TODO fix schema here
+    """
+    def __init__(self, forward_transforms, inverse_transforms, initial_coords, state=None):
+        self.forward_transforms = forward_transforms
+        self.inverse_transforms = inverse_transforms
+        self.initial_coords = initial_coords
+        self.state = state
+
+    def realize(self, key_name, driver_instance, instrument) -> Detector:
+        physical_axes = {}
+
+        for physical_name in self.forward_transforms.keys():
+            physical_axes[physical_name] = instrument.lookup_axis(physical_name)
+
+        return LogicalAxis(
+            name=key_name, schema=None,
+            physical_axes=physical_axes,
+            forward_transforms=self.forward_transforms,
+            inverse_transforms=self.inverse_transforms,
+            logical_state=self.initial_coords,
+            internal_state=self.state
+        )
+
+    def to_scan_axis(self, over, path, rest, *args, **kwargs):
+        from daquiri.scan import ScanAxis
+        return ScanAxis([over] + path + rest, *args, **kwargs)
+
+
+class PropertySpecification:
+    """
+    sensitivity = ChoicePropertySpecification(choices=DSP7265.SENSITIVITIES, labels=lambda x: f'{x} V')
+    time_constant = ChoicePropertySpecification(choices=DSP7265.TIME_CONSTANTS, labels=lambda x: f'{x} s')
+    """
+    where: Tuple[Union[str, float]]
+
+    def __init__(self, where):
+        self.where = tokenize_access_path(where)
+
+    def realize(self, key_name, driver_instance, instrument) -> Property:
+        raise NotImplementedError()
+
+    def to_scan_axis(self, over, path, *args, **kwargs):
+        raise NotImplementedError()
+
+
+class ChoicePropertySpecification(PropertySpecification):
+    choices = Dict[str, Any]  # unique choices -> hardware values
+    labels = Dict[str, str]  # unique choices -> display values
+
+    def __init__(self, where, choices, labels: Optional[Union[Dict[str, str], Callable[[Any], str]]] = None):
+        if isinstance(choices, list):
+            self.choices = dict(zip(choices, range(len(choices))))
+        else:
+            self.choices = choices
+
+        if labels is None:
+            self.labels = dict(zip(self.choices.keys(), self.choices.keys()))
+        elif callable(labels):
+            self.labels = {k: labels(v, k) for k, v in self.choices.items()}
+        else:
+            self.labels = labels
+
+        super().__init__(where)
+
+    def realize(self, key_name, driver_instance, instrument) -> Property:
+        return ChoiceProperty(name=key_name, where=self.where, driver=driver_instance,
+                              choices=self.choices, labels=self.labels)
+
+    def to_scan_axis(self, over, path, *args, **kwargs):
+        from daquiri.scan import ScanChoiceProperty
+        return ScanChoiceProperty([over] + path, self)
+
+
+class DetectorSpecification(AxisSpecification):
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs, axis=False)
 
-        simulate = self.app.config.instruments.simulate_instruments
-        self.driver = MockDriver() if simulate else self.driver_cls()
 
-        def is_spec(s):
-            try:
-                return isinstance(getattr(self, s), Specification)
-            except:
-                return False
+def parameter(name, **kwargs):
+    return Parameter(name, kind=Parameter.POSITIONAL_OR_KEYWORD, **kwargs)
 
-        spec_names = [s for s in dir(self) if is_spec(s)]
-        self.specification_ = {spec_name: getattr(self, spec_name) for spec_name in spec_names}
 
-        for spec_name in spec_names:
-            spec = getattr(self, spec_name)
-            if not isinstance(spec, LogicalAxisSpecification):
-                setattr(self, spec_name, spec.realize(spec_name, self.driver, self))
+class MethodSpecification:
+    where: Tuple[Union[str, float]]
+    parameters: Optional[Dict[str, Parameter]] = None
+    return_annotation: Optional[Type] = None
 
-        # logical axes require physical axes instantiated so we do this in a second pass for now
-        for spec_name in spec_names:
-            spec = getattr(self, spec_name)
-            if isinstance(spec, LogicalAxisSpecification):
-                setattr(self, spec_name, spec.realize(spec_name, self.driver, self))
+    def __init__(self, where, parameters=None, return_annotation=None):
+        self.where = tokenize_access_path(where)
+        self.parameters = parameters
+        self.return_annotation = return_annotation
 
-    async def run(self):
-        while True:
-            await asyncio.sleep(5)
+    def realize(self, key_name, driver_instance, instrument) -> Method:
+        method_cls = TestMethod if isinstance(driver_instance, MockDriver) else Method
+        return method_cls(name=key_name, where=self.where, driver=driver_instance,
+                          parameters=self.parameters, return_annotation=self.return_annotation)
+

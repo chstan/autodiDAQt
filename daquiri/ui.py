@@ -39,12 +39,14 @@ allows building PyQt5 "forms" without effort.
 from enum import Enum
 
 import enum
+from inspect import Signature, Parameter
+
 from pyqt_led import Led
 
 import rx.operators as ops
 import rx
 
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any, Type, Union
 
 import functools
 from PyQt5.QtWidgets import (
@@ -78,7 +80,9 @@ __all__ = (
     'bind_dataclass',
 )
 
+ACTIVE_UI_STACK = []
 ACTIVE_UI = None
+
 
 def ui_builder(f):
     @functools.wraps(f)
@@ -102,8 +106,10 @@ def ui_builder(f):
 
 class CollectUI:
     def __init__(self, target_ui=None):
-        global ACTIVE_UI
-        assert ACTIVE_UI is None
+        global ACTIVE_UI, ACTIVE_UI_STACK
+
+        if ACTIVE_UI is not None:
+            ACTIVE_UI_STACK.append(ACTIVE_UI)
 
         self.ui = {} if target_ui is None else target_ui
         ACTIVE_UI = self.ui
@@ -112,8 +118,12 @@ class CollectUI:
         return self.ui
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        global ACTIVE_UI
-        ACTIVE_UI = None
+        global ACTIVE_UI, ACTIVE_UI_STACK
+        if ACTIVE_UI_STACK:
+            ACTIVE_UI = ACTIVE_UI_STACK[-1]
+            ACTIVE_UI_STACK = ACTIVE_UI_STACK[:-1]
+        else:
+            ACTIVE_UI = None
 
 
 @ui_builder
@@ -329,6 +339,69 @@ def _layout_dataclass_field(dataclass_cls, field_name: str, prefix: str):
             field_input,
         )
 
+
+def _layout_function_parameter(parameter: Parameter, prefix: str):
+    parameter_type = parameter.annotation
+    widget_cls = {
+        float: lambda id: numeric_input(0, float, id=id),
+        int: lambda id: numeric_input(0, int, id=id),
+        str: lambda id: line_edit(id=id),
+    }[parameter_type]
+
+    return group(
+        f'{parameter.name} : {parameter_type.__name__}',
+        widget_cls(id=f'{prefix}{parameter.name}'),
+    )
+
+
+def layout_function_call(signature: Signature, prefix: Optional[str] = None):
+    """
+    Renders fields and a call button for a Python method. This allows "RPC" from the UI to
+    driver methods or other functions.
+
+    :param signature:
+    :param prefix:
+    :return:
+    """
+    if prefix is None:
+        prefix = ''
+
+    return vertical(
+        *[_layout_function_parameter(parameter, prefix) for parameter in signature.parameters.values()],
+        button('Call', id='submit'),
+    )
+
+
+def bind_function_call(function, prefix: str, ui: Dict[str, QWidget],
+                       signature: Signature = None, values: Dict[Any, Any] = None):
+
+    def translate(kind: Union[Parameter, Type]):
+        if isinstance(kind, Parameter):
+            if not kind.annotation == kind.empty:
+                kind = kind.annotation
+            else:
+                kind = type(kind.default)
+
+        return {
+            int: (lambda x: str(x), lambda x: int(x)),
+            float: (lambda x: str(x), lambda x: float(x)),
+        }.get(kind, (lambda x: x, lambda x: x))
+
+    if values is None:
+        values = {}
+
+    translations = {k: translate(signature.parameters[k]) for k in signature.parameters.keys()}
+
+    for k, v in values.items():
+        ui[f'{prefix}{k}'].subject.on_next(translations[k][0](v))
+
+    def perform_call(call_kwargs):
+        safe_call_kwargs = {k: translations[k][1](v) for k, v in call_kwargs.items()}
+        function(**safe_call_kwargs)
+
+    submit(f'{prefix}submit', [f'{prefix}{k}' for k in signature.parameters.keys()], ui).subscribe(perform_call)
+
+
 def layout_dataclass(dataclass_cls, prefix: Optional[str] = None):
     """
     Renders a dataclass instance to QtWidgets. See also `bind_dataclass` below
@@ -345,6 +418,7 @@ def layout_dataclass(dataclass_cls, prefix: Optional[str] = None):
           for field_name in dataclass_cls.__dataclass_fields__]
     )
 
+
 def bind_dataclass(dataclass_instance, prefix: str, ui: Dict[str, QWidget]):
     """
     One-way data binding between a dataclass instance and a collection of widgets in the UI.
@@ -358,7 +432,7 @@ def bind_dataclass(dataclass_instance, prefix: str, ui: Dict[str, QWidget]):
     :param ui: Collected UI elements
     :return:
     """
-    relevant_widgets = {k.split(prefix)[1]: v  for k, v in ui.items() if k.startswith(prefix)}
+    relevant_widgets = {k.split(prefix)[1]: v for k, v in ui.items() if k.startswith(prefix)}
     for field_name, field in dataclass_instance.__dataclass_fields__.items():
         translate_from_field, translate_to_field = {
             int: (lambda x: str(x), lambda x: int(x)),

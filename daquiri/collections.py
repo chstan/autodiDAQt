@@ -1,4 +1,5 @@
-__all__ = ('AttrDict',)
+__all__ = ('AttrDict', 'map_tree_leaves', 'map_treelike_nodes',)
+
 
 class AttrDict(dict):
     def __getitem__(self, k):
@@ -15,6 +16,7 @@ class AttrDict(dict):
 
     __getattr__ = __getitem__
     __setattr__ = dict.__setitem__
+
 
 def map_treelike_nodes(tree, transform):
     if not isinstance(transform, dict):
@@ -33,6 +35,7 @@ def map_treelike_nodes(tree, transform):
                 tree[i] = map_treelike_nodes(item, transform)
 
     return transform[type(tree)](tree)
+
 
 def map_tree_leaves(tree: dict, transform):
     for k, v in tree.items():

@@ -1,14 +1,14 @@
 from typing import Dict, Optional, Tuple
 
 import pandas as pd
-import numpy as np
 
 import rx
 import rx.operators as ops
 from rx.subject import Subject
 
 
-__all__ = ('reactive_frame', 'link_scatter', 'link_plot',)
+__all__ = ('reactive_frame', 'ReactivePlot',)
+
 
 def reactive_frame(initial: Optional[pd.DataFrame] = None, mutate=False) -> Tuple[Subject, rx.Observable]:
     """

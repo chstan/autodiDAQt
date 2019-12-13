@@ -1,18 +1,21 @@
 import asyncio
 import functools
 import datetime
+import inspect
 import json
-import numpy as np
 import pyqtgraph as pg
 import pandas as pd
 
-from typing import List, Union
+from typing import List, Union, Any, Dict
 
 from loguru import logger
 
-from daquiri.instrument.axis import ProxiedAxis, LogicalAxis, TestAxis
+from daquiri.instrument.axis import ProxiedAxis, LogicalAxis, TestAxis, Axis, LogicalSubaxis
+from daquiri.instrument.method import Method, TestMethod
+from daquiri.instrument.property import ChoiceProperty
 from daquiri.utils import safe_lookup
-from daquiri.ui import grid, tabs, vertical, group, horizontal, label, line_edit, button, CollectUI, submit
+from daquiri.ui import grid, tabs, vertical, group, horizontal, label, line_edit, button, CollectUI, submit, \
+    layout_dataclass, bind_dataclass, combo_box, layout_function_call, bind_function_call
 from daquiri.panel import Panel
 
 
@@ -21,7 +24,56 @@ class TimeAxisItem(pg.AxisItem):
         return [datetime.datetime.fromtimestamp(value) for value in values]
 
 
+class MethodView:
+    method: Method
+
+    def __init__(self, method):
+        self.method = method
+
+    def layout(self):
+        ui = {}
+
+        with CollectUI(ui):
+            layout = group(
+                self.method.name,
+                layout_function_call(self.method.signature)
+            )
+
+        bind_function_call(self.method.call, '', ui,
+                           self.method.signature, values=self.method.last_kwargs)
+        return layout
+
+
+class ChoicePropertyView:
+    prop: ChoiceProperty
+
+    def __init__(self, prop):
+        self.prop = prop
+
+    def layout(self):
+        ui = {}
+
+        inverse_mapping = dict(zip(self.prop.labels.values(), self.prop.choices.values()))
+        inverse_values = dict(zip(self.prop.choices.values(), self.prop.choices.keys()))
+
+        with CollectUI(ui):
+            layout = group(self.prop.name, combo_box(self.prop.labels.values(), id='combo'))
+
+        def on_change(value):
+            self.prop.set(inverse_mapping[value])
+
+        try:
+            ui['combo'].subject.on_next(inverse_values[self.prop.value])
+        except:
+            pass
+
+        ui['combo'].subject.subscribe(on_change)
+        return layout
+
+
 class AxisView:
+    axis: Axis
+
     def __init__(self, axis, path_to_axis: List[Union[str, int]]):
         self.axis = axis
         self.path_to_axis = path_to_axis
@@ -134,20 +186,38 @@ class ProxiedAxisView(AxisView):
 
 
 class LogicalAxisView(AxisView):
-    sub_axes = None
+    axis: LogicalAxis
+    sub_axes: List[LogicalSubaxis] = None
+    sub_views: List[AxisView] = None
 
     def attach(self, ui):
         for view in self.sub_views:
             view.attach(ui)
 
     def layout(self):
-        self.sub_axes = [getattr(self.axis, n) for n in self.axis.coordinate_names]
+        self.sub_axes = [getattr(self.axis, n) for n in self.axis.logical_coordinate_names]
         self.sub_views = [ProxiedAxisView(axis, self.path_to_axis + [n])
-                          for axis, n in zip(self.sub_axes, self.axis.coordinate_names)]
+                          for axis, n in zip(self.sub_axes, self.axis.logical_coordinate_names)]
+
+        state_panel = []
+        if self.axis.internal_state_cls is not None:
+            state_panel = [['State', self.layout_state_panel()],]
 
         return tabs(
-            *[[n, sub_view.layout()] for sub_view, n in zip(self.sub_views, self.axis.coordinate_names)]
+            *[[n, sub_view.layout()] for sub_view, n in zip(self.sub_views, self.axis.logical_coordinate_names)],
+            *state_panel
         )
+
+    def layout_state_panel(self):
+        ui = {}
+        with CollectUI(ui):
+            layout = group(
+                self.axis.internal_state_cls.__name__,
+                layout_dataclass(self.axis.internal_state_cls, prefix='state')
+            )
+
+        bind_dataclass(self.axis.internal_state, prefix='state.', ui=ui)
+        return layout
 
 
 class TestAxisView(ProxiedAxisView):
@@ -161,6 +231,7 @@ class UIEncoder(json.JSONEncoder):
 
 class BasicInstrumentPanel(Panel):
     SIZE = (600, 300)
+    DEFAULT_OPEN = True
 
     def __init__(self, parent, id, app, instrument_description, instrument_actor):
         """
@@ -173,10 +244,16 @@ class BasicInstrumentPanel(Panel):
         self.description = instrument_description
         self.actor = instrument_actor
         self.id_to_path = {}
+        self.TITLE = f'{id} (Instrument)'
+
         self.axis_views = []
+        self.property_views = []
+        self.method_views = []
+
         self.ui = {}
 
         super().__init__(parent, id, app)
+
 
     def retrieve(self, path: List[Union[str, int]]):
         instrument = self.app.managed_instruments[self.id]
@@ -192,14 +269,12 @@ class BasicInstrumentPanel(Panel):
             TestAxis: TestAxisView,
         }.get(type(description))
 
-        print(description, view_cls)
-
         view = view_cls(description, path_to_axis)
         self.axis_views.append(view)
         return view.layout()
 
     def tab_for_axis_group(self, key):
-        description = self.description['axis_root'][key]
+        description = self.description['axes'][key]
         if isinstance(description, list):
             return tabs(
                 *[[str(i), self.layout_for_single_axis(d, path_to_axis=[key, i])] for i, d in enumerate(description)]
@@ -207,15 +282,40 @@ class BasicInstrumentPanel(Panel):
 
         return self.layout_for_single_axis(description, path_to_axis=[key])
 
+    def render_property(self, key):
+        ins_property = self.description['properties'][key]
+        view_cls = {
+            ChoiceProperty: ChoicePropertyView,
+        }.get(type(ins_property))
+
+        view = view_cls(ins_property)
+        self.property_views.append(view)
+        return view.layout()
+
+    def render_method(self, key):
+        method = self.description['methods'][key]
+        view_cls = {
+            Method: MethodView,
+            TestMethod: MethodView,
+        }.get(type(method))
+
+        view = view_cls(method)
+        self.method_views.append(view)
+        return view.layout()
+
     def layout(self):
         with CollectUI(self.ui):
             grid(
                 tabs(
-                    *[[k, self.tab_for_axis_group(k)] for k in self.description['axis_root']],
+                    *[[k, self.tab_for_axis_group(k)] for k in self.description['axes']],
                     ['Settings', grid(
-                        'Settings', *[x + ',' for x in json.dumps(
-                            self.description['properties'], cls=UIEncoder).split(',')])],
-                    ['Functions', grid('Functions', 'Stuff here eventually.')],
+                        'Settings',
+                        *[self.render_property(k) for k in self.description['properties']],
+                    )],
+                    ['Methods', grid(
+                        'Methods',
+                        *[self.render_method(k) for k in self.description['methods']],
+                    )],
                     #['Connection', grid('Connection')],
                     #['Statistics', grid('Statistics')],
                     #['Terminal', grid('Terminal')],

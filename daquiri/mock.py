@@ -1,15 +1,9 @@
 import numpy as np
 
-from daquiri.instrument.spec import ManagedInstrument
-from daquiri.instrument.property import AxisListSpecification, AxisSpecification
+from daquiri.instrument.spec import AxisListSpecification, AxisSpecification, MockDriver
+from daquiri.instrument.managed_instrument import ManagedInstrument
 
 __all__ = ('MockMotionController', 'MockScalarDetector')
-
-
-class MockDriver:
-    """
-    A fake driver
-    """
 
 
 class MockMotionController(ManagedInstrument):
@@ -21,6 +15,7 @@ class MockMotionController(ManagedInstrument):
         read='position',
         write='move',
 
+        # create three mocked axes
         mock=dict(n=3),
     )
 
@@ -31,9 +26,3 @@ class MockScalarDetector(ManagedInstrument):
         float, where=['device'],
         mock=dict(read=lambda: np.random.normal() + 5)
     )
-
-    async def run(self):
-        while True:
-            import asyncio
-            await asyncio.sleep(0.1)
-            await self.device.read()
