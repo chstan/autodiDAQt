@@ -20,7 +20,7 @@ from daquiri.config import Config, MetaData
 from daquiri.panel import Panel
 
 from daquiri.actor import Actor
-from daquiri.instrument.spec import ManagedInstrument
+from daquiri.instrument import ManagedInstrument
 from daquiri.panels import InstrumentManager
 from daquiri.ui import led, button, vertical, horizontal, CollectUI
 
@@ -35,7 +35,6 @@ class DaquiriMainWindow(QMainWindow):
     def client_panel_will_close(self, name):
         self._panels[name]['indicator'].set_status(False)
         self._panels[name]['indicator'].update()
-        #self._panels[name]['panel'] = None
 
     def launch_panel(self, name):
         logger.info(f'Opening panel {name}')

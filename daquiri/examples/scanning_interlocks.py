@@ -2,7 +2,7 @@ import random
 
 from daquiri import Daquiri, Experiment
 from daquiri.mock import MockMotionController, MockScalarDetector
-from daquiri.scan import ScanAxis, scan
+from daquiri.scan import scan
 from daquiri.interlock import InterlockException
 
 
@@ -19,7 +19,7 @@ async def high_voltage_is_off(*_):
 
 
 class MyExperiment(Experiment):
-    dx = ScanAxis('mc.stages[0]')
+    dx = MockMotionController.scan('mc').stages[0]()
     read_power = {'power': 'power_meter.device', }
 
     scan_methods = [

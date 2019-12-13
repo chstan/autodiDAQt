@@ -27,6 +27,7 @@ class Monitor(Panel):
         # button is pressed
         submit('submit',['radio', 'edit'], ui).subscribe(print)
 
+
 class Log(Panel):
     DEFAULT_OPEN = True
     TITLE = 'Logs'
@@ -37,6 +38,7 @@ class Log(Panel):
             text_edit('Initial log text.'),
             widget=self,
         )
+
 
 app = Daquiri(__name__, {
     'Monitor': Monitor,

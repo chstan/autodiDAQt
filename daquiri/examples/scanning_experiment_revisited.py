@@ -1,19 +1,11 @@
-import numpy as np
-
 from daquiri import Daquiri, Experiment
-from daquiri.mock import MockMotionController, MockDetector
-from daquiri.scan import ScanAxis, scan
-
-
-# As before, a fake detector
-class MockSimpleDetector(MockDetector):
-    def generate(self):
-        return np.random.normal() + 5
+from daquiri.mock import MockMotionController, MockScalarDetector
+from daquiri.scan import scan
 
 
 class MyExperiment(Experiment):
-    dx = ScanAxis('mc.stages[0]', limits=[-10, 10])
-    dy = ScanAxis('mc.stages[1]', limits=[-30, 30])
+    dx = MockMotionController.scan('mc').stages[0](limits=[-10, 10])
+    dy = MockMotionController.scan('mc').stages[1](limits=[-30, 30])
 
     read_power = {'power': 'power_meter.device', }
 
@@ -25,7 +17,7 @@ class MyExperiment(Experiment):
 
 app = Daquiri(__name__, {}, {'experiment': MyExperiment}, {
     'mc': MockMotionController,
-    'power_meter': MockSimpleDetector,
+    'power_meter': MockScalarDetector,
 })
 
 if __name__ == '__main__':

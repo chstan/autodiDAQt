@@ -1,17 +1,14 @@
 from pymeasure.instruments.signalrecovery.dsp7265 import DSP7265
 
 from daquiri import Daquiri, Experiment
+from daquiri.instrument.spec import ChoicePropertySpecification, MethodSpecification
 from daquiri.mock import MockMotionController, MockScalarDetector
-from daquiri.scan import ScanAxis, scan
-
-from daquiri.instrument.spec import (
-    ManagedInstrument, Generate)
-from daquiri.instrument.property import ChoiceProperty, AxisSpecification
+from daquiri.scan import scan
+from daquiri.instrument import ManagedInstrument, AxisSpecification
 
 
 class ManagedDSP7265(ManagedInstrument):
     driver_cls = DSP7265
-    test_cls = Generate()
 
     # -> don't need where= because we can look on self.instrument.phase by default
     phase = AxisSpecification(float)
@@ -19,10 +16,12 @@ class ManagedDSP7265(ManagedInstrument):
     y = AxisSpecification(float)
     mag = AxisSpecification(float)
 
-    properties = {
-        'sensitivity': ChoiceProperty(choices=DSP7265.SENSITIVITIES, labels=lambda x: f'{x} V'),
-        'time_constant': ChoiceProperty(choices=DSP7265.TIME_CONSTANTS, labels=lambda x: f'{x} s'),
-    }
+    sensitivity = ChoicePropertySpecification(
+        where=['sensitivity'], choices=DSP7265.SENSITIVITIES, labels=lambda _, k: f'{k} V')
+    time_constant = ChoicePropertySpecification(
+        where=['time_constant'], choices=DSP7265.TIME_CONSTANTS, labels=lambda _, k: f'{k} s')
+    auto_sensitivity = MethodSpecification(where=['auto_sensitivity'])
+    auto_phase = MethodSpecification(where=['auto_phase'])
 
     profiles = {
         'Fast': {
@@ -35,20 +34,17 @@ class ManagedDSP7265(ManagedInstrument):
         }
     }
 
-    proxy_methods = ['auto_sensitivity', 'auto_phase']
-
-
-dx = MockMotionController.scan('mc').stages[0]
-sensitivity = ManagedDSP7265.scan('lockin').sensitivity
-time_constant = ManagedDSP7265.scan('lockin').time_constant
-
-read_power = {'power': 'power_meter.device', }
-
 
 class MyExperiment(Experiment):
+    dx = MockMotionController.scan('mc').stages[0](limits=[-10, 10])
+    dsensitivity = ManagedDSP7265.scan('lockin').sensitivity()
+    dtime_constant = ManagedDSP7265.scan('lockin').time_constant()
+
+    read_power = {'power': 'power_meter.device', }
+
     scan_methods = [
-        scan(x=dx, sensitivity=sensitivity, name='Sensitivity Scan', read=read_power),
-        scan(x=dx, tc=time_constant, name='Time Constant Scan', read=read_power),
+        scan(x=dx, sensitivity=dsensitivity, name='Sensitivity Scan', read=read_power),
+        scan(x=dx, tc=dtime_constant, name='Time Constant Scan', read=read_power),
 
         scan(x=dx, name='Fast Scan', read=read_power, profiles=dict(lockin='Fast')),
         scan(x=dx, name='Slow Scan', read=read_power, profiles=dict(lockin='Slow')),

@@ -1,12 +1,13 @@
-from dataclasses import make_dataclass, field
+from dataclasses import make_dataclass, field, Field
 from enum import Enum
 
-from typing import Optional, Union, Iterator, Any
+from typing import Union, Iterator, Any, Dict, Tuple, List
 
 import numpy as np
 import itertools
 
-from daquiri.utils import AccessRecorder, InstrumentScanAccessRecorder
+from daquiri.instrument.spec import ChoicePropertySpecification
+from daquiri.utils import AccessRecorder, InstrumentScanAccessRecorder, tokenize_access_path, PathType
 
 __all__ = ('ScanAxis', 'scan')
 
@@ -19,19 +20,58 @@ def _set_profile(scope, profile_name):
     }
 
 
-def unwrap(value):
-    try:
-        return int(value)
-    except ValueError:
-        return value
+FieldSetType = Tuple[str, type, Field]
 
 
-def str_device_to_list(device_name):
-    return [unwrap(x) for x in device_name.replace('[', '.').replace(']', '.').split('.') if x]
+class ScanDegreeOfFreedom:
+    devices: PathType
+
+    def to_fields(self, base_name: str) -> List[FieldSetType]:
+        raise NotImplementedError()
+
+    def write(self, value) -> Dict[str, Any]:
+        return {'write': value, 'path': list(self.devices[1:]), 'scope': self.devices[0], }
+
+    def iterate(self, fields: Any, base_name: str) -> Iterator[Any]:
+        raise NotImplementedError()
 
 
-class ScanAxis:
+class ScanChoiceProperty(ScanDegreeOfFreedom):
+    spec: ChoicePropertySpecification
+
+    def __init__(self, device_name: Union[str, AccessRecorder], spec):
+        self.spec = spec
+
+        if isinstance(device_name, InstrumentScanAccessRecorder):
+            self.devices = device_name.full_path_()
+        else:
+            self.devices = tokenize_access_path(device_name)
+
+    def __repr__(self):
+        return f'ScanChoiceProperty(device_name={self.devices})'
+
+    def write(self, value):
+        return {'set': value, 'path': list(self.devices[1:]), 'scope': self.devices[0],}
+
+    def to_fields(self, base_name: str) -> List[FieldSetType]:
+        enum_items = {v: i + 1 for i, (k, v) in enumerate(self.spec.labels.items())}
+        ValuesEnum = Enum(f'{base_name}Values', enum_items)
+
+        return [
+            (f'start_{base_name}', ValuesEnum, field(default=1)),
+            (f'stop_{base_name}', ValuesEnum, field(default=len(self.spec.choices)))
+        ]
+
+    def iterate(self, fields: Any, base_name: str) -> Iterator[Any]:
+        start = getattr(fields, f'start_{base_name}')
+        stop = getattr(fields, f'stop_{base_name}')
+        return list(self.spec.choices.values())[start-1:stop-1]
+
+
+
+class ScanAxis(ScanDegreeOfFreedom):
     values = None
+
     def __init__(self, device_name: Union[str, AccessRecorder], limits=None, values=None, is_property=False):
         if isinstance(device_name, InstrumentScanAccessRecorder):
             self.devices = device_name.full_path_()
@@ -40,7 +80,7 @@ class ScanAxis:
             self.name = device_name.name_()
             self.is_property = device_name.is_property_()
         else:
-            self.devices = str_device_to_list(device_name)
+            self.devices = tokenize_access_path(device_name)
             self.name = device_name
             self.is_property = is_property
 
@@ -49,14 +89,15 @@ class ScanAxis:
         if values is not None:
             self.values = values
 
-    def to_fields(self, base_name):
+    def to_fields(self, base_name: str) -> List[FieldSetType]:
         if self.values is None:
             return [(f'n_{base_name}', int, field(default=5)),
                     (f'start_{base_name}', float, field(default=0)),
                     (f'stop_{base_name}', float, field(default=10))]
         else:
             # TODO need to be careful here as the labels we present in the UI need to be massaged.
-            ValuesEnum = Enum(f'{base_name}Values', {k: i + 1 for i, (k, _) in enumerate(self.values.items())})
+            ValuesEnum = Enum(f'{base_name}Values',
+                              {k: i + 1 for i, (k, _) in enumerate(self.values.items())})
 
             return [
                 (f'start_{base_name}', ValuesEnum, field(default=1)),
@@ -64,7 +105,8 @@ class ScanAxis:
             ]
 
     def write(self, value):
-        return {'write': value, 'path': list(self.devices[1:]), 'scope': self.devices[0], 'is_property': self.is_property}
+        return {'write': value, 'path': list(self.devices[1:]), 'scope': self.devices[0],
+                'is_property': self.is_property}
 
     def iterate(self, fields, base_name) -> Iterator[Any]:
         if self.values is None:
@@ -87,11 +129,13 @@ def scan(name=None, read=None, profiles=None, setup=None, teardown=None,
     if read is None:
         read = {}
 
-    axes = {name: ax if isinstance(ax, ScanAxis) else ScanAxis(ax) for name, ax in axes.items()}
+    axes = {name: ax if isinstance(ax, ScanDegreeOfFreedom) else ScanAxis(ax) for name, ax in axes.items()}
+    axes: Dict[str, ScanDegreeOfFreedom] = axes
+
     fields = {name: ax.to_fields(name) for name, ax in axes.items()}
 
     def sequence_scan(self, experiment, **kwargs):
-        dependent = {read_name: str_device_to_list(read_device)
+        dependent = {read_name: tokenize_access_path(read_device)
                      for read_name, read_device in read.items()}
         experiment.collate(
             independent=[[axis.devices, name]

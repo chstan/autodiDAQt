@@ -4,22 +4,20 @@ import numpy as np
 from pymeasure.instruments.signalrecovery.dsp7265 import DSP7265
 
 from daquiri import Daquiri, Experiment
+from daquiri.instrument.spec import ChoicePropertySpecification
 from daquiri.mock import MockMotionController
-from daquiri.scan import ScanAxis, scan
-
-from daquiri.instrument.spec import (
-    ManagedInstrument, Generate)
-from daquiri.instrument.property import ChoiceProperty, AxisSpecification
+from daquiri.scan import scan
+from daquiri.instrument import ManagedInstrument, AxisSpecification
 
 
 class ManagedDSP7265(ManagedInstrument):
     # Minimal, for more details look at scanning_properties_and_profiles
     driver_cls = DSP7265
-    test_cls = Generate()
 
     x = AxisSpecification(float)
+    time_constant = ChoicePropertySpecification(
+        where=['time_constant'], choices=DSP7265.TIME_CONSTANTS, labels=lambda _, k: f'{k} s')
 
-    properties = {'time_constant': ChoiceProperty(choices=DSP7265.TIME_CONSTANTS),}
     profiles = {
         'Fast': {'time_constant': DSP7265.TIME_CONSTANTS[9]},
         'Slow': {'time_constant': DSP7265.TIME_CONSTANTS[13]}
@@ -63,8 +61,8 @@ def teardown_lockin(experiment, lockin=None, **kwargs):
 
 
 class MyExperiment(Experiment):
-    dx = ScanAxis('mc.stages[0]', limits=[-10, 10])
-    sensitivity = ScanAxis('lockin.properties.sensitivity')
+    dx = MockMotionController.scan('mc').stages[0](limits=[-10, 10])
+    dtime_constant = ManagedDSP7265.scan('lockin').time_constant()
 
     read_power = {'power': 'lockin.x', }
 

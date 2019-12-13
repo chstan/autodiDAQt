@@ -1,13 +1,26 @@
 import asyncio
-from typing import Optional
+from dataclasses import dataclass
+from typing import Optional, Dict, List, Callable, Any
 
 import datetime
 import rx
 from rx.subject import Subject
 from daquiri.data import reactive_frame
-from daquiri.instrument.property import PolledWrite, PolledRead
 
-__all__ = ('Axis', 'Detector', 'TestAxis', 'TestDetector', 'ProxiedAxis',)
+__all__ = ('Axis', 'Detector', 'TestAxis', 'ProxiedAxis', 'LogicalAxis',
+           'PolledRead', 'PolledWrite')
+
+
+@dataclass
+class PolledWrite:
+    write: Optional[str] = None
+    poll: Optional[str] = None
+
+
+@dataclass
+class PolledRead:
+    read: str
+    poll: Optional[str] = None
 
 
 class Detector:
@@ -24,6 +37,12 @@ class Detector:
     """
     IDLE = 0
     MOVING = 1
+
+    DEFAULT_VALUES = {
+        int: 0,
+        float: 0,
+        str: '',
+    }
 
     raw_value_stream: Optional[Subject]
     collected_value_stream: Optional[rx.Observable]
@@ -59,6 +78,98 @@ class Axis(Detector):
 
     async def settle(self):
         raise NotImplementedError('')
+
+
+class LogicalSubaxis(Axis):
+    def __init__(self, name, schema, parent_axis, subaxis_name, index):
+        super().__init__(name, schema)
+
+        self.parent_axis = parent_axis
+        self.subaxis_name = subaxis_name
+        self.index = index
+
+    async def write(self, value):
+        old_state = list(self.parent_axis.logical_state)
+        old_state[self.index] = value
+        await self.parent_axis.write(old_state)
+
+    async def read(self):
+        raise NotImplementedError('Subaxis reads not supported.')
+
+    async def settle(self):
+        await self.parent_axis.settle()
+
+
+class LogicalAxis(Axis):
+    physical_axes: Dict[str, Axis]
+
+    logical_coordinate_names: List[str]
+    physical_coordinate_names: List[str]
+
+    forward_transforms: Dict[str, Callable[[Any], Any]]
+    inverse_transforms: Dict[str, Callable[[Any], Any]]
+
+    logical_state: List[Any] = None
+    physical_state: List[Any] = None
+
+    internal_state_cls: type = None
+    internal_state: Any = None
+
+    def __init__(self, name, schema,
+                 physical_axes: Dict[str, Axis], forward_transforms, inverse_transforms,
+                 logical_state, internal_state=None):
+
+        self.physical_axes = physical_axes
+
+        self.logical_coordinate_names = list(inverse_transforms.keys())
+        self.physical_coordinate_names = list(forward_transforms.keys())
+
+        self.forward_transforms = forward_transforms
+        self.inverse_transforms = inverse_transforms
+
+        self.logical_state = logical_state
+        self.internal_state = internal_state
+
+        if self.internal_state is not None:
+            if type(self.internal_state) == type:
+                self.internal_state_cls = self.internal_state
+                self.internal_state = self.internal_state_cls()
+            else:
+                self.internal_state_cls = type(self.internal_state)
+
+        super().__init__(name, schema)
+
+        for index, subaxis_name in enumerate(self.logical_coordinate_names):
+            subaxis = LogicalSubaxis(f'{self.name}.{subaxis_name}', self.schema, self, subaxis_name, index)
+            setattr(self, subaxis_name, subaxis)
+
+    async def write(self, value):
+        writes = []
+        new_physical_state = []
+
+        for axis_name, coordinate_transform in self.forward_transforms.items():
+            physical_value = coordinate_transform(self.internal_state, *value)
+            new_physical_state.append(physical_value)
+            writes.append(self.physical_axes[axis_name].write(physical_value))
+
+        await asyncio.gather(*writes)
+        self.logical_state = value
+        self.physical_state = new_physical_state
+
+    async def read(self):
+        axis_names, axes = zip(*self.physical_axes.items())
+        values = await asyncio.gather(*[axis.read() for axis in axes])
+
+        logical_values = []
+        for inverse_transform in self.inverse_transforms.values():
+            logical_values.append(inverse_transform(self.internal_state, *values))
+
+        self.physical_state = values
+        self.logical_state = logical_values
+        return self.logical_state
+
+    async def settle(self):
+        await asyncio.gather(*[axis.settle() for axis in self.physical_axes.values()])
 
 
 class ProxiedAxis(Axis):
@@ -194,17 +305,14 @@ class ProxiedAxis(Axis):
 
 
 class TestDetector(Detector):
-    DEFAULT_VALUES = {
-        int: 0,
-        float: 0,
-        str: '',
-    }
-
-    def __init__(self, name, schema, mock_read=None, mock_write=None):
+    def __init__(self, name, schema, mock=None, *args, **kwargs):
         super().__init__(name, schema)
         self._value = self.DEFAULT_VALUES[self.schema]
-        self._mock_read = mock_read
-        self._mock_write = mock_write
+        self.mock = mock or {}
+        self._mock_read = self.mock.get('read')
+        self._mock_write = self.mock.get('write')
+        self.init_args = args
+        self.init_kwargs = kwargs
 
     async def read(self):
         if self._mock_read:

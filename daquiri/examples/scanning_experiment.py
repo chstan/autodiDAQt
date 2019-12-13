@@ -5,21 +5,34 @@ import itertools
 import numpy as np
 
 from daquiri import Daquiri
-from daquiri.mock import MockMotionController, MockDetector
+from daquiri.instrument import ManagedInstrument
+from daquiri.instrument.spec import MockDriver, AxisSpecification
+from daquiri.mock import MockMotionController
 from daquiri.experiment import Experiment
 
-class MockImageDetector(MockDetector):
+
+class MockImageDetector(ManagedInstrument):
     """
-    Generate some fake instruments, here we make a fake 100px by 100px camera
-    and a fake scalar detector (in this case a "power meter").
+    Generate some fake instruments, here we make a mocked (fake) 400px by 400px camera
+    and a mocked scalar detector (in this case a "power meter").
+
+    Various utility mocks are available in daquiri.mock as well.
+
+    By mocking, we can coarsely test our DAQ programs even if we have none or only some of the physical hardware.
     """
-    def generate(self):
-        return np.random.random((800,800,))
+    driver_cls = MockDriver # <- specifies that we should always be mocking this instrument
+    device = AxisSpecification(
+        float, where=['device'],
+        mock=dict(read=lambda: np.random.random((800, 800)))  # <- specifies how we want to fake reads
+    )
 
 
-class MockSimpleDetector(MockDetector):
-    def generate(self):
-        return np.random.normal() + 5
+class MockSimpleDetector(ManagedInstrument):
+    driver_cls = MockDriver
+    device = AxisSpecification(
+        float, where=['device'],
+        mock=dict(read=lambda: np.random.normal() + 5)
+    )
 
 
 """
@@ -99,7 +112,7 @@ class SimpleScan:
 
 @dataclass
 class TwoAxisScan:
-    "Another scan mode we implement: here a two axis scan."
+    """Another scan mode we implement: here a two axis scan."""
 
     n_steps_x: int = 10
     n_steps_y: int = 3

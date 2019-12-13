@@ -2,6 +2,7 @@ import asyncio
 
 __all__ = ('Actor', 'EchoActor')
 
+
 class Actor:
     panel_cls = None
 
