@@ -170,7 +170,16 @@ class Daquiri:
         self.qt_app = None
         self.messages = Subject()
         self.actors = {k: A(app=self) for k, A in actors.items()}
-        self.managed_instruments = {k: A(app=self) for k, A in managed_instruments.items()}
+
+        def lookup_managed_instrument_args(instrument_key):
+            return {
+                'driver_init': {
+                    'args': self.config.instruments.nested_get([instrument_key, 'initialize', 'args'], []),
+                    'kwargs': self.config.instruments.nested_get([instrument_key, 'initialize', 'kwargs'], {}),
+                },
+            }
+
+        self.managed_instruments = {k: A(app=self, **lookup_managed_instrument_args(k)) for k, A in managed_instruments.items()}
         self.managed_instrument_classes = managed_instruments
 
         if DEBUG is not None and self.config.DEBUG != DEBUG:
