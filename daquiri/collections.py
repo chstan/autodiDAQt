@@ -1,6 +1,26 @@
 __all__ = ('AttrDict',)
 
 class AttrDict(dict):
+    def nested_get(self, key_seq, default, safe_early_terminate=False):
+        key_seq = list(key_seq)
+        first, rst = key_seq[0], key_seq[1:]
+
+        try:
+            item = getattr(self, first)
+        except (AttributeError, KeyError) as e:
+            if safe_early_terminate or not rst:
+                return default
+
+            raise e
+
+        if not rst:
+            return item
+
+        if not isinstance(item, AttrDict) and safe_early_terminate:
+            return default
+
+        return item.nested_get(rst, default, safe_early_terminate=safe_early_terminate)
+
     def __getitem__(self, k):
         """
         Rewraps the item in an AttrDict if possible to allow "." chaining
