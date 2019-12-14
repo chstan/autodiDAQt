@@ -179,6 +179,8 @@ class ProxiedAxis(Axis):
         self.driver = driver
         self._status = Detector.IDLE
 
+        print(name, where, read, write)
+
         if read is None:
             read = where[-1]
 

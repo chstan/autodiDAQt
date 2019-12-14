@@ -57,11 +57,15 @@ class ManagedInstrument(Actor):
     def scan(cls, instrument_name):
         return ScanRecorder(cls, instrument_name)
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, driver_init=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        if driver_init is None:
+            driver_init = {}
+
         simulate = self.app.config.instruments.simulate_instruments
-        self.driver = MockDriver() if simulate else self.driver_cls()
+        self.driver = MockDriver() if simulate else self.driver_cls(
+            *driver_init.get('args', []), **driver_init.get('kwargs', {}))
 
         def is_spec(s, kind: type = Specification):
             try:

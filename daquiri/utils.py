@@ -27,6 +27,8 @@ PathlikeType = Union[PathFragmentType, Path]
 
 def safe_lookup(d: Any, s: PathlikeType):
     if isinstance(s, (tuple, list)):
+        if len(s) == 0:
+            return d
         if len(s) == 1:
             return safe_lookup(d, s[0])
 

@@ -2,6 +2,8 @@ from typing import Any, Union, Tuple, Dict
 
 __all__ = ('Property', 'ChoiceProperty', 'TestProperty',)
 
+from daquiri.utils import safe_lookup
+
 
 class Property:
     driver: Any
@@ -31,16 +33,26 @@ class ChoiceProperty(Property):
         self.labels = labels
         super().__init__(name, where, driver)
 
-        self._bound_write = None
-        self._bound_read = None
+        print(where)
+        self._bound_driver = safe_lookup(driver, where[:-1])
+
+        def bound_get():
+            return getattr(self._bound_driver, where[-1])
+
+        def bound_set(value):
+            setattr(self._bound_driver, where[-1], value)
+
+        self._bound_get = bound_get
+        self._bound_set = bound_set
 
     def get(self):
         print('get', self.name, self.driver)
-        return self.value
+        return self._bound_get()
 
     def set(self, value):
         self.value = value
         print('set', value, self.name, self.driver)
+        self._bound_set(value)
 
 
 class TestProperty(Property):
