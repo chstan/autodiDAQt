@@ -139,6 +139,8 @@ class Daquiri:
     ```
     """
 
+    _is_shutdown = False
+
     def __init__(self, import_name, panel_definitions: Optional[Dict[str, Type[Panel]]] = None,
                  actors: Optional[Dict[str, Type[Actor]]] = None,
                  managed_instruments: Optional[Dict[str, Type[ManagedInstrument]]] = None,
@@ -190,17 +192,25 @@ class Daquiri:
             warnings.warn(f'Overwriting the value of DEBUG from configuration, using {DEBUG}')
             self.config.DEBUG = DEBUG
 
-    def handle_exception(self, loop, context, old):
+    def handle_exception(self, loop, context):
         """
         Attempts to recover from, log, or otherwise deal with an exception inside the
         async portions of Daquiri.
         """
-
-        print('Handling.')
+        print(loop)
         message = context.get('exception', context['message'])
-        logger.error(f"Caught: {message}")
-        loop.create_task(self.shutdown(loop, signal=None))
-        old(context)
+        logger.error(f"Caught Unhandled: {message}")
+
+        if self._is_shutdown:
+            return
+
+        try:
+            other_loop = asyncio.get_running_loop()
+            print(loop, other_loop)
+            asyncio.create_task(self.shutdown(loop, signal=None))
+
+        except RuntimeError:
+            pass
 
     async def shutdown(self, loop, signal=None):
         """
@@ -211,6 +221,8 @@ class Daquiri:
         Returns:
             None
         """
+        self._is_shutdown = True
+
         if signal:
             logger.info(f'Received exit signal {signal.name}.')
         else:
@@ -350,16 +362,21 @@ class Daquiri:
             loop = asyncio.get_event_loop()
 
         signal_set = {
-            'win32': lambda: tuple(), # windows has no signals, but will raise exceptions
+            'win32': lambda: (), # windows has no signals, but will raise exceptions
         }.get(sys.platform, lambda: (signal.SIGHUP, signal.SIGTERM, signal.SIGINT))()
         for s in signal_set:
             loop.add_signal_handler(s, lambda s=s: loop.create_task(self.shutdown(loop, s)))
 
         self.main_window = DaquiriMainWindow(loop=loop, app=self)
+        main_task = asyncio.ensure_future(self.master())
 
-        asyncio.ensure_future(self.master())
+        loop.set_exception_handler(self.handle_exception)
 
-        with loop:
+        try:
             loop.run_forever()
-
-        self.main_window.show()
+        except KeyboardInterrupt:
+            if not self._is_shutdown:
+                loop.run_until_complete(self.shutdown(loop, signal=None))
+        finally:
+            loop.close()
+            logger.info('Closed DAQuiri successfully.')
