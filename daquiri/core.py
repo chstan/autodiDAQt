@@ -16,7 +16,7 @@ from pyqt_led import Led
 from rx.subject import Subject
 from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget
 from PyQt5 import QtCore
-from quamash import QEventLoop
+from asyncqt import QEventLoop
 
 from daquiri.config import Config, MetaData, default_config_for_platform
 from daquiri.panel import Panel
@@ -31,6 +31,8 @@ from daquiri.version import VERSION
 
 __all__ = ('Daquiri',)
 
+
+USE_QUAMASH = False
 
 class DaquiriMainWindow(QMainWindow):
     """
@@ -267,6 +269,10 @@ class Daquiri:
         config_files = list(itertools.chain(*[p.glob('config.json') for p in self.search_paths])) + []
         self.config = Config(config_files[0], defaults=default)
 
+    async def process_events(self):
+        while True:
+            await asyncio.sleep(0)
+            self.qt_app.processEvents()
 
     async def master(self):
         logger.info('Started async loop.')
@@ -279,6 +285,9 @@ class Daquiri:
         # Start managed instruments
         await asyncio.gather(*[instrument.prepare() for instrument in self.managed_instruments.values()])
         for instrument in self.managed_instruments.values(): asyncio.ensure_future(instrument.run())
+
+        if not USE_QUAMASH:
+            asyncio.ensure_future(self.process_events())
 
         self.load_state()
 
@@ -334,9 +343,11 @@ class Daquiri:
 
     def start(self):
         self.qt_app = QApplication(sys.argv)
-        loop = QEventLoop(self.qt_app)
-
-        asyncio.set_event_loop(loop)
+        if USE_QUAMASH:
+            loop = QEventLoop(self.qt_app)
+            asyncio.set_event_loop(loop)
+        else:
+            loop = asyncio.get_event_loop()
 
         signal_set = {
             'win32': lambda: tuple(), # windows has no signals, but will raise exceptions
