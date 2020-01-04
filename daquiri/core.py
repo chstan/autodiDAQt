@@ -1,9 +1,11 @@
+import pickle
 import asyncio
 import sys
 import warnings
 import itertools
 import signal
 import appdirs
+from copy import deepcopy
 from typing import Dict, Optional, Type
 
 from pathlib import Path
@@ -16,14 +18,16 @@ from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget
 from PyQt5 import QtCore
 from quamash import QEventLoop
 
-from daquiri.config import Config, MetaData
+from daquiri.config import Config, MetaData, default_config_for_platform
 from daquiri.panel import Panel
 
 from daquiri.actor import Actor
 from daquiri.instrument import ManagedInstrument
 from daquiri.panels import InstrumentManager
+from daquiri.state import DaquiriStateAtRest, generate_state_filename, find_newest_state_filename, SerializationSchema, \
+    AppState
 from daquiri.ui import led, button, vertical, horizontal, CollectUI
-
+from daquiri.version import VERSION
 
 __all__ = ('Daquiri',)
 
@@ -35,6 +39,11 @@ class DaquiriMainWindow(QMainWindow):
     def client_panel_will_close(self, name):
         self._panels[name]['indicator'].set_status(False)
         self._panels[name]['indicator'].update()
+
+    @property
+    def open_panels(self) -> Dict[str, Panel]:
+        return {name: self._panels[name]['panel']
+                for name in self._panels if self._panels[name]['panel']}
 
     def launch_panel(self, name):
         logger.info(f'Opening panel {name}')
@@ -108,6 +117,7 @@ class DaquiriMainWindow(QMainWindow):
 
         self.loop = loop
 
+
 class Daquiri:
     """
     The main application instance for your Daquiri apps.
@@ -159,6 +169,7 @@ class Daquiri:
         self.extract_from_dotenv()
         self.load_config()
         self.meta = MetaData()
+        self.app_state = AppState()
 
         self._log_handler = None
         self.log_file = None
@@ -168,8 +179,9 @@ class Daquiri:
         self.main_window = None
         self.qt_app = None
         self.messages = Subject()
-        self.actors = {k: A(app=self) for k, A in actors.items()}
-        self.managed_instruments = {k: A(app=self) for k, A in managed_instruments.items()}
+        self.actors: Dict[str, Actor] = {k: A(app=self) for k, A in actors.items()}
+        self.managed_instruments: Dict[str, ManagedInstrument] = {
+            k: A(app=self) for k, A in managed_instruments.items()}
         self.managed_instrument_classes = managed_instruments
 
         if DEBUG is not None and self.config.DEBUG != DEBUG:
@@ -251,13 +263,10 @@ class Daquiri:
             load_dotenv(str(dotenv_files[0]))
 
     def load_config(self):
-        from daquiri.utils import DAQUIRI_LIB_ROOT
+        default = default_config_for_platform()
+        config_files = list(itertools.chain(*[p.glob('config.json') for p in self.search_paths])) + []
+        self.config = Config(config_files[0], defaults=default)
 
-        configs = {'win32': 'default_config_windows.json',}
-        cfile = configs.get(sys.platform, 'default_config.json')
-        defaults_path = DAQUIRI_LIB_ROOT / 'resources' / cfile
-        config_files = list(itertools.chain(*[p.glob('config.json') for p in self.search_paths])) + [defaults_path]
-        self.config = Config(config_files[0])
 
     async def master(self):
         logger.info('Started async loop.')
@@ -271,9 +280,57 @@ class Daquiri:
         await asyncio.gather(*[instrument.prepare() for instrument in self.managed_instruments.values()])
         for instrument in self.managed_instruments.values(): asyncio.ensure_future(instrument.run())
 
+        self.load_state()
+
         while True:
             message = await self.messages.get()
             logger.info(message)
+
+    def collect_state(self) -> DaquiriStateAtRest:
+        ser_schema = SerializationSchema(
+            daquiri_version=VERSION, user_version=self.config.version,
+            app_root=self.app_root, commit='')
+
+        return deepcopy(DaquiriStateAtRest(
+            daquiri_state=self.app_state,
+            schema=ser_schema,
+            panels={k: p.collect_state() for k, p in self.main_window.open_panels.items()},
+            actors={k: a.collect_state() for k, a in self.actors.items()},
+            managed_instruments={k: ins.collect_state() for k, ins in self.managed_instruments.items()},
+        ))
+
+    def receive_state(self, state: DaquiriStateAtRest):
+        self.app_state = state.daquiri_state
+
+        for k, p in self.main_window.open_panels.items():
+            if k in state.panels:
+                p.receive_state(state.panels[k])
+
+        for k, a in self.actors.items():
+            if k in state.panels:
+                a.receive_state(state.actors[k])
+
+        for k, ins in self.managed_instruments.items():
+            if k in state.panels:
+                ins.receive_state(state.managed_instruments[k])
+
+    def load_state(self):
+        state_filename = find_newest_state_filename(self)
+        if not state_filename:
+            state = self.collect_state()
+            self.receive_state(state)
+            return
+
+        with open(str(state_filename), 'rb') as state_f:
+            state: DaquiriStateAtRest = pickle.load(state_f)
+
+        self.receive_state(state)
+
+    def save_state(self):
+        state_filename = generate_state_filename(self)
+        state = self.collect_state()
+        with open(str(state_filename), 'wb') as state_f:
+            pickle.dump(state, state_f)
 
     def start(self):
         self.qt_app = QApplication(sys.argv)

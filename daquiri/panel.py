@@ -6,6 +6,8 @@ from matplotlib.figure import Figure
 
 from PyQt5.QtWidgets import QWidget, QPushButton, QGridLayout, QLabel
 
+from daquiri.state import PanelState
+
 __all__ = ('Panel',)
 
 
@@ -29,6 +31,13 @@ class Panel(QWidget):
     DEFAULT_OPEN = False
     RESTART = False
     SIZE = (50,50,)
+
+    def collect_state(self) -> PanelState:
+        return PanelState(geometry=self.geometry())
+
+    def receive_state(self, state: PanelState):
+        print(self, 'Received', state)
+        self.setGeometry(state.geometry)
 
     def register_figure(self, name, toolbar=None, layout=None, *args, **kwargs):
         assert name not in self.canvases

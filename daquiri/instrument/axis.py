@@ -1,9 +1,11 @@
 import asyncio
+import warnings
 from dataclasses import dataclass
 from typing import Optional, Dict, List, Callable, Any
 
 import datetime
 import rx
+from daquiri.state import LogicalAxisState
 from rx.subject import Subject
 from daquiri.data import reactive_frame
 
@@ -46,6 +48,12 @@ class Detector:
 
     raw_value_stream: Optional[Subject]
     collected_value_stream: Optional[rx.Observable]
+
+    def collect_state(self):
+        return None
+
+    def receive_state(self, state):
+        pass
 
     def __init__(self, name: str, schema: type):
         self.name = name
@@ -142,6 +150,20 @@ class LogicalAxis(Axis):
         for index, subaxis_name in enumerate(self.logical_coordinate_names):
             subaxis = LogicalSubaxis(f'{self.name}.{subaxis_name}', self.schema, self, subaxis_name, index)
             setattr(self, subaxis_name, subaxis)
+
+    def collect_state(self) -> LogicalAxisState:
+        return LogicalAxisState(
+            internal_state=self.internal_state,
+            logical_state=self.logical_state,
+            physical_state=self.physical_state,
+        )
+
+    def receive_state(self, state: LogicalAxisState):
+        if self.internal_state_cls and not isinstance(state.internal_state, self.internal_state_cls):
+            warnings.warn(f'Logical Axis received invalid state {state}, '
+                          f'type did not match expected {self.internal_state_cls}.')
+        else:
+            self.internal_state = state.internal_state
 
     async def write(self, value):
         writes = []

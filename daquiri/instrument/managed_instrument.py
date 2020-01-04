@@ -1,9 +1,11 @@
 import asyncio
+import warnings
 
 from daquiri.actor import Actor
 from daquiri.instrument.spec import Specification, LogicalAxisSpecification, MockDriver, PropertySpecification, \
     MethodSpecification
 from daquiri.panels import BasicInstrumentPanel
+from daquiri.state import InstrumentState
 from daquiri.utils import safe_lookup, AccessRecorder, tokenize_access_path
 
 
@@ -34,7 +36,6 @@ class ManagedInstrument(Actor):
     driver_cls = None
     test_cls = None
 
-    properties = {}
     profiles = {}
     proxy_methods = []
 
@@ -42,11 +43,34 @@ class ManagedInstrument(Actor):
         for name, value in self.profiles[profile_name].items():
             setattr(self, name, value)
 
+    def collect_state(self) -> InstrumentState:
+        return InstrumentState(
+            axes={k: [vs.collect_state() for vs in v] if isinstance(v, list) else v.collect_state()
+                  for k, v in self.axes.items()},
+            properties={},
+        )
+
+    def receive_state(self, state: InstrumentState):
+        for k in set(state.axes).intersection(self.axes):
+            if isinstance(self.axes[k], list):
+                for axis, axis_state in zip(self.axes[k], state.axes[k]):
+                    axis.receive_state(axis_state)
+            else:
+                self.axes[k].receive_state(state.axes[k])
+
+    @property
+    def axes(self):
+        return {k: getattr(self, k) for k in self.specification_.keys()}
+
+    @property
+    def properties(self):
+        return {k: getattr(self, k) for k in self.properties_.keys()}
+
     @property
     def ui_specification(self):
         return {
-            'axes': {k: getattr(self, k) for k in self.specification_.keys()},
-            'properties': {k: getattr(self, k) for k in self.properties_.keys()},
+            'axes': self.axes,
+            'properties': self.properties,
             'methods': {k: getattr(self, k) for k in self.methods_.keys()},
         }
 
