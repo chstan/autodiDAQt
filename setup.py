@@ -46,6 +46,7 @@ requirements = [
     'setuptools',
     'PyQt5>=5.13.0',
     'Quamash>=0.6.1',
+    'asyncqt',
     'matplotlib>=3.1.1',
     'python-dotenv>=0.10.3',
     'pyqt-led>=0.0.6',
@@ -66,15 +67,18 @@ requirements = [
     'numpy',
 
     # zarr + xarray support
+    'toolz',
+    'pandas',
+    'partd',
+    'fsspec',
     'xarray',
     'zarr',
     'dask',
-    'toolz',
 ]
 
 extras_require = {
     'reST': ['Sphinx'],
-    }
+}
 
 setup(name='daquiri',
       version=VERSION,

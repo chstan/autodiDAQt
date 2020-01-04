@@ -11,7 +11,5 @@ python:
   install:
     - method: pip
       path: .
-      extra_requirements:
-        - "dask[complete]"
 
 formats: []
