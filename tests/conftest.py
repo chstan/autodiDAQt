@@ -1,4 +1,8 @@
-from dataclasses import dataclass, field
+# need to insert the DISPLAY key in order to prevent the ``mouseinfo`` package from
+# error-ing on import during CI.
+import os
+os.environ['DISPLAY'] = ''
+
 from typing import Dict
 
 import pytest
