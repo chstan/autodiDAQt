@@ -212,7 +212,7 @@ class ChoicePropertySpecification(PropertySpecification):
 
     def __init__(self, where, choices, labels: Optional[Union[Dict[str, str], Callable[[Any], str]]] = None):
         if isinstance(choices, list):
-            self.choices = dict(zip(choices, range(len(choices))))
+            self.choices = dict(zip(range(len(choices)), choices))
         else:
             self.choices = choices
 

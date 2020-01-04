@@ -201,6 +201,16 @@ class ProxiedAxis(Axis):
         self.driver = driver
         self._status = Detector.IDLE
 
+        print(name, where, read, write)
+
+        if read is None:
+            read = where[-1]
+
+            if write is not None:
+                write = where[-1]
+
+            self.where = where[:-1]
+
         if isinstance(read, str):
             read = PolledRead(read=read, poll=None)
 
@@ -212,13 +222,26 @@ class ProxiedAxis(Axis):
 
         def _bind(function_name):
             d = driver
-            for w in where + [function_name]:
+            last = None
+            for w in self.where + [function_name]:
+                last = d
                 if w is None:
                     raise AttributeError()
                 if isinstance(w, str):
                     d = getattr(d, w)
                 else:
                     d = d[w]
+
+            if not callable(d):
+                print('_bind sync', last, function_name)
+
+                def bound(value=None):
+                    if value:
+                        setattr(last, function_name, value)
+                    else:
+                        return getattr(last, function_name)
+
+                return bound
 
             print('_bind', d)
             return d
