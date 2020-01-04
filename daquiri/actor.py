@@ -1,5 +1,7 @@
 import asyncio
 
+from daquiri.state import ActorState
+
 __all__ = ('Actor', 'EchoActor')
 
 
@@ -15,6 +17,12 @@ class Actor:
 
     async def run(self):
         raise NotImplementedError()
+
+    def collect_state(self) -> ActorState:
+        return ActorState()
+
+    def receive_state(self, state: ActorState):
+        print(self, 'Received state', state)
 
 
 class EchoActor(Actor):
