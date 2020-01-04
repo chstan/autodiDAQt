@@ -42,10 +42,14 @@ def tokenize_access_path(str_or_list) -> Tuple[Union[str, int]]:
     """
     Turns a string-like accessor into a list of tokens
 
-    a.b[0].c -> ['a', 'b', 0, 'c']
+    Examples:
+        a.b[0].c -> ['a', 'b', 0, 'c']
 
-    :param str_or_list:
-    :return:
+    Args:
+        str_or_list:
+
+    Returns:
+        The tokenize path as a tuple of ints and strings
     """
     if isinstance(str_or_list, (tuple, list)):
         return str_or_list

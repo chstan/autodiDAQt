@@ -3,6 +3,7 @@ import slack
 
 __all__ = ('send_slack_message',)
 
+
 def send_slack_message(msg, app, to=None):
     """
     Sends a Slack message to a particular user or channel. In order to use this,
@@ -13,9 +14,11 @@ def send_slack_message(msg, app, to=None):
 
     We recommend using `python-dotenv` to manage your dependencies, and in
     particular if a `.dotenv` is located with your app, we will load it for you.
-    :param msg:
-    :param to:
-    :return:
+
+    Args:
+        msg (str): Message to send.
+        app: Running DAQuiri application
+        to: Optional channel override to send on
     """
     token = os.environ['SLACK_TOKEN']
     client = slack.WebClient(token=token)

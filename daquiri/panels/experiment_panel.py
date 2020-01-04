@@ -50,14 +50,12 @@ class ExperimentPanel(Panel):
     def enter_running(self):
         """
         Update the UI elements featuring the UI state.
-        :return:
         """
         self.ui['status-box'].setText('Running...')
 
     def enter_paused(self):
         """
         Update the UI elements featuring the UI state.
-        :return:
         """
         self.ui['status-box'].setText('Paused...')
 
@@ -65,7 +63,6 @@ class ExperimentPanel(Panel):
         """
         Unmount the data browsing part of the UI. This is because data is now stale and we
         don't know if the same axes will even be present in subsequent scans.
-        :return:
         """
         self.ui['status-box'].setText('Waiting...')
 
@@ -74,7 +71,6 @@ class ExperimentPanel(Panel):
         Here, we update the UI tree so it includes the newly
         published data. This amounts to traversing the UI, taking the newly
         published data, and calling the pyqtgraph `.set_data` function as appropriate.
-        :return:
         """
         dynamic_layout_container = self.ui['dynamic-layout']
         dynamic_layout = dynamic_layout_container.layout()

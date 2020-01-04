@@ -1,3 +1,5 @@
+from typing import Dict, Any
+
 __all__ = ('AttrDict', 'map_tree_leaves', 'map_treelike_nodes',)
 
 
@@ -5,8 +7,12 @@ class AttrDict(dict):
     def __getitem__(self, k):
         """
         Rewraps the item in an AttrDict if possible to allow "." chaining
-        :param
-        :return:
+
+        Args:
+            k (str): Key or item to find in the dictionary.
+
+        Returns:
+            Any: The value at the specified key, wrapped in an AttrDict if it was a dict.
         """
         item = super().__getitem__(k)
         if isinstance(item, dict):

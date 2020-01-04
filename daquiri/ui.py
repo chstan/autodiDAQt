@@ -359,9 +359,12 @@ def layout_function_call(signature: Signature, prefix: Optional[str] = None):
     Renders fields and a call button for a Python method. This allows "RPC" from the UI to
     driver methods or other functions.
 
-    :param signature:
-    :param prefix:
-    :return:
+    Args:
+        signature (Signature): The call signature for the function we are rendering UI for.
+        prefix (:obj:`str`, optional): UI ID prefix
+
+    Returns:
+        Rendered Qt widgets, without any callbacks/subscriptions in place.
     """
     if prefix is None:
         prefix = ''
@@ -406,9 +409,13 @@ def layout_dataclass(dataclass_cls, prefix: Optional[str] = None):
     """
     Renders a dataclass instance to QtWidgets. See also `bind_dataclass` below
     to get one way data binding to the instance
-    :param dataclass_cls:
-    :param prefix:
-    :return:
+
+    Args:
+        dataclass_cls (type): The class definition for the field under layout.
+        prefix (:obj:`str`, optional): UI ID prefix
+
+    Returns:
+        Qt.Widget corresponding to the fields of a dataclass, without any subscriptions or callbacks.
     """
     if prefix is None:
         prefix = dataclass_cls.__name__
@@ -427,10 +434,10 @@ def bind_dataclass(dataclass_instance, prefix: str, ui: Dict[str, QWidget]):
     subscriptions to value changes on the UI so that any future changes are propagated to
     the dataclass instance.
 
-    :param dataclass_instance: Instance to link
-    :param prefix: Prefix for widget IDs in the UI
-    :param ui: Collected UI elements
-    :return:
+    Args:
+        dataclass_instance: Instance to link
+        prefix: Prefix for widget IDs in the UI
+        ui: Collected UI elements
     """
     relevant_widgets = {k.split(prefix)[1]: v for k, v in ui.items() if k.startswith(prefix)}
     for field_name, field in dataclass_instance.__dataclass_fields__.items():

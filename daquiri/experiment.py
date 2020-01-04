@@ -63,9 +63,10 @@ class FSM(Actor):
 
         1. and 3. represent teardown and setup for the states respectively, and 2.
         can capture and transition specific state logic
-        :param transition:
-        :param trigger:
-        :return:
+        Args:
+            transition (dict): The transition message, with "to" and "match" keys.
+            trigger: The message causing the transition
+
         """
         from_state = self.state.lower()
         logger.info(f'{transition}, {trigger}')
@@ -101,8 +102,9 @@ class FSM(Actor):
 
         If there is no transition available, then the message is passed off to the client message
         handler `handle_message`
-        :param message:
-        :return:
+
+        Args:
+            message (str): Request to transition the state machine
         """
         found_transition = None
         if isinstance(message, str):
@@ -124,9 +126,12 @@ class FSM(Actor):
 
     async def handle_message(self, message):
         """
-        Handler for messages not related to state transitions
-        :param message:
-        :return:
+        Handler for messages not related to state transitions.
+
+        If subclassed, you can handle any work related to external events here.
+
+        Args:
+            message (str): Message from another Actor or thread
         """
         raise Exception(message)
 
@@ -155,9 +160,9 @@ class Collation:
     def receive(self, device, value):
         """
         Records statistics and observed values for the given axis, if it is independent
-        :param device:
-        :param value:
-        :return:
+        Args:
+            device: Path/ID of the virtual axis/device
+            value: Received value
         """
         if device in self.independent:
             if device in self.statistics:
@@ -307,13 +312,17 @@ class Run:
                 'steps_taken': self.steps_taken,
             }, f, cls=RichEncoder, indent=2)
 
-        def daq_to_xarray(stream_name, data_stream):
+        def daq_to_xarray(stream_name, data_stream) -> xr.Dataset:
             """
             Data streams are always lists of dictionaries with a
             point, a step number, and the acquisition time. Here we
 
-            :param data_stream:
-            :return:
+            Args:
+                data_stream:
+
+            Returns:
+                xr.Dataset: All accumulated data as an xr.Dataset
+                with dims and appropriate coords for the DAQ session.
             """
             step, points, data, time = [
                 [p[name] for p in data_stream]

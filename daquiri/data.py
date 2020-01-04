@@ -20,9 +20,13 @@ def reactive_frame(initial: Optional[pd.DataFrame] = None, mutate=False) -> Tupl
     with the data being updated behind your back. That being said, this option is more performant as pandas
     does not need to make a new copy of the frame with every push of data onto the stream.
 
-    :param initial: Initial data frame which can be used to populate the types and column names.
-    :param mutate: Whether to modify or concat (make new copy) new data onto the accumulated DataFrame.
-    :return:
+    Args:
+        initial (pd.DataFrame): Initial data frame which can be used to populate the types and column names.
+        mutate (bool): Whether to modify or concat (make new copy) new data onto the accumulated DataFrame.
+
+    Returns:
+        A tuple of an rx.Subject and an rx.Observable providing the raw value
+        and accumulated value streams respectively.
     """
     subject = Subject()
 
@@ -72,10 +76,10 @@ class ReactivePlot:
     def infer_x(self, df: pd.DataFrame):
         """
         Once we have received the first data, determine which axis is "x"
-        :param df: The first value we have received over the event stream
-        :return:
-        """
 
+        Args:
+            df: The data frame for which we are hoping to infer the index/independent variable column.
+        """
         if self.x:
             assert self.x in df.columns
         else:
@@ -86,8 +90,9 @@ class ReactivePlot:
         Like infer_x, once we have received the first data, determine which axis is "y".
         Importantly, this should be called after self.infer_x because otherwise we might mistakenly
         plot x against x.
-        :param df:
-        :return:
+
+        Args:
+            df: The data frame from which we hope to infer the dependent (y).
         """
 
         if isinstance(self.y, str):

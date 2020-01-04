@@ -12,7 +12,7 @@ class XScan:
     n_points_y: int = 20
 
     def sequence(self, experiment, mc, power_meter):
-        experiment.plot(dependent='power_meter.device', independent=['mc.stages[0'], name='Line Plot')
+        experiment.plot(dependent='power_meter.device', independent=['mc.stages[0]'], name='Line Plot')
         experiment.plot(dependent='power_meter.device', independent=['mc.stages[0]', 'mc.stages[1]'], name='Power',
                         size=lambda value: np.abs(value))
 

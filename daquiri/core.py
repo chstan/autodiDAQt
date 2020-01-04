@@ -180,10 +180,6 @@ class Daquiri:
         """
         Attempts to recover from, log, or otherwise deal with an exception inside the
         async portions of Daquiri.
-
-        :param loop:
-        :param context:
-        :return:
         """
 
         print('Handling.')
@@ -194,10 +190,12 @@ class Daquiri:
 
     async def shutdown(self, loop, signal=None):
         """
-        Cleanup the application
-        :param signal: The signal received triggering the shutdown.
-        :param loop: The running event loop.
-        :return:
+        Args:
+            loop: The running event loop.
+            signal: The signal received which triggered application shutdown.
+
+        Returns:
+            None
         """
         if signal:
             logger.info(f'Received exit signal {signal.name}.')

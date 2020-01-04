@@ -6,6 +6,7 @@ from daquiri.ui import grid
 
 __all__ = ('LogPanel',)
 
+
 class LogPanel(Panel):
     MAX_HISTORY = 300
     TITLE = 'Application Logs'

@@ -235,11 +235,12 @@ class BasicInstrumentPanel(Panel):
 
     def __init__(self, parent, id, app, instrument_description, instrument_actor):
         """
-        :param parent:
-        :param id: The key identifying the window but also the associated Actor for the instrument as managed by DAQuiri
-        :param app:
-        :param instrument_description:
-        :param instrument_actor:
+        Args:
+            parent:
+            id: The key identifying the window but also the associated Actor for the instrument as managed by DAQuiri
+            app:
+            instrument_description:
+            instrument_actor:
         """
         self.description = instrument_description
         self.actor = instrument_actor

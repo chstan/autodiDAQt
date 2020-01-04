@@ -5,7 +5,7 @@ from PyQt5.QtWidgets import (
     QPushButton, QCheckBox, QComboBox,
     QSpinBox, QTextEdit, QSlider,
     QLineEdit, QRadioButton,
-    QWidget, QFileDialog, QHBoxLayout
+    QWidget, QFileDialog, QHBoxLayout,
 )
 
 __all__ = (
@@ -15,7 +15,6 @@ __all__ = (
     'SubjectiveSlider', 'SubjectiveSpinBox',
     'SubjectiveTextEdit',
 )
-
 
 class SubjectiveComboBox(QComboBox):
     def __init__(self, *args, **kwargs):
