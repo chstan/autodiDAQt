@@ -6,7 +6,7 @@ from typing import Union, List, Dict, Tuple, Any, Optional, Callable, Type
 
 from daquiri.instrument import Detector
 from daquiri.instrument.method import Method, TestMethod
-from daquiri.instrument.property import ChoiceProperty, Property
+from daquiri.instrument.property import ChoiceProperty, Property, TestProperty, SimpleProperty
 from daquiri.instrument.axis import TestAxis, ProxiedAxis, LogicalAxis
 from daquiri.utils import tokenize_access_path
 
@@ -36,13 +36,19 @@ class MockDriver:
 
 class Specification:
     where = None  # path to the appropriate location on the instrument driver
+    axis_cls = None
+    test_axis_cls = TestAxis
 
     @property
     def where_list(self) -> Tuple[Union[str, int]]:
         return tokenize_access_path(self.where or [])
 
     def realize(self, key_name, driver_instance, instrument) -> Union[Detector, List[Detector], Dict[str, Detector]]:
-        raise NotImplementedError()
+        axis_cls = self.axis_cls
+        if isinstance(driver_instance, MockDriver):
+            axis_cls = self.test_axis_cls
+
+        return axis_cls(key_name, driver_instance, instrument)
 
     def to_scan_axis(self, over, path, *args, **kwargs):
         raise NotImplementedError()
@@ -183,12 +189,18 @@ class PropertySpecification:
     time_constant = ChoicePropertySpecification(choices=DSP7265.TIME_CONSTANTS, labels=lambda x: f'{x} s')
     """
     where: Tuple[Union[str, float]]
+    axis_cls: type = None
+    test_axis_cls: type = TestProperty
 
     def __init__(self, where):
         self.where = tokenize_access_path(where)
 
-    def realize(self, key_name, driver_instance, instrument) -> Property:
-        raise NotImplementedError()
+    def realize(self, key_name, driver_instance, instrument) -> Union[Detector, List[Detector], Dict[str, Detector]]:
+        axis_cls = self.axis_cls
+        if isinstance(driver_instance, MockDriver):
+            axis_cls = self.test_axis_cls
+
+        return axis_cls(key_name, driver_instance, instrument)
 
     def to_scan_axis(self, over, path, *args, **kwargs):
         raise NotImplementedError()
@@ -222,6 +234,25 @@ class ChoicePropertySpecification(PropertySpecification):
         return ScanChoiceProperty([over] + path, self)
 
 
+class DataclassPropertySpecification(PropertySpecification):
+    """
+    Allows setting Dataclass instances against a driver.
+    """
+    data_cls: type
+    default_instance: Any
+
+    axis_cls = SimpleProperty
+
+    def __init__(self, where, data_cls: type, default_instance=None):
+        super().__init__(where)
+        self.data_cls = data_cls
+        self.default_instance = default_instance
+
+    def to_scan_axis(self, over, path, *args, **kwargs):
+        from daquiri.scan import ScanDataclassProperty
+        return ScanDataclassProperty([over] + path, self)
+
+
 class DetectorSpecification(AxisSpecification):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs, axis=False)
@@ -245,4 +276,3 @@ class MethodSpecification:
         method_cls = TestMethod if isinstance(driver_instance, MockDriver) else Method
         return method_cls(name=key_name, where=self.where, driver=driver_instance,
                           parameters=self.parameters, return_annotation=self.return_annotation)
-

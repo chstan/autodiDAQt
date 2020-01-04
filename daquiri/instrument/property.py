@@ -1,5 +1,7 @@
 from typing import Any, Union, Tuple, Dict
 
+from daquiri.utils import safe_lookup
+
 __all__ = ('Property', 'ChoiceProperty', 'TestProperty',)
 
 
@@ -20,6 +22,20 @@ class Property:
 
     def get(self):
         raise NotImplementedError()
+
+
+class SimpleProperty(Property):
+    def __init__(self, name, where, driver):
+        super().__init__(name, where, driver)
+
+        self._bound_driver = safe_lookup(driver, where[:-1])
+
+    def set(self, value):
+        self.value = value
+        setattr(self._bound_driver, self.where[-1], value)
+
+    def get(self):
+        return getattr(self._bound_driver, self.where[-1])
 
 
 class ChoiceProperty(Property):
