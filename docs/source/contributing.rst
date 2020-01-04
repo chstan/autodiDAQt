@@ -28,7 +28,8 @@ for us.
 
 Once in your environment, install DAQuiri and its requirements locally with
 
-.. code-block:: none
+.. code-block:: bash
+
    # conda activate {my environment}
 
    pip install -e .

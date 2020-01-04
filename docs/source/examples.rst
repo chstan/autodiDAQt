@@ -36,6 +36,7 @@ AxisSpecification
 -----------------
 
 .. code-block:: python
+
    class ExampleInstrumnt(ManagedInstrument):
        polarization = AxisSpecification(float, where=['thorlabs_rot_controller.theta'])
 
@@ -44,6 +45,7 @@ PropertiesSpecification
 -----------------------
 
 .. code-block:: python
+
    class ExampleLockInAmplifier(ManagedInstrument):
        # a discrete property
        time_constant = ChoicePropertySpecification(choices=LockinDriver.TIME_CONSTANTS, where=['time_constant'])
@@ -62,6 +64,7 @@ In order to use a scan, you need to make sure it's registered with your experime
 to the python:attr:``daquiri.experiment.Experiment.scan_methods`` attribute.
 
 .. code-block:: python
+
    class MyExperiment(Experiment):
        scan_methods = [
            # Scan method classes here
@@ -82,6 +85,7 @@ so that DAQuiri can render UI for you to populate the configuration of the scan.
 In the future, you will be able to specify how to render fields if you need to.
 
 .. code-block:: python
+
    import numpy as np
    from dataclasses import dataclass
 
@@ -105,6 +109,7 @@ python:func:``daquiri.scan.scan``, which constructs a class with a ``.sequence``
 by scanning over the axes provided and reading from the axes specified in the ``read=`` keyword.
 
 .. code-block:: python
+
    d_location = PointMover.scan('mc').location()
 
    scan(location=d_location, read={'signal': 'value_reader.value'})

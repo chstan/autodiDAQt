@@ -6,6 +6,7 @@ file: "config.json". An annotated copy of the defaults used is included here as 
 Python dictionary literal:
 
 .. code-block:: python
+
    {
      # Version of your, the user's software. This is used for attaching DAQ software versions to
      # data collected, and to the application's state so that we can persist logical motors, window locations,
@@ -61,10 +62,10 @@ simple sorting of the logs if you need to check something against a particular d
 
 The actual name is constructed by using the following metadata:
 
-1. ``user (str)``: The name of the current user or ``"test_user"``if not specified.
-2. ``time (str)``: The date and time as a string.
-3. ``session (str)``: A user-provided description of the current experiment.
-4. ``run (int)``: An index indicating the number of experiments/runs that have taken place
+1. user (str): The name of the current user or ``"test_user"`` if not specified.
+2. time (str): The date and time as a string.
+3. session (str): A user-provided description of the current experiment.
+4. run (int): An index indicating the number of experiments/runs that have taken place
    since starting the application.
 
 data_directory

@@ -72,8 +72,8 @@ Documention
 * :doc:`development-efforts`
 * :doc:`api`
 * :doc:`internals`
-* :doc:`coming-soon`
 * :doc:`contributing`
+* :doc:`CHANGELOG`
 
 .. toctree::
    :maxdepth: 1
@@ -83,6 +83,6 @@ Documention
    development-efforts
    api
    internals
-   coming-soon
    contributing
+   CHANGELOG
 

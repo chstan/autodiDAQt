@@ -16,6 +16,7 @@ python:meth:`Daquiri.experiment.Experiment.plot`. This function expects a few ar
 ``independent=`` axes as the axis URLs, and the ``dependent=`` axes as axis URLs.
 
 .. code-block:: python
+
    def sequence(self, experiment, ...):
        ...
        # plot the reads from `power_meter.device` against `mc.stages[0]` while running

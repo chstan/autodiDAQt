@@ -26,7 +26,7 @@ a Python object, it can have any internal state it requires. An ``Actor`` in DAQ
 distinguished by the presence of two asynchronous methods :py:meth:`~daquiri.actors.Actor.prepare`
 and :py:meth:`~daquiri.actors.Actor.run`.
 
-.. ipython:: python
+.. code-block:: python
 
     class Actor:
         ...
@@ -37,7 +37,6 @@ and :py:meth:`~daquiri.actors.Actor.run`.
         async def run(self):
             # do any useful work here, either once and quit,
             # or read messages continually
-
 
 When you start DAQuiri you can specify any additional actors your program uses together
 with unique IDs and DAQuiri will handle configuring and scheduling them to run for you.
