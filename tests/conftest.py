@@ -1,7 +1,14 @@
-# need to insert the DISPLAY key in order to prevent the ``mouseinfo`` package from
-# error-ing on import during CI.
-import os
-os.environ['DISPLAY'] = ''
+# need to mock pyqt_led because it does not work on the CI server
+import sys
+
+
+class Led:
+    pass
+
+
+module = type(sys)('pyqt_led')
+module.Led = Led
+sys.modules['pyqt_led'] = module
 
 from typing import Dict
 
