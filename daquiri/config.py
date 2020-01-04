@@ -1,15 +1,32 @@
 import datetime
 import json
+import sys
+from pathlib import Path
 
-from .collections import AttrDict
+from daquiri.utils import DAQUIRI_LIB_ROOT
 
-__all__ = ('Config', 'MetaData',)
+from .collections import AttrDict, deep_update
+
+__all__ = ('Config', 'MetaData', 'default_config_for_platform')
+
+
+def default_config_for_platform() -> Path:
+    configs = {'win32': 'default_config_windows.json', }
+    cfile = configs.get(sys.platform, 'default_config.json')
+
+    return DAQUIRI_LIB_ROOT / 'resources' / cfile
 
 
 class Config:
-    def __init__(self, path):
+    def __init__(self, path, defaults=None):
+        if defaults:
+            with open(str(path)) as f:
+                self._cached_settings = json.load(f)
+        else:
+            self._cached_settings = {}
+
         with open(str(path)) as f:
-            self._cached_settings = json.load(f)
+            deep_update(json.load(f), self._cached_settings)
 
     def __getattr__(self, item):
         ret = self._cached_settings[item]

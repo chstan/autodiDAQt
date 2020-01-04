@@ -24,6 +24,30 @@ class AttrDict(dict):
     __setattr__ = dict.__setitem__
 
 
+def deep_update(src: Dict[Any, Any], dest: Dict[Any, Any]):
+    """
+    Similar to ``dict.update``, except that we also ``deep_update``
+    any dictionaries we find inside of the destination. This is useful for
+    nested default settings, for instance.
+
+    Args:
+        src:
+        dest:
+
+    Returns:
+        The merged dictionaries.
+    """
+
+    for k, v in src.items():
+        if isinstance(v, dict):
+            if k not in dest:
+                dest[k] = {}
+
+            deep_update(v, dest[k])
+        else:
+            dest[k] = v
+
+
 def map_treelike_nodes(tree, transform):
     if not isinstance(transform, dict):
         transform = {
