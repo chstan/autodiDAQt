@@ -1,7 +1,6 @@
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
 from daquiri.utils import run_on_loop, gather_dict, find_conflict_free_matches
-from ..resource_manager import resource_manager
 from collections import defaultdict
 
 from . import newport, srs, lakeshore
@@ -32,7 +31,8 @@ async def identify_all_instruments(instrument_map, manager=None):
     handles_by_address = {}
 
     unidentified = set(instrument_map.keys())
-    resources = resource_manager.list_resources_info()
+    resources = {}
+    #resources = resource_manager.list_resources_info()
 
     for k, v in resources.items():
         try:
