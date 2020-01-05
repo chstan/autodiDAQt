@@ -16,12 +16,8 @@ jobs:
     name: CI
     tox_version: 'tox'
     jobs:
-      docs: null
       py37:
         image: [linux, windows, macOs]
-    coverage:
-      with_toxenv: 'coverage'
-      for_envs: [py37]
 
 - ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/release') }}:
   - template: publish-pypi.yml@tox
