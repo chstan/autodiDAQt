@@ -187,8 +187,10 @@ class Daquiri:
         def lookup_managed_instrument_args(instrument_key):
             return {
                 'driver_init': {
-                    'args': self.config.instruments.nested_get([instrument_key, 'initialize', 'args'], []),
-                    'kwargs': self.config.instruments.nested_get([instrument_key, 'initialize', 'kwargs'], {}),
+                    'args': self.config.instruments.nested_get([instrument_key, 'initialize', 'args'], [],
+                                                               safe_early_terminate=True),
+                    'kwargs': self.config.instruments.nested_get([instrument_key, 'initialize', 'kwargs'], {},
+                                                                 safe_early_terminate=True),
                 },
             }
 
@@ -287,7 +289,7 @@ class Daquiri:
 
     def load_config(self):
         default = default_config_for_platform()
-        config_files = list(itertools.chain(*[p.glob('config.json') for p in self.search_paths])) + []
+        config_files = list(itertools.chain(*[p.glob('config.json') for p in self.search_paths])) + [default]
         self.config = Config(config_files[0], defaults=default)
 
     async def process_events(self):
