@@ -4,12 +4,15 @@
 
 |build_status| |docs_status| |coverage_status|
 
+|example|
+
 .. |build_status| image:: https://dev.azure.com/chstansbury/DAQuiri/_apis/build/status/chstan.DAQuiri?branchName=master
    :target: https://dev.azure.com/chstansbury/DAQuiri/_build/latest?definitionId=2&branchName=master
 .. |docs_status| image:: https://readthedocs.org/projects/daquiri/badge/?version=latest&style=flat
    :target: https://daquiri.readthedocs.io/en/latest/
 .. |coverage_status| image:: https://img.shields.io/azure-devops/coverage/chstansbury/daquiri/1.svg
    :target: https://dev.azure.com/chstansbury/DAQuiri/_build?definitionId=1
+.. |example| image:: docs/source/_static/daquiri-example.gif
 
 
 daquiri := DAQ + UI generation + Reactivity + Instruments
