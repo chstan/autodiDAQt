@@ -241,6 +241,8 @@ class Daquiri:
 
         logger.info('Saving...')
 
+        self.save_state()
+
         tasks = [t for t in asyncio.all_tasks(loop=loop) if t is not asyncio.current_task(loop=loop)]
         for task in tasks: task.cancel()
 
@@ -339,14 +341,15 @@ class Daquiri:
                 p.receive_state(state.panels[k])
 
         for k, a in self.actors.items():
-            if k in state.panels:
+            if k in state.actors:
                 a.receive_state(state.actors[k])
 
         for k, ins in self.managed_instruments.items():
-            if k in state.panels:
+            if k in state.managed_instruments:
                 ins.receive_state(state.managed_instruments[k])
 
     def load_state(self):
+        logger.info('Loading application state.')
         state_filename = find_newest_state_filename(self)
         if not state_filename:
             state = self.collect_state()
@@ -359,12 +362,16 @@ class Daquiri:
         self.receive_state(state)
 
     def save_state(self):
+        logger.info('Saving application state.')
         state_filename = generate_state_filename(self)
+        state_filename.parent.mkdir(parents=True, exist_ok=True)
+
         state = self.collect_state()
         with open(str(state_filename), 'wb') as state_f:
             pickle.dump(state, state_f)
 
     def start(self):
+        logger.info('Application in startup.')
         self.qt_app = QApplication(sys.argv)
         if USE_QUAMASH:
             loop = QEventLoop(self.qt_app)

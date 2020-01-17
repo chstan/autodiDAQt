@@ -36,7 +36,9 @@ class Panel(QWidget):
         return PanelState(geometry=self.geometry())
 
     def receive_state(self, state: PanelState):
-        print(self, 'Received', state)
+        if state is None:
+            return
+
         self.setGeometry(state.geometry)
 
     def register_figure(self, name, toolbar=None, layout=None, *args, **kwargs):
