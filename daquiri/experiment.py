@@ -2,7 +2,7 @@ import contextlib
 import json
 import warnings
 from dataclasses import dataclass, field
-from collections import defaultdict
+from collections import defaultdict, deque
 from pathlib import Path
 import datetime
 from asyncio import QueueEmpty, sleep, gather
@@ -418,7 +418,14 @@ class Experiment(FSM):
             else:
                 self.run_number += 1
 
-            config = copy(self.scan_configuration[self.use_method])
+            # use the queue if it is not empty
+            if self.scan_deque:
+                self.autoplay = True
+
+                config = self.scan_deque.popleft()
+            else:
+                config = copy(self.scan_configuration)
+
             all_scopes = itertools.chain(self.app.actors.keys(), self.app.managed_instruments.keys())
             sequence = config.sequence(self, **{
                 s: ScopedAccessRecorder(s) for s in all_scopes if s != 'experiment'})  # TODO fixthis
@@ -478,6 +485,11 @@ class Experiment(FSM):
     async def running_to_idle(self, *_):
         await self.save()
         self.ui.running_to_idle()
+        if self.autoplay:
+            if self.scan_deque:
+                self.messages.put_nowait('start')
+            else:
+                self.autoplay = False
 
     async def running_to_shutdown(self, *_):
         await self.save()
@@ -566,8 +578,23 @@ class Experiment(FSM):
         await gather(*[self.perform_single_daq(**spec) for spec in step])
         self.current_run.step += 1
 
+    @property
+    def current_progress(self):
+        try:
+            n_points = self.scan_configuration.n_points
+        except AttributeError:
+            n_points = None
+
+        if self.current_run is None:
+            return None, n_points
+
+        return self.current_run.point, n_points
+
+
     async def run_idle(self, *_):
-        return
+        # this is kind of a kludge, instead we should be
+        await sleep(0.1)
+        self.ui.update_timing_ui()
 
     async def enter_idle(self, *_):
         self.ui.enter_idle()
@@ -581,7 +608,9 @@ class Experiment(FSM):
         return
 
     async def run_paused(self, *_):
-        return
+        # this is kind of a kludge
+        await sleep(0.1)
+        self.ui.update_timing_ui()
 
     async def save(self, *_):
         if self.current_run is None:
@@ -598,6 +627,10 @@ class Experiment(FSM):
 
         self.current_run = None
 
+    @property
+    def scan_configuration(self):
+        return self.scan_configurations[self.use_method]
+
     @contextlib.contextmanager
     def point(self):
         self.current_run.point_started.append(datetime.datetime.now())
@@ -608,15 +641,28 @@ class Experiment(FSM):
         if self.ui is not None:
             self.ui.soft_update()
 
+    # QUEUE MANAGEMENT
+    def enqueue(self, index=None):
+        configuration = copy(self.scan_configuration)
+
+        if index is not None:
+            self.scan_deque.insert(index, configuration)
+        else:
+            self.scan_deque.append(configuration)
+
     def __init__(self, app):
         super().__init__(app)
 
         self.run_number = None
         self.current_run = None
         self.collation = None
-        self.ui = None # reference to the mounted UI
 
-        self.scan_configuration = {S.__name__: S() for S in self.scan_methods}
+        self.autoplay = False  # autoplay next item from queue
+        self.scan_deque = deque([])
+
+        self.ui = None  # reference to the mounted UI
+
+        self.scan_configurations = {S.__name__: S() for S in self.scan_methods}
         self.use_method = self.scan_methods[0].__name__
 
     async def handle_message(self, message):
