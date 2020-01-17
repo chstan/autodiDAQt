@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import pytest
+from daquiri.version import VERSION
 from daquiri.mock import MockScalarDetector
 from daquiri.state import DaquiriStateAtRest, SerializationSchema, AppState, InstrumentState
 from tests.conftest import MockDaquiri
@@ -16,13 +17,14 @@ async def test_basic_state_collection(app: MockDaquiri):
     state = app.collect_state()
     root = Path(__file__).parent.parent
     assert state == DaquiriStateAtRest(
-        schema=SerializationSchema(daquiri_version='0.0.3', user_version='0.0.0',
+        schema=SerializationSchema(daquiri_version=VERSION, user_version='0.0.0',
                                    app_root=root),
         daquiri_state=AppState(),
         panels={},
         actors={},
         managed_instruments={
-            'mc': InstrumentState(axes={'device': None}, properties={})
+            'mc': InstrumentState(axes={'device': None}, properties={},
+                                  panel_state=None)
         },
     )
 
