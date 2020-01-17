@@ -6,13 +6,14 @@ import json
 import pyqtgraph as pg
 import pandas as pd
 
-from typing import List, Union, Any, Dict
+from typing import List, Union
 
 from loguru import logger
 
 from daquiri.instrument.axis import ProxiedAxis, LogicalAxis, TestAxis, Axis, LogicalSubaxis
 from daquiri.instrument.method import Method, TestMethod
 from daquiri.instrument.property import ChoiceProperty
+from daquiri.schema import ArrayType
 from daquiri.utils import safe_lookup
 from daquiri.ui import grid, tabs, vertical, group, horizontal, label, line_edit, button, CollectUI, submit, \
     layout_dataclass, bind_dataclass, combo_box, layout_function_call, bind_function_call
@@ -84,8 +85,12 @@ class AxisView:
         return self.axis.schema in (float,)
 
     @property
-    def live_plottable(self):
+    def live_line_plottable(self):
         return self.axis.schema in (float, int,)
+
+    @property
+    def live_image_plottable(self):
+        return isinstance(self.axis.schema, ArrayType)
 
     def attach(self, ui):
         raise NotImplementedError()
@@ -159,12 +164,16 @@ class ProxiedAxisView(AxisView):
     def layout(self):
         jog_controls = []
         live_plots = []
-        if self.live_plottable:
+        if self.live_line_plottable:
             widget = pg.PlotWidget(axisItems={'bottom': TimeAxisItem(orientation='bottom')})
             self.live_plot = widget.plot()
             widget.setTitle(self.id)
 
             live_plots = [widget]
+
+        if self.live_image_plottable:
+            logger.warning('Not live plotting image: not currently supported. '
+                           'Complain at Conrad if this sufficiently upsets you.')
 
         if self.joggable:
             jog_controls = [
