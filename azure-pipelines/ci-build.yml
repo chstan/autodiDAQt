@@ -10,18 +10,25 @@ trigger:
 - master
 - release
 
+pr:
+  branches:
+    include:
+      - master
+
 jobs:
 - template: run-tox-env.yml@tox
   parameters:
-    name: CI
     tox_version: 'tox'
     jobs:
       py37:
         image: [linux, windows, macOs]
+    coverage:
+      with_toxenv: 'coverage'
+      for_envs: [py37]
 
 - ${{ if eq(variables['Build.SourceBranch'], 'refs/heads/release') }}:
   - template: publish-pypi.yml@tox
     parameters:
-      dependsOn: [CI]
+      dependsOn: [report_coverage]
       external_feed: 'daquiri'
-      pypi_remote: ''
+      pypi_remote: 'pypi-daquiri'
