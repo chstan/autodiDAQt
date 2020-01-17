@@ -32,7 +32,13 @@ class SerializationSchema:
 
 
 @dataclass
+class InstrumentPanelState(PanelState):
+    pass
+
+
+@dataclass
 class InstrumentState:
+    panel_state: InstrumentPanelState
     axes: Dict[str, Any]
     properties: Dict[str, Any]
 

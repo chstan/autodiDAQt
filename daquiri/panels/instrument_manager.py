@@ -27,6 +27,7 @@ class InstrumentManager(Panel):
             w = panel_cls(parent=self, id=name, app=self.app,
                           instrument_actor=self.app.managed_instruments[name],
                           instrument_description=self.app.managed_instruments[name].ui_specification)
+            self.app.managed_instruments[name].panel = w
             self._panels[name]['panel'] = w
             w.show()
         else:

@@ -9,6 +9,7 @@ from daquiri.instrument import ManagedInstrument
 from daquiri.instrument.spec import MockDriver, AxisSpecification
 from daquiri.mock import MockMotionController
 from daquiri.experiment import Experiment
+from daquiri.schema import ArrayType
 
 
 class MockImageDetector(ManagedInstrument):
@@ -22,8 +23,8 @@ class MockImageDetector(ManagedInstrument):
     """
     driver_cls = MockDriver # <- specifies that we should always be mocking this instrument
     device = AxisSpecification(
-        float, where=['device'],
-        mock=dict(read=lambda: np.random.random((800, 800)))  # <- specifies how we want to fake reads
+        ArrayType([250, 250], float), where=['device'],
+        mock=dict(read=lambda: np.random.random((250, 250)))  # <- specifies how we want to fake reads
     )
 
 

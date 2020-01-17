@@ -8,24 +8,21 @@ before a 1.0.0 release. If a feature has an anticipated release number, it will 
 Related to Axes
 ---------------
 
-1. (0.0.5) Logical state is saved and restored on restarts
-2. (0.0.6) Axis settling
+1. (0.0.6) Axis settling
 
 Related to UI/UI Generation
 ---------------------------
 
-1. (0.0.5) Panel locations and sizes are restored on restarts
-2. (1.0.0) Reduction in dead whitespace
+1. (1.0.0) Reduction in dead whitespace
 
 Related to Experiments
 ----------------------
 
 1. (0.0.7) Barebones Experiment in uninverted control mode (you can manage recording and saving data as you wish but
    DAQuiri will still record the raw experiment record for you)
-2. (0.0.4) Scan queueing
-3. (0.0.10) DAQ happens on separate thread
-4. (0.0.10) Large file IO (saving data) happens on separate thread
-5. (0.0.8) Scan duration estimates/overhead metrics
+2. (0.0.10) DAQ happens on separate thread
+3. (0.0.10) Large file IO (saving data) happens on separate thread
+4. (0.0.8) Scan duration estimates/overhead metrics
 
 Tests
 -----

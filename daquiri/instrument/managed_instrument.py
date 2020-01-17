@@ -32,6 +32,7 @@ class ScanRecorder(AccessRecorder):
 
 class ManagedInstrument(Actor):
     panel_cls = BasicInstrumentPanel
+    panel = None
 
     driver_cls = None
     test_cls = None
@@ -44,10 +45,15 @@ class ManagedInstrument(Actor):
             setattr(self, name, value)
 
     def collect_state(self) -> InstrumentState:
+        try:
+            panel_state = self.panel.collect_state()
+        except:
+            panel_state = None
         return InstrumentState(
             axes={k: [vs.collect_state() for vs in v] if isinstance(v, list) else v.collect_state()
                   for k, v in self.axes.items()},
             properties={},
+            panel_state=panel_state,
         )
 
     def receive_state(self, state: InstrumentState):
@@ -57,6 +63,9 @@ class ManagedInstrument(Actor):
                     axis.receive_state(axis_state)
             else:
                 self.axes[k].receive_state(state.axes[k])
+
+        if self.panel is not None:
+            self.panel.receive_state(state.panel_state)
 
     @property
     def axes(self):

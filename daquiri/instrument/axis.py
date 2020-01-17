@@ -1,16 +1,35 @@
 import asyncio
 import warnings
 from dataclasses import dataclass
+import numpy as np
 from typing import Optional, Dict, List, Callable, Any
 
 import datetime
 import rx
+
+from daquiri.schema import ArrayType
 from daquiri.state import LogicalAxisState
 from rx.subject import Subject
 from daquiri.data import reactive_frame
 
 __all__ = ('Axis', 'Detector', 'TestAxis', 'ProxiedAxis', 'LogicalAxis',
            'PolledRead', 'PolledWrite')
+
+DEFAULT_VALUES = {
+    int: 0,
+    float: 0,
+    str: '',
+}
+
+
+def default_value_for_schema(schema):
+    if isinstance(schema, ArrayType):
+        if schema.shape is None:
+            return None
+
+        return np.zeros(dtype=schema.dtype or float, shape=schema.shape)
+
+    return DEFAULT_VALUES[schema]
 
 
 @dataclass
@@ -40,11 +59,6 @@ class Detector:
     IDLE = 0
     MOVING = 1
 
-    DEFAULT_VALUES = {
-        int: 0,
-        float: 0,
-        str: '',
-    }
 
     raw_value_stream: Optional[Subject]
     collected_value_stream: Optional[rx.Observable]
@@ -331,7 +345,7 @@ class ProxiedAxis(Axis):
 class TestDetector(Detector):
     def __init__(self, name, schema, mock=None, *args, **kwargs):
         super().__init__(name, schema)
-        self._value = self.DEFAULT_VALUES[self.schema]
+        self._value = default_value_for_schema(schema)
         self.mock = mock or {}
         self._mock_read = self.mock.get('read')
         self._mock_write = self.mock.get('write')

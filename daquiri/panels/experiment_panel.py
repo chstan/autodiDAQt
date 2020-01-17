@@ -1,3 +1,9 @@
+import dataclasses
+import datetime
+import math
+from typing import Tuple
+from copy import copy
+
 import numpy as np
 import pyqtgraph as pg
 
@@ -6,12 +12,24 @@ from daquiri.ui import (
     CollectUI, tabs, vertical, horizontal,
     combo_box, button,
     label, bind_dataclass,
-    layout_dataclass, splitter)
+    layout_dataclass, splitter, group)
 
 __all__ = ('ExperimentPanel',)
 
 pg.setConfigOption('background', 'w')
 pg.setConfigOption('foreground', 'k')
+
+
+def timedelta_to_tuple(delta: datetime.timedelta) -> Tuple[int, int, float]:
+    secs = delta.total_seconds()
+    secs, rest = int(math.floor(secs)), secs - math.floor(secs)
+    hours, remainder = divmod(secs, 3600)
+    minutes, remainder = divmod(remainder, 60)
+    return hours, minutes, remainder + rest
+
+
+def format_delta(h, m, s):
+    return f'{h}:{m}:{s:.1f}' if h else (f'{m}:{s:.1f}' if m else f'{s:.1f}')
 
 
 class ExperimentPanel(Panel):
@@ -22,11 +40,11 @@ class ExperimentPanel(Panel):
     the layout function, as is appropriate for your application. If you find yourself needing to make serious
     modifications you can make a feature request or suggest a reorg of the code.
     """
-    SIZE = (900, 450)
+    SIZE = (1400, 450)
     TITLE = 'Experiment'
     DEFAULT_OPEN = True
     RESTART = True
-    LEFT_PANEL_SIZE: int = 200
+    LEFT_PANEL_SIZE: int = 400
 
     extra_panels = []
     dynamic_state_mounted: bool = False
@@ -35,7 +53,13 @@ class ExperimentPanel(Panel):
     pg_plots = None
     plot_type = None
     additional_plots = None
+
     ui = None
+    timing_ui = None
+    queue_ui = None
+
+    pause_stack = None
+    frame_times = []
 
     @staticmethod
     def layout_scan_methods(methods):
@@ -47,16 +71,48 @@ class ExperimentPanel(Panel):
         # at setup time otherwise this will break or require runtime type inspection
         return self.app.actors['experiment']
 
+    @property
+    def efficiency(self):
+        pause_time, running_time = datetime.timedelta(0), datetime.timedelta(0)
+
+        state, current_time = self.pause_stack[0]
+        for new_state, transition_time in self.pause_stack[1:]:
+            if state == 'Start':
+                running_time += (transition_time - current_time)
+            else:
+                pause_time += (transition_time - current_time)
+
+            state, current_time = new_state, transition_time
+
+        if state == 'Start':
+            running_time += datetime.datetime.now() - current_time
+        else:
+            pause_time += datetime.datetime.now() - current_time
+
+        try:
+            eff = running_time.total_seconds() / (
+                    running_time.total_seconds() + pause_time.total_seconds())
+        except ZeroDivisionError:
+            eff = 0
+
+        return eff, running_time, pause_time
+
     def enter_running(self):
         """
         Update the UI elements featuring the UI state.
         """
+        self.pause_stack.append(['Start', datetime.datetime.now()])
+        self.update_timing_ui()
+        self.update_queue_ui()
         self.ui['status-box'].setText('Running...')
 
     def enter_paused(self):
         """
         Update the UI elements featuring the UI state.
         """
+        self.frame_times = []
+        self.pause_stack.append(['Paused', datetime.datetime.now()])
+        self.update_timing_ui()
         self.ui['status-box'].setText('Paused...')
 
     def enter_idle(self):
@@ -64,7 +120,122 @@ class ExperimentPanel(Panel):
         Unmount the data browsing part of the UI. This is because data is now stale and we
         don't know if the same axes will even be present in subsequent scans.
         """
+        self.pause_stack = []
+        self.frame_times = []
+        self.update_timing_ui()
         self.ui['status-box'].setText('Waiting...')
+
+    def update_timing_ui(self):
+        completed_points, n_points = self.experiment.current_progress
+
+        if not self.pause_stack:
+            if n_points is None:
+                n_points = '[UNKNOWN]'
+
+            self.timing_ui['timing-label'].setText(f'{n_points} Points')
+            return
+
+        efficiency, total_runtime, total_pausetime = self.efficiency
+        if self.pause_stack[-1][0] == 'Start':
+            # running...
+            runtime = format_delta(*timedelta_to_tuple(total_runtime))
+            pointrate = 0.
+            points_progress = ''
+            time_remaining = ''
+
+            if n_points is not None:
+                points_progress = f'{completed_points}/{n_points}'
+                try:
+                    n_frames = min(len(self.frame_times), 10)
+                    start_frame = self.frame_times[-n_frames]
+                    per_frame_time = (datetime.datetime.now() - start_frame) / n_frames
+
+                    remaining = (n_points - completed_points) * per_frame_time
+                    time_remaining = format_delta(*timedelta_to_tuple(remaining))
+                    pointrate = 1 / (per_frame_time.total_seconds() + 0.0001)
+                except:
+                    time_remaining = ''
+
+            self.timing_ui['timing-label'].setText(
+                f'Running: {runtime}\nRemaining: {points_progress}  {time_remaining} EST {pointrate:.1f} PPS'
+            )
+        else:
+            self.timing_ui['timing-label'].setText(
+                f'Paused: {format_delta(*timedelta_to_tuple(total_pausetime))}'
+            )
+
+    def widget_for_scan_config(self, item, index):
+        def remove_this_item(*_):
+            self.experiment.scan_deque.remove(item)
+            self.update_queue_ui()
+
+        def copy_this_item(*_):
+            self.experiment.scan_deque.insert(index, copy(item))
+            self.update_queue_ui()
+
+        def move_item_up(*_):
+            if index > 0:
+                self.experiment.scan_deque.remove(item)
+                self.experiment.scan_deque.insert(index - 1, item)
+
+            self.update_queue_ui()
+
+        def move_item_down(*_):
+            if index + 1 < len(self.experiment.scan_deque):
+                self.experiment.scan_deque.remove(item)
+                self.experiment.scan_deque.insert(index + 1, item)
+
+            self.update_queue_ui()
+
+        remove_button = button('Remove')
+        remove_button.subject.subscribe(remove_this_item)
+        copy_button = button('Copy')
+        copy_button.subject.subscribe(copy_this_item)
+        up_button = button('↑')
+        up_button.subject.subscribe(move_item_up)
+        down_button = button('↓')
+        down_button.subject.subscribe(move_item_down)
+
+        rest = None
+        try:
+            fields = dataclasses.asdict(item)
+            if len(fields) < 3:
+                rest = vertical(*[label(f'{f}: {str(getattr(item, f))}') for f, v in fields.items()])
+            else:
+                split = len(fields) // 2
+                rest = horizontal(
+                    vertical(*[label(f'{f}: {str(getattr(item, f))}') for f, _ in list(fields.items())[:split]]),
+                    vertical(*[label(f'{f}: {str(getattr(item, f))}') for f, _ in list(fields.items())[split:]]),
+                )
+        except TypeError:
+            rest = label(str(item))
+
+        return horizontal(
+            group(
+                label(type(item).__name__),
+                rest,
+                label=f'Queue Item {index + 1}',
+            ),
+            vertical(
+                remove_button,
+                copy_button,
+            ),
+            vertical(
+                up_button,
+                down_button,
+            )
+        )
+
+    def update_queue_ui(self):
+        queue_main_widget = self.queue_ui['queue-layout']
+
+        # for now clear and rerender since this operation isn't performed often
+        for i in reversed(range(queue_main_widget.layout().count())):
+            queue_main_widget.layout().itemAt(i).widget().setParent(None)
+
+        for i, config in enumerate(self.experiment.scan_deque):
+            queue_main_widget.layout().addWidget(
+                self.widget_for_scan_config(config, i))
 
     def soft_update(self):
         """
@@ -72,6 +243,9 @@ class ExperimentPanel(Panel):
         published data. This amounts to traversing the UI, taking the newly
         published data, and calling the pyqtgraph `.set_data` function as appropriate.
         """
+        self.frame_times.append(datetime.datetime.now())
+        self.update_timing_ui()
+
         dynamic_layout_container = self.ui['dynamic-layout']
         dynamic_layout = dynamic_layout_container.layout()
 
@@ -192,6 +366,35 @@ class ExperimentPanel(Panel):
     def running_to_idle(self):
         self.dynamic_state_mounted = False
 
+    def layout_queue_content(self):
+        self.queue_ui = {}
+
+        with CollectUI(self.queue_ui):
+            queue_page = splitter(
+                vertical(
+                    button('Clear Queue', id='clear-queue'),
+                ),
+                vertical(
+                    id='queue-layout',
+                ),
+                direction=splitter.Horizontal,
+                size=[self.LEFT_PANEL_SIZE, self.SIZE[0] - self.LEFT_PANEL_SIZE],
+            )
+
+        self.queue_ui['clear-queue'].subject.subscribe(self.clear_queue)
+        return queue_page
+
+    def layout_timing_group(self):
+        self.timing_ui = {}
+
+        with CollectUI(self.timing_ui):
+            timing_group = group(
+                label('N Points: {}'.format(0), id='timing-label'),
+                label='Timing',
+            )
+
+        return timing_group
+
     def layout(self):
         experiment = self.experiment
         self.experiment.ui = self
@@ -202,38 +405,45 @@ class ExperimentPanel(Panel):
             vertical(
                 horizontal(
                     button('Start', id='start'),
+                    button('Add to Q', id='enqueue'),
                     button('Pause', id='pause'),
                     button('Stop', id='stop'),
                     label('Waiting...', id='status-box'),
+                    self.layout_timing_group(),
+                    min_height=120,
                 ),
-                splitter(
-                    vertical(
-                        horizontal(
-                            'Use',
-                            combo_box([s.__name__ for s in scan_methods], id='selected_scan_method'),
+                tabs(*[
+                    ['Scan', splitter(
+                        vertical(
+                            horizontal(
+                                'Use',
+                                combo_box([s.__name__ for s in scan_methods], id='selected_scan_method'),
+                            ),
+                            tabs(
+                                ['Scans', tabs(
+                                    *self.layout_scan_methods(scan_methods)
+                                )],
+                                *self.extra_panels,
+                            ),
                         ),
-                        tabs(
-                            ['Scans', tabs(
-                                *self.layout_scan_methods(scan_methods)
-                            )],
-                            *self.extra_panels,
+                        vertical(
+                            '[Data Streams]',
+                            id='dynamic-layout',
                         ),
-                    ),
-                    vertical(
-                        '[Data Streams]',
-                        id='dynamic-layout',
-                    ),
-                    direction=splitter.Horizontal,
-                    size=[self.LEFT_PANEL_SIZE, self.SIZE[0] - self.LEFT_PANEL_SIZE]
-                ),
+                        direction=splitter.Horizontal,
+                        size=[self.LEFT_PANEL_SIZE, self.SIZE[0] - self.LEFT_PANEL_SIZE]
+                    )],
+                    ['Queue', self.layout_queue_content()],
+                ]),
                 widget=self,
             )
 
         for scan_method in scan_methods:
             name = scan_method.__name__
-            bind_dataclass(experiment.scan_configuration[name], prefix=name + '.', ui=ui)
+            bind_dataclass(experiment.scan_configurations[name], prefix=name + '.', ui=ui)
 
         ui['start'].subject.subscribe(self.start)
+        ui['enqueue'].subject.subscribe(self.add_to_queue)
         ui['stop'].subject.subscribe(self.stop)
         ui['pause'].subject.subscribe(self.pause)
 
@@ -242,6 +452,17 @@ class ExperimentPanel(Panel):
 
         self.ui = ui
         self.dynamic_state_mounted = False
+
+    def add_to_queue(self, *_):
+        self.experiment.enqueue()
+        self.update_queue_ui()
+
+    def clear_queue(self, *_):
+        self.experiment.scan_deque.clear()
+        self.update_queue_ui()
+
+    def update_n_points(self):
+        print('update n_points')
 
     def set_scan_method(self, scan_method):
         self.experiment.use_method = scan_method
