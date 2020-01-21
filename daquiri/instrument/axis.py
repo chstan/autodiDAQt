@@ -7,19 +7,13 @@ from typing import Optional, Dict, List, Callable, Any
 import datetime
 import rx
 
-from daquiri.schema import ArrayType
+from daquiri.schema import ArrayType, DEFAULT_VALUES
 from daquiri.state import LogicalAxisState
 from rx.subject import Subject
 from daquiri.data import reactive_frame
 
 __all__ = ('Axis', 'TestAxis', 'ProxiedAxis', 'LogicalAxis',
            'PolledRead', 'PolledWrite')
-
-DEFAULT_VALUES = {
-    int: 0,
-    float: 0,
-    str: '',
-}
 
 
 def default_value_for_schema(schema):
@@ -204,7 +198,7 @@ class LogicalAxis(Axis):
 
 
 class ProxiedAxis(Axis):
-    def __init__(self, name, schema, driver, where, read, write):
+    def __init__(self, name, schema, driver, where, read, write, settle):
         super().__init__(name, schema)
         self.where = where
         self.driver = driver
@@ -344,6 +338,7 @@ class TestAxis(Axis):
         self.mock = mock or {}
         self._mock_read = self.mock.get('read')
         self._mock_write = self.mock.get('write')
+        self._mock_settle = self.mock.get('settle')
         self.init_args = args
         self.init_kwargs = kwargs
 
@@ -379,6 +374,5 @@ class TestAxis(Axis):
             self._value = value
 
     async def settle(self):
-        return
-
-
+        if self._mock_settle:
+            self._mock_settle()

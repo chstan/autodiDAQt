@@ -14,7 +14,6 @@ class MockMotionController(ManagedInstrument):
         where=lambda i: ['axis', i],
         read='position',
         write='move',
-
         # create three mocked axes
         mock=dict(n=3),
     )
@@ -24,5 +23,5 @@ class MockScalarDetector(ManagedInstrument):
     driver_cls = MockDriver
     device = AxisSpecification(
         float, where=['device'],
-        mock=dict(read=lambda: np.random.normal() + 5)
+        mock=dict(read=lambda: np.random.normal() + 5),
     )

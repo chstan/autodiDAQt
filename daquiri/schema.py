@@ -20,3 +20,10 @@ class ArrayType:
     @classmethod
     def of(cls, dtype):
         return ArrayType(None, dtype)
+
+
+DEFAULT_VALUES = {
+    int: 0,
+    float: 0,
+    str: '',
+}

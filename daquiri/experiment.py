@@ -267,6 +267,7 @@ class Run:
 
     step: int = 0
     point: int = 0
+    is_inverted: bool = True
 
     # UI Configuration
     additional_plots: List[Dict] = field(default_factory=list)
@@ -426,14 +427,26 @@ class Experiment(FSM):
             else:
                 config = copy(self.scan_configuration)
 
-            all_scopes = itertools.chain(self.app.actors.keys(), self.app.managed_instruments.keys())
-            sequence = config.sequence(self, **{
-                s: ScopedAccessRecorder(s) for s in all_scopes if s != 'experiment'})  # TODO fixthis
+            if hasattr(config, 'sequence'):
+                is_inverted = True
+                # run the experiment in inverted control as is standard
+                all_scopes = itertools.chain(self.app.actors.keys(), self.app.managed_instruments.keys())
+
+                # TODO fix this to be safer
+                sequence = config.sequence(self, **{
+                    s: ScopedAccessRecorder(s) for s in all_scopes if s != 'experiment'})
+            else:
+                is_inverted = False
+                all_scopes = {}
+                all_scopes.update(self.app.actors)
+                all_scopes.update(self.app.managed_instruments)
+                del all_scopes['experiment']
+                sequence = config.sequence(self, **all_scopes)
 
             self.collation = None
             self.current_run = Run(
                 number=self.run_number, user='test_user', session='test_session',
-                config=config, sequence=sequence)
+                config=config, sequence=sequence, is_inverted=is_inverted)
 
     async def enter_running(self, *_):
         self.ui.enter_running()
@@ -450,8 +463,8 @@ class Experiment(FSM):
             **kwargs,
         })
 
-    def collate(self, independent: List[Tuple[ScanAccessRecorder, str]] = None,
-                dependent: List[Tuple[ScanAccessRecorder, str]] = None):
+    def collate(self, independent: List[Tuple[Union[ScanAccessRecorder, str], str]] = None,
+                dependent: List[Tuple[Union[ScanAccessRecorder, str], str]] = None):
         if independent is None:
             independent = []
         if dependent is None:
@@ -460,6 +473,9 @@ class Experiment(FSM):
         def unwrap(c):
             if isinstance(c, (list, tuple,)):
                 return tuple(c)
+
+            if isinstance(c, str):
+                return tokenize_access_path(str)
 
             return c.full_path_()
 
@@ -496,13 +512,33 @@ class Experiment(FSM):
 
     # BUSINESS LOGIC
     async def run_running(self, *_):
-        try:
-            next_step = next(self.current_run.sequence)
+        if self.current_run.is_inverted:
+            try:
+                next_step = next(self.current_run.sequence)
+                await self.take_step(next_step)
+            except StopIteration:
+                # We're done! Time to save your data.
+                self.messages.put_nowait('stop')
+        else:
+            async for data in self.current_run.sequence:
+                self.current_run.steps_taken.append({
+                    'step': {'direct_control_step': self.current_run.step},
+                    'time': datetime.datetime.now()
+                })
+                self.current_run.step += 1
+                for qual_name, value in data.items():
+                    self.record_data(tokenize_access_path(qual_name), value)
 
-            await self.take_step(next_step)
-        except StopIteration:
-            # We're done! Time to save your data.
-            self.messages.put_nowait('stop')
+    def record_data(self, qual_name: Tuple, value: any):
+        self.current_run.daq_values[qual_name].append({
+            'data': value,
+            'time': datetime.datetime.now(),
+            'step': self.current_run.step,
+            'point': self.current_run.point,
+        })
+
+        self.current_run.streaming_daq_xs[qual_name].append(self.current_run.point)
+        self.current_run.streaming_daq_ys[qual_name].append(value)
 
     async def perform_single_daq(self, scope=None, path=None, read=None, write=None,
                                  set=None,
@@ -538,15 +574,7 @@ class Experiment(FSM):
             instrument(*args, **kwargs)
         elif write is None and set is None:
             value = await instrument.read()
-            time = datetime.datetime.now()
-            self.current_run.daq_values[qual_name].append({
-                'data': value,
-                'time': time,
-                'step': self.current_run.step,
-                'point': self.current_run.point,
-            })
-            self.current_run.streaming_daq_xs[qual_name].append(self.current_run.point)
-            self.current_run.streaming_daq_ys[qual_name].append(value)
+            self.record_data(qual_name, value)
         else:
             if self.collation:
                 self.collation.receive(qual_name, write if set is None else set)
@@ -556,15 +584,7 @@ class Experiment(FSM):
             else:
                 await instrument.write(write)
 
-            time = datetime.datetime.now()
-            self.current_run.daq_values[qual_name].append({
-                'data': write if set is None else set,
-                'time': time,
-                'step': self.current_run.step,
-                'point': self.current_run.point,
-            })
-            self.current_run.streaming_daq_xs[qual_name].append(self.current_run.point)
-            self.current_run.streaming_daq_ys[qual_name].append(write if set is None else set)
+            self.record_data(qual_name, write if set is None else None)
 
     async def take_step(self, step):
         self.current_run.steps_taken.append({
@@ -589,7 +609,6 @@ class Experiment(FSM):
             return None, n_points
 
         return self.current_run.point, n_points
-
 
     async def run_idle(self, *_):
         # this is kind of a kludge, instead we should be

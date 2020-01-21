@@ -1,6 +1,7 @@
-from typing import Any, Tuple, Union, Dict, List
+from typing import Any, Tuple, Union, Dict
 import inspect
 
+from daquiri.schema import DEFAULT_VALUES
 from daquiri.utils import safe_lookup
 
 __all__ = ('Method', 'TestMethod',)
@@ -13,12 +14,6 @@ class Method:
 
     last_kwargs: Dict[str, Any]
     value: Any = None
-
-    DEFAULT_VALUES = {
-        float: 0,
-        int: 0,
-        str: '',
-    }
 
     def __init__(self, name, where, driver, return_annotation=None, parameters=None):
         self.driver = driver
@@ -42,7 +37,7 @@ class Method:
             if not parameter.default == self.signature.empty:
                 self.last_kwargs[parameter.name] = parameter.default
             else:
-                self.last_kwargs[parameter.name] = self.DEFAULT_VALUES.get(parameter.annotation)
+                self.last_kwargs[parameter.name] = DEFAULT_VALUES.get(parameter.annotation)
 
     def find_method(self):
         return safe_lookup(self.driver, self.where)

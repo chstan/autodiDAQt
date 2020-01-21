@@ -57,7 +57,8 @@ class AxisListSpecification(Specification):
     Represents the specification for a list of axes, such as is present on
     a motion controller.
     """
-    def __init__(self, schema, where=None, read=None, write=None, mock=None):
+    def __init__(self, schema, where=None, read=None, write=None, mock=None,
+                 settle=None):
         if mock is None:
             mock = {'n': 5}
 
@@ -66,6 +67,7 @@ class AxisListSpecification(Specification):
         self.name = None
         self.read = read
         self.write = write
+        self.settle = settle
 
         self.where = where
 
@@ -96,7 +98,7 @@ class AxisListSpecification(Specification):
 
         return [
             axis_cls(name=key_name, schema=self.schema, where=self.where(i), driver=driver_instance,
-                        read=self.read, write=self.write)
+                     settle=self.settle, read=self.read, write=self.write)
             for i in range(n)
         ]
 
@@ -109,15 +111,17 @@ class AxisSpecification(Specification):
     """
     Represents a single axis or detector.
     """
-    def __init__(self, schema, where=None, range=None, validator=None, axis=True, read=None, write=None, mock=None):
+    def __init__(self, schema, where=None, range=None, validator=None, read=None,
+                 write=None, settle=None, mock=None):
         self.name = None
         self.schema = schema
         self.range = range
         self.validator = validator
-        self.is_axis = axis
+        self.is_axis = False if write is None else True
         self.read = read
         self.write = write
         self.where = where
+        self.settle = settle
         self.mock = mock or {}
 
     def __repr__(self):
@@ -129,7 +133,8 @@ class AxisSpecification(Specification):
                 f'validator={self.validator!r},'
                 f'is_axis={self.is_axis!r},'
                 f'read={self.read},'
-                f'write={self.write}'
+                f'write={self.write}',
+                f'settle={self.settle}'
                 ')')
 
     def realize(self, key_name, driver_instance, instrument) -> Axis:
@@ -141,7 +146,7 @@ class AxisSpecification(Specification):
             init_kwargs = {}
 
         return axis_cls(name=key_name, schema=self.schema, where=self.where, driver=driver_instance,
-                        read=self.read, write=self.write, **init_kwargs)
+                        read=self.read, write=self.write, settle=self.settle, **init_kwargs)
 
     def to_scan_axis(self, over, path, *args, **kwargs):
         from daquiri.scan import ScanAxis

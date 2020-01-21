@@ -14,6 +14,7 @@ Related to UI/UI Generation
 ---------------------------
 
 1. (1.0.0) Reduction in dead whitespace
+2. (0.0.7) Better bindings between dataclasses and UI
 
 Related to Experiments
 ----------------------
