@@ -12,7 +12,7 @@ from daquiri.state import LogicalAxisState
 from rx.subject import Subject
 from daquiri.data import reactive_frame
 
-__all__ = ('Axis', 'Detector', 'TestAxis', 'ProxiedAxis', 'LogicalAxis',
+__all__ = ('Axis', 'TestAxis', 'ProxiedAxis', 'LogicalAxis',
            'PolledRead', 'PolledWrite')
 
 DEFAULT_VALUES = {
@@ -44,21 +44,22 @@ class PolledRead:
     poll: Optional[str] = None
 
 
-class Detector:
+class Axis:
     """
-    Representation of a detector which can read values.
+    Representation of an axis which can read values or write values.
 
-    Detectors have fixed schema: in this sense, you can always expect to receive the same shape data
-    back from the detector. In most cases, detectors record single points, but you can produce any Python
+    Axes have fixed schema: in this sense, you can always expect to receive the same shape data
+    back from the axis. In most cases, axes record single points, but you can produce any Python
     primitive, as well as `np.ndarray`s and `pd.DataFrame`s if it is appropriate.
 
-    Detectors are fundamentally asynchronous, since they represent actual hardware resources that exist over I/O.
-    Additionally, measurements may take finite time, and in the case of event stream detectors, you may not know
+    See also the schema module for type hinting Arrays.
+
+    Axes are fundamentally asynchronous, since they represent actual hardware resources that exist over I/O.
+    Additionally, measurements may take finite time, and in the case of event stream axes, you may not know
     when values will be produced.
     """
     IDLE = 0
     MOVING = 1
-
 
     raw_value_stream: Optional[Subject]
     collected_value_stream: Optional[rx.Observable]
@@ -88,12 +89,6 @@ class Detector:
 
     async def trigger(self):
         raise NotImplementedError('')
-
-
-class Axis(Detector):
-    """
-    Representation of a motor or detector
-    """
 
     async def write(self, value):
         raise NotImplementedError('')
@@ -213,7 +208,7 @@ class ProxiedAxis(Axis):
         super().__init__(name, schema)
         self.where = where
         self.driver = driver
-        self._status = Detector.IDLE
+        self._status = Axis.IDLE
 
         print(name, where, read, write)
 
@@ -278,7 +273,7 @@ class ProxiedAxis(Axis):
             pass
 
     async def read(self):
-        if self._status == Detector.IDLE:
+        if self._status == Axis.IDLE:
             value = self._bound_read()
 
             if asyncio.iscoroutine(value):
@@ -287,13 +282,13 @@ class ProxiedAxis(Axis):
             if self.raw_value_stream:
                 self.raw_value_stream.on_next({'value': value, 'time': datetime.datetime.now().timestamp()})
             return value
-        elif self._status == Detector.MOVING:
+        elif self._status == Axis.MOVING:
             sleep_time, sleep_backoff, sleep_maximum = self.backoff
 
             while True:
                 await asyncio.sleep(sleep_time)
                 if self._bound_poll_read():
-                    self._status = Detector.IDLE
+                    self._status = Axis.IDLE
                     value = self._bound_read()
                     if self.raw_value_stream:
                         self.raw_value_stream.on_next({'value': value, 'time': datetime.datetime.now().timestamp()})
@@ -303,11 +298,11 @@ class ProxiedAxis(Axis):
                 sleep_time = sleep_maximum if sleep_time > sleep_maximum else sleep_time
 
     async def write(self, value):
-        if self._status == Detector.MOVING:
+        if self._status == Axis.MOVING:
             raise ValueError('Already moving!')
 
         if self._bound_poll_write is not None:
-            self._status = Detector.MOVING
+            self._status = Axis.MOVING
             self._bound_write(value)
 
             sleep_time, sleep_backoff, sleep_maximum = self.backoff
@@ -316,7 +311,7 @@ class ProxiedAxis(Axis):
                 await asyncio.sleep(sleep_time)
 
                 if self._bound_poll_write():
-                    self._status = Detector.IDLE
+                    self._status = Axis.IDLE
                     return
 
                 sleep_time *= sleep_backoff
@@ -328,21 +323,21 @@ class ProxiedAxis(Axis):
         of course be provided.
         :return:
         """
-        if self._status == Detector.MOVING:
+        if self._status == Axis.MOVING:
             sleep_time, sleep_backoff, sleep_maximum = self.backoff
 
             while True:
                 await asyncio.sleep(sleep_time)
 
                 if self._bound_poll_write():
-                    self._status = Detector.IDLE
+                    self._status = Axis.IDLE
                     return
 
                 sleep_time *= sleep_backoff
                 sleep_time = sleep_maximum if sleep_time > sleep_maximum else sleep_time
 
 
-class TestDetector(Detector):
+class TestAxis(Axis):
     def __init__(self, name, schema, mock=None, *args, **kwargs):
         super().__init__(name, schema)
         self._value = default_value_for_schema(schema)
@@ -377,8 +372,6 @@ class TestDetector(Detector):
     async def trigger(self):
         return
 
-
-class TestAxis(TestDetector):
     async def write(self, value):
         if self._mock_write:
             self._mock_write(value)
@@ -387,3 +380,5 @@ class TestAxis(TestDetector):
 
     async def settle(self):
         return
+
+

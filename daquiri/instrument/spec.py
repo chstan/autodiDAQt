@@ -4,10 +4,9 @@ import numpy as np
 
 from typing import Union, List, Dict, Tuple, Any, Optional, Callable, Type
 
-from daquiri.instrument import Detector
 from daquiri.instrument.method import Method, TestMethod
 from daquiri.instrument.property import ChoiceProperty, Property, TestProperty, SimpleProperty
-from daquiri.instrument.axis import TestAxis, ProxiedAxis, LogicalAxis
+from daquiri.instrument.axis import TestAxis, ProxiedAxis, LogicalAxis, Axis
 from daquiri.utils import tokenize_access_path
 
 __all__ = ('MockDriver',
@@ -17,7 +16,6 @@ __all__ = ('MockDriver',
            'AxisListSpecification',
            'AxisSpecification',
            'LogicalAxisSpecification',
-           'DetectorSpecification',
 
            # properties
            'PropertySpecification',
@@ -43,7 +41,7 @@ class Specification:
     def where_list(self) -> Tuple[Union[str, int]]:
         return tokenize_access_path(self.where or [])
 
-    def realize(self, key_name, driver_instance, instrument) -> Union[Detector, List[Detector], Dict[str, Detector]]:
+    def realize(self, key_name, driver_instance, instrument) -> Union[Axis, List[Axis], Dict[str, Axis]]:
         axis_cls = self.axis_cls
         if isinstance(driver_instance, MockDriver):
             axis_cls = self.test_axis_cls
@@ -78,7 +76,7 @@ class AxisListSpecification(Specification):
                 f'where={self.where("{ index }")!r},'
                 ')')
 
-    def realize(self, key_name, driver_instance, instrument) -> List[Detector]:
+    def realize(self, key_name, driver_instance, instrument) -> List[Axis]:
         where_root = tokenize_access_path(self.where(np.nan))
         where_root = where_root[:where_root.index(np.nan)]
 
@@ -134,7 +132,7 @@ class AxisSpecification(Specification):
                 f'write={self.write}'
                 ')')
 
-    def realize(self, key_name, driver_instance, instrument) -> Detector:
+    def realize(self, key_name, driver_instance, instrument) -> Axis:
         if isinstance(driver_instance, MockDriver):
             axis_cls = TestAxis
             init_kwargs = {'mock': self.mock}
@@ -163,7 +161,7 @@ class LogicalAxisSpecification(Specification):
         self.initial_coords = initial_coords
         self.state = state
 
-    def realize(self, key_name, driver_instance, instrument) -> Detector:
+    def realize(self, key_name, driver_instance, instrument) -> Axis:
         physical_axes = {}
 
         for physical_name in self.forward_transforms.keys():
@@ -195,7 +193,7 @@ class PropertySpecification:
     def __init__(self, where):
         self.where = tokenize_access_path(where)
 
-    def realize(self, key_name, driver_instance, instrument) -> Union[Detector, List[Detector], Dict[str, Detector]]:
+    def realize(self, key_name, driver_instance, instrument) -> Union[Axis, List[Axis], Dict[str, Axis]]:
         axis_cls = self.axis_cls
         if isinstance(driver_instance, MockDriver):
             axis_cls = self.test_axis_cls
@@ -251,11 +249,6 @@ class DataclassPropertySpecification(PropertySpecification):
     def to_scan_axis(self, over, path, *args, **kwargs):
         from daquiri.scan import ScanDataclassProperty
         return ScanDataclassProperty([over] + path, self)
-
-
-class DetectorSpecification(AxisSpecification):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs, axis=False)
 
 
 def parameter(name, **kwargs):
