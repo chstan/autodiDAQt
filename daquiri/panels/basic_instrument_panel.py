@@ -1,7 +1,7 @@
 import asyncio
 import functools
 import datetime
-import inspect
+import rx.operators
 import json
 import pyqtgraph as pg
 import pandas as pd
@@ -131,16 +131,19 @@ class ProxiedAxisView(AxisView):
         except ValueError:
             logger.error(f'Cannot jog with speed {self.raw_jog_speed}')
 
-    def update_plot(self, value: pd.DataFrame):
-        self.live_plot.setData(value['time'], value['value'])
+    def update_plot(self, _):
+        self.live_plot.setData(self.axis.collected_xs, self.axis.collected_ys)
 
     def attach(self, ui):
         if self.live_plot:
-            self.axis.collected_value_stream.subscribe(self.update_plot)
+            throttle = rx.operators.sample(0.2)
+            self.axis.raw_value_stream.pipe(throttle).subscribe(self.update_plot)
 
         if self.axis.raw_value_stream:
             label_widget = ui[f'{self.id}-last_value']
-            self.axis.raw_value_stream.subscribe(lambda v: label_widget.setText(str(v['value'])))
+            throttle = rx.operators.sample(0.2)
+            self.axis.raw_value_stream.pipe(throttle).subscribe(
+                lambda v: label_widget.setText(str(v['value'])))
 
         if self.joggable:
             neg_fast, neg_slow, pos_slow, pos_fast, jog_speed = [
@@ -263,7 +266,6 @@ class BasicInstrumentPanel(Panel):
         self.ui = {}
 
         super().__init__(parent, id, app)
-
 
     def retrieve(self, path: List[Union[str, int]]):
         instrument = self.app.managed_instruments[self.id]

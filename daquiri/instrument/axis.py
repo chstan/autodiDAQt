@@ -12,6 +12,7 @@ from rx.subject import Subject
 from daquiri.data import reactive_frame
 
 __all__ = ('Axis', 'TestAxis', 'ProxiedAxis', 'LogicalAxis',
+           'ManualAxis', 'TestManualAxis',
            'PolledRead', 'PolledWrite')
 
 
@@ -53,13 +54,24 @@ class Axis:
     def receive_state(self, state):
         pass
 
+    def append_point_to_history(self, point):
+        self.collected_xs.append(point['time'])
+        self.collected_ys.append(point['value'])
+
+    def reset_history(self):
+        self.collected_xs = []
+        self.collected_ys = []
+
     def __init__(self, name: str, schema: type):
         self.name = name
         self.schema = schema
 
         # for scalar schemas we can provide a stream of values
         if schema in (float, int,):
-            self.raw_value_stream, self.collected_value_stream = reactive_frame()
+            self.raw_value_stream = Subject()
+            self.collected_xs = []
+            self.collected_ys = []
+            self.raw_value_stream.subscribe(self.append_point_to_history)
         else:
             self.raw_value_stream = None
             self.collected_value_stream = None
