@@ -80,6 +80,35 @@ class Axis:
         raise NotImplementedError('')
 
 
+class ManualAxis(Axis):
+    raw_value_stream: Optional[Subject]
+    collected_value_stream: Optional[rx.Observable]
+
+    def __init__(self, name, schema, axis_descriptor):
+        self.name = name
+        self.schema = schema
+        self.axis_descriptor = axis_descriptor
+
+    async def write(self, value):
+        value = await self.axis_descriptor.fwrite(value)
+
+        if self.raw_value_stream:
+            self.raw_value_stream.on_next({'value': value, 'time': datetime.datetime.now().timestamp()})
+
+        return value
+
+    async def read(self):
+        await self.axis_descriptor.fread()
+
+
+class TestManualAxis(ManualAxis):
+    async def write(self, value):
+        await self.axis_descriptor.fmockwrite(value)
+
+    async def read(self):
+        await self.axis_descriptor.fmockread()
+
+
 class LogicalSubaxis(Axis):
     def __init__(self, name, schema, parent_axis, subaxis_name, index):
         super().__init__(name, schema)

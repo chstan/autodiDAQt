@@ -4,3 +4,4 @@ from .core import Daquiri
 from .panel import Panel
 from .actor import Actor
 from .experiment import Experiment
+from .instrument import ManagedInstrument

@@ -14,7 +14,6 @@ class MyExperiment(Experiment):
         scan(x=dx, y=dy, name='dx-dy Scan', read=read_power),
     ]
 
-
 app = Daquiri(__name__, {}, {'experiment': MyExperiment}, {
     'mc': MockMotionController,
     'power_meter': MockScalarDetector,

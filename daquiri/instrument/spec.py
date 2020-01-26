@@ -6,7 +6,11 @@ from typing import Union, List, Dict, Tuple, Any, Optional, Callable, Type
 
 from daquiri.instrument.method import Method, TestMethod
 from daquiri.instrument.property import ChoiceProperty, Property, TestProperty, SimpleProperty
-from daquiri.instrument.axis import TestAxis, ProxiedAxis, LogicalAxis, Axis
+from daquiri.instrument.axis import (
+    Axis, TestAxis, ProxiedAxis,
+    LogicalAxis,
+    ManualAxis, TestManualAxis,
+)
 from daquiri.utils import tokenize_access_path
 
 __all__ = ('MockDriver',
@@ -23,7 +27,11 @@ __all__ = ('MockDriver',
 
            # methods
            'parameter',
-           'MethodSpecification')
+           'MethodSpecification',
+
+           # descriptors
+           'axis',
+           )
 
 
 class MockDriver:
@@ -50,6 +58,57 @@ class Specification:
 
     def to_scan_axis(self, over, path, *args, **kwargs):
         raise NotImplementedError()
+
+
+class AxisDescriptor(Specification):
+    schema = None
+    axis_cls = ManualAxis
+    test_axis_cls = TestManualAxis
+
+    def __init__(self, fread, fwrite=None, fmockread=None, fmockwrite=None, doc=None):
+        self.fread = fread
+        self.fwrite = fwrite
+        self.fmockread = fmockread
+        self.fmockwrite = fmockwrite
+
+        self.__doc__ = fread.__doc__ if doc is None else doc
+
+    @property
+    def name(self):
+        return self.fread.__name__
+
+    @property
+    def where_list(self):
+        return [f'@axis_{self.name}']
+
+    def to_scan_axis(self, over, path, *args, **kwargs):
+        raise NotImplementedError()
+
+    def realize(self, key_name, driver_instance, instrument) -> Axis:
+        raise NotImplementedError()
+
+    # "property" syntax
+    def write(self, fwrite):
+        return type(self)(self.fread, fwrite, self.fmockread, self.fmockwrite, self.__doc__)
+
+    def mock_read(self, fmockread):
+        return type(self)(self.fread, self.fwrite, fmockread, self.fmockwrite, self.__doc__)
+
+    def mock_write(self, fmockwrite):
+        return type(self)(self.fread, self.fwrite, self.fmockread, fmockwrite, self.__doc__)
+
+
+def axis(with_schema):
+    """
+    This is a bit of a kludge at the moment,
+
+    Args:
+        with_schema:
+    """
+    class AxisDescriptorWithSchema(AxisDescriptor):
+        schema = with_schema
+
+    return AxisDescriptorWithSchema
 
 
 class AxisListSpecification(Specification):
