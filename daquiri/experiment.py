@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 from collections import defaultdict, deque
 from pathlib import Path
 import datetime
-from asyncio import QueueEmpty, sleep, gather
+from asyncio import QueueEmpty, sleep, gather, get_running_loop
 from copy import copy
 from typing import Any, Dict, List, Tuple, Set, Union
 import xarray as xr
@@ -29,6 +29,16 @@ class ScopedAccessRecorder:
 
     def __getitem__(self, item):
         return ScanAccessRecorder(self.scope)[item]
+
+
+def _save_on_separate_thread(run, directory, collation):
+    if collation:
+        try:
+            collated = collation.to_xarray(run.daq_values)
+        except:
+            collated = None
+
+    run.save(directory, {'collated': collated})
 
 
 class FSM(Actor):
@@ -145,6 +155,7 @@ class FSM(Actor):
             except QueueEmpty:
                 f = getattr(self, 'run_{}'.format(self.state.lower()))
                 await f()
+
                 # NEVER TRUST THE USER, this ensures we yield back to the scheduler
                 await sleep(0)
 
@@ -251,7 +262,8 @@ class Collation:
 
             for k, value in point.items():
                 kname = independent_names.get(k, k)
-                ds[kname].loc[iter_coords] = value
+                index = [np.searchsorted(ds.coords[d].values, iter_coords[d]) for d in ds[kname].dims]
+                ds[kname].values[index] = value
 
         return ds
 
@@ -284,14 +296,19 @@ class Run:
     streaming_daq_xs: Dict[str, Any] = field(default_factory=lambda: defaultdict(list))
     streaming_daq_ys: Dict[str, Any] = field(default_factory=lambda: defaultdict(list))
 
-    async def save(self, app, extra=None):
-        save_directory = Path(str(app.app_root / app.config.data_directory / app.config.data_format).format(
+    def finalize(self):
+        self.config = None
+        self.sequence = None
+
+    def save_directory(self, app):
+        return Path(str(app.app_root / app.config.data_directory / app.config.data_format).format(
             user=self.user,
             session=self.session,
             run=self.number,
             date=datetime.date.today().isoformat(),
         ))
 
+    def save(self, save_directory: Path, extra=None):
         if extra is None:
             extra = {}
 
@@ -397,6 +414,7 @@ class Experiment(FSM):
     panel_cls = ExperimentPanel
     scan_methods = []
     interlocks = []
+    save_on_main: bool = False
 
     async def idle_to_running(self, *_):
         """
@@ -635,14 +653,18 @@ class Experiment(FSM):
         if self.current_run is None:
             return
 
-        collated_data = None
-        try:
-            if self.collation:
-                collated_data = self.collation.to_xarray(self.current_run.daq_values)
-        except:
-            pass
+        finished_run = self.current_run
+        directory = self.current_run.save_directory(self.app)
+        logger.info(f'Saving to {directory}')
+        finished_run.finalize()
 
-        await self.current_run.save(self.app, {'collated': collated_data})
+        if self.save_on_main:
+            _save_on_separate_thread(finished_run, directory, self.collation)
+        else:
+            loop = get_running_loop()
+            task = loop.run_in_executor(
+                self.app.process_pool, _save_on_separate_thread,
+                finished_run, directory, self.collation)
 
         self.current_run = None
 
