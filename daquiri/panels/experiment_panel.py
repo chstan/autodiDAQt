@@ -6,6 +6,7 @@ from copy import copy
 
 import numpy as np
 import pyqtgraph as pg
+from PyQt5.QtWidgets import QTabWidget
 
 from daquiri.panel import Panel
 from daquiri.ui import (
@@ -51,6 +52,9 @@ class ExperimentPanel(Panel):
     built_widgets = None
     pg_widgets = None
     pg_plots = None
+    update_every = 0.2  # 200 ms
+    last_plot_update = None
+    data_stream_views: QTabWidget = None
     plot_type = None
     additional_plots = None
 
@@ -139,20 +143,24 @@ class ExperimentPanel(Panel):
         if self.pause_stack[-1][0] == 'Start':
             # running...
             runtime = format_delta(*timedelta_to_tuple(total_runtime))
-            pointrate = 0.
             points_progress = ''
             time_remaining = ''
+
+            try:
+                LOOKBACK = 100
+                n_frames = min(len(self.frame_times), LOOKBACK)
+                start_frame = self.frame_times[-n_frames]
+                per_frame_time = (datetime.datetime.now() - start_frame) / n_frames
+                pointrate = 1 / (per_frame_time.total_seconds() + 0.0001)
+            except IndexError:
+                pointrate = 0.
 
             if n_points is not None:
                 points_progress = f'{completed_points}/{n_points}'
                 try:
-                    n_frames = min(len(self.frame_times), 10)
-                    start_frame = self.frame_times[-n_frames]
-                    per_frame_time = (datetime.datetime.now() - start_frame) / n_frames
-
                     remaining = (n_points - completed_points) * per_frame_time
                     time_remaining = format_delta(*timedelta_to_tuple(remaining))
-                    pointrate = 1 / (per_frame_time.total_seconds() + 0.0001)
+
                 except:
                     time_remaining = ''
 
@@ -243,14 +251,15 @@ class ExperimentPanel(Panel):
         published data. This amounts to traversing the UI, taking the newly
         published data, and calling the pyqtgraph `.set_data` function as appropriate.
         """
-        self.frame_times.append(datetime.datetime.now())
-        self.update_timing_ui()
-
-        dynamic_layout_container = self.ui['dynamic-layout']
-        dynamic_layout = dynamic_layout_container.layout()
+        now = datetime.datetime.now()
+        self.frame_times.append(now)
 
         if not self.dynamic_state_mounted:
+            dynamic_layout_container = self.ui['dynamic-layout']
+            dynamic_layout = dynamic_layout_container.layout()
+
             self.dynamic_state_mounted = True
+            self.last_plot_update = now
 
             # clear the layout
             for i in reversed(range(dynamic_layout.count())):
@@ -325,43 +334,55 @@ class ExperimentPanel(Panel):
                 tab_widgets.append((display_name, widget,))
 
             data_stream_views = tabs(*tab_widgets)
+            self.data_stream_views = data_stream_views
             dynamic_layout.addWidget(data_stream_views)
 
-        for k in self.pg_plots:
-            pg_plot = self.pg_plots[k]
+        if (now - self.last_plot_update).total_seconds() < self.update_every:
+            return
 
-            xs, ys = (self.experiment.current_run.streaming_daq_xs[k],
-                      self.experiment.current_run.streaming_daq_ys[k])
-            if self.plot_type[k] == 'image':
-                pg_plot.setImage(ys[-1])
-            else:
-                assert self.plot_type[k] == 'line'
-                pg_plot.setData(np.asarray(xs), np.asarray(ys))
+        self.update_timing_ui()
 
-        for additional_plot in self.additional_plots:
-            name, ind, dep = [additional_plot[k] for k in ['name', 'independent', 'dependent']]
-            pg_plot = self.user_pg_plots[name]
-            if len(ind) > 1:
-                last_index = additional_plot.get('last_index', 0)
-                color = additional_plot.get('color')
-                size = additional_plot.get('size', np.abs)
+        self.last_plot_update = now
+        viewing_plot = self.data_stream_views.currentIndex()
 
-                xss = np.stack([self.experiment.current_run.streaming_daq_ys[indi][last_index:] for indi in ind])
-                ys = self.experiment.current_run.streaming_daq_ys[dep][last_index:]
+        if viewing_plot < len(self.pg_plots):
+            self.update_data_stream_plot(*list(self.pg_plots.items())[viewing_plot])
+        else:
+            self.update_user_stream_plot(*list(self.additional_plots.keys())[viewing_plot - len(self.pg_plots)])
 
-                additional_plot['last_index'] = last_index + len(ys)
+    def update_user_stream_plot(self, user_plot_key):
+        name, ind, dep = [user_plot_key[k] for k in ['name', 'independent', 'dependent']]
+        pg_plot = self.user_pg_plots[name]
+        if len(ind) > 1:
+            last_index = user_plot_key.get('last_index', 0)
+            color = user_plot_key.get('color')
+            size = user_plot_key.get('size', np.abs)
 
-                def make_spot(index, y):
-                    s = {'pos': xss[:, index], 'data': y, 'size': size(y)}
-                    if color:
-                        s['color'] = color(y)
-                    return s
+            xss = np.stack([self.experiment.current_run.streaming_daq_ys[indi][last_index:] for indi in ind])
+            ys = self.experiment.current_run.streaming_daq_ys[dep][last_index:]
 
-                pg_plot.addPoints([make_spot(i, y) for i, y in enumerate(ys)])
-            else:
-                xs, ys = (self.experiment.current_run.streaming_daq_ys[ind[0]],
-                          self.experiment.current_run.streaming_daq_ys[dep])
-                pg_plot.setData(np.asarray(xs), np.asarray(ys))
+            user_plot_key['last_index'] = last_index + len(ys)
+
+            def make_spot(index, y):
+                s = {'pos': xss[:, index], 'data': y, 'size': size(y)}
+                if color:
+                    s['color'] = color(y)
+                return s
+
+            pg_plot.addPoints([make_spot(i, y) for i, y in enumerate(ys)])
+        else:
+            xs, ys = (self.experiment.current_run.streaming_daq_ys[ind[0]],
+                      self.experiment.current_run.streaming_daq_ys[dep])
+            pg_plot.setData(np.asarray(xs), np.asarray(ys))
+
+    def update_data_stream_plot(self, k, pg_plot):
+        xs, ys = (self.experiment.current_run.streaming_daq_xs[k],
+                  self.experiment.current_run.streaming_daq_ys[k])
+        if self.plot_type[k] == 'image':
+            pg_plot.setImage(ys[-1])
+        else:
+            assert self.plot_type[k] == 'line'
+            pg_plot.setData(np.asarray(xs), np.asarray(ys))
 
     def running_to_idle(self):
         self.dynamic_state_mounted = False
