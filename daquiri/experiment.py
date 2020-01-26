@@ -687,3 +687,34 @@ class Experiment(FSM):
     async def handle_message(self, message):
         logger.warning(f'Unhandled message: {message}')
 
+
+class AutoExperiment(Experiment):
+    run_with = None
+    exit_after_finish: bool = False
+    discard_data: bool = False
+
+    def __init__(self, app):
+        super().__init__(app)
+
+        self.scan_deque = deque(self.run_with)
+
+    async def running_to_idle(self, *_):
+        await self.save()
+        self.ui.running_to_idle()
+        if self.autoplay:
+            if self.scan_deque:
+                self.messages.put_nowait('start')
+            else:
+                self.autoplay = False
+                if self.exit_after_finish:
+                    # not a perfect way to shut things down, but should work well for now.
+                    raise KeyboardInterrupt('Stopping.')
+
+    async def startup_to_idle(self, *_):
+        self.messages.put_nowait('start')
+
+    async def save(self, *_):
+        if self.discard_data:
+            return
+
+        await super().save(*_)
