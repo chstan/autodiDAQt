@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 from typing import List, Optional
 
+import numpy as np
+
 
 @dataclass
 class ArrayType:
@@ -27,3 +29,13 @@ DEFAULT_VALUES = {
     float: 0,
     str: '',
 }
+
+
+def default_value_for_schema(schema):
+    if isinstance(schema, ArrayType):
+        if schema.shape is None:
+            return None
+
+        return np.zeros(dtype=schema.dtype or float, shape=schema.shape)
+
+    return DEFAULT_VALUES[schema]

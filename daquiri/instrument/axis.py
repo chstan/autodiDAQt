@@ -1,29 +1,18 @@
 import asyncio
 import warnings
 from dataclasses import dataclass
-import numpy as np
 from typing import Optional, Dict, List, Callable, Any
 
 import datetime
 import rx
 
-from daquiri.schema import ArrayType, DEFAULT_VALUES
+from daquiri.schema import default_value_for_schema
 from daquiri.state import LogicalAxisState
 from rx.subject import Subject
 from daquiri.data import reactive_frame
 
 __all__ = ('Axis', 'TestAxis', 'ProxiedAxis', 'LogicalAxis',
            'PolledRead', 'PolledWrite')
-
-
-def default_value_for_schema(schema):
-    if isinstance(schema, ArrayType):
-        if schema.shape is None:
-            return None
-
-        return np.zeros(dtype=schema.dtype or float, shape=schema.shape)
-
-    return DEFAULT_VALUES[schema]
 
 
 @dataclass
