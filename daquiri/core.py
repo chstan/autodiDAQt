@@ -2,11 +2,13 @@ import pickle
 import asyncio
 import sys
 import warnings
+import multiprocessing
 import itertools
 import signal
 import appdirs
 from copy import deepcopy
 from typing import Dict, Optional, Type
+from concurrent.futures import ProcessPoolExecutor
 
 from pathlib import Path
 
@@ -33,6 +35,7 @@ __all__ = ('Daquiri',)
 
 
 USE_QUAMASH = False
+
 
 class DaquiriMainWindow(QMainWindow):
     """
@@ -167,6 +170,7 @@ class Daquiri:
                 panel_definitions[actor_name] = actor.panel_cls
 
         self.events = Subject()
+        self.process_pool = ProcessPoolExecutor(max_workers=multiprocessing.cpu_count())
 
         self.config = None
         self.import_name = import_name
@@ -233,6 +237,7 @@ class Daquiri:
             None
         """
         self._is_shutdown = True
+        self.process_pool.shutdown(wait=True)
 
         if signal:
             logger.info(f'Received exit signal {signal.name}.')
