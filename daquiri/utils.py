@@ -25,6 +25,12 @@ PathType = Union[List[PathFragmentType], Tuple[PathFragmentType]]
 PathlikeType = Union[PathFragmentType, Path]
 
 
+def default_stylesheet() -> str:
+    with open(str(DAQUIRI_LIB_ROOT / 'resources' / 'default_styles.css')) as fqss:
+        styles = fqss.read()
+        return styles
+
+
 def safe_lookup(d: Any, s: PathlikeType):
     if isinstance(s, (tuple, list)):
         if len(s) == 0:
