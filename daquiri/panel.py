@@ -1,14 +1,17 @@
+from typing import Type
+
 from matplotlib.backends.backend_qt5agg import (
     FigureCanvasQTAgg as FigureCanvas,
     NavigationToolbar2QT as NavigationToolbar,
 )
 from matplotlib.figure import Figure
 
-from PyQt5.QtWidgets import QWidget, QPushButton, QGridLayout, QLabel
+from PyQt5.QtWidgets import QWidget, QPushButton, QGridLayout, QLabel, QApplication, QMainWindow, QVBoxLayout
 
 from daquiri.state import PanelState
+from daquiri.utils import default_stylesheet
 
-__all__ = ('Panel',)
+__all__ = ('Panel', 'open_appless_panel',)
 
 
 def figure(figsize=None, toolbar=None):
@@ -30,7 +33,7 @@ class Panel(QWidget):
     CLOSE_TEXT = 'Close'
     DEFAULT_OPEN = False
     RESTART = False
-    SIZE = (50,50,)
+    SIZE = (600, 600,)
 
     def collect_state(self) -> PanelState:
         return PanelState(geometry=self.geometry())
@@ -98,3 +101,27 @@ class Panel(QWidget):
 
         self.setLayout(layout)
 
+
+def open_appless_panel(panel_cls: Type[Panel]):
+    app = QApplication([])
+    app.setStyleSheet(default_stylesheet())
+
+    class FauxParent:
+        def client_panel_will_close(self, _):
+            app.exit()
+
+    window_widget = panel_cls(parent=FauxParent(), id='appless', app=None)
+
+    window = QMainWindow()
+    window.setCentralWidget(window_widget)
+
+    screen_rect = app.primaryScreen().geometry()
+    window.move(screen_rect.left(), screen_rect.top())
+    window.resize(*panel_cls.SIZE)
+
+    window.app = None
+
+    window.show()
+    #app.exec_()
+
+    return window
