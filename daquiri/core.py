@@ -1,4 +1,5 @@
 import pickle
+import traceback
 import asyncio
 import sys
 import warnings
@@ -212,7 +213,12 @@ class Daquiri:
         Attempts to recover from, log, or otherwise deal with an exception inside the
         async portions of Daquiri.
         """
-        print(loop)
+        try:
+            e = context['exception']
+            traceback.print_exception(type(e), e, e.__traceback__)
+        except:
+            print(context)
+
         message = context.get('exception', context['message'])
         logger.error(f"Caught Unhandled: {message}")
 
@@ -220,8 +226,6 @@ class Daquiri:
             return
 
         try:
-            other_loop = asyncio.get_running_loop()
-            print(loop, other_loop)
             asyncio.create_task(self.shutdown(loop, signal=None))
 
         except RuntimeError:
