@@ -1,4 +1,5 @@
 import datetime
+import functools
 from json import JSONEncoder
 from pathlib import Path
 import enum
@@ -46,6 +47,17 @@ def safe_lookup(d: Any, s: PathlikeType):
     return d[s]
 
 
+@functools.lru_cache(maxsize=256)
+def tokenize_string_path(s: str):
+    def safe_unwrap_int(value):
+        try:
+            return int(value)
+        except ValueError:
+            return str(value)
+
+    return tuple(safe_unwrap_int(x) for x in s.replace('[', '.').replace(']', '').split('.') if x)
+
+
 def tokenize_access_path(str_or_list) -> Tuple[Union[str, int]]:
     """
     Turns a string-like accessor into a list of tokens
@@ -62,13 +74,7 @@ def tokenize_access_path(str_or_list) -> Tuple[Union[str, int]]:
     if isinstance(str_or_list, (tuple, list)):
         return str_or_list
 
-    def safe_unwrap_int(value):
-        try:
-            return int(value)
-        except ValueError:
-            return str(value)
-
-    return tuple([safe_unwrap_int(x) for x in str_or_list.replace('[', '.').replace(']', '').split('.') if x])
+    return tokenize_string_path(str_or_list)
 
 
 def _try_unwrap_value(v):
