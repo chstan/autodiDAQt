@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 from collections import defaultdict, deque
 from pathlib import Path
 import datetime
+import inspect
 from asyncio import QueueEmpty, sleep, gather, get_running_loop
 from copy import copy
 from typing import Any, Dict, List, Tuple, Set, Union
@@ -267,6 +268,7 @@ class Collation:
 
         return ds
 
+
 @dataclass
 class Run:
     # Configuration/Bookkeeping
@@ -445,7 +447,7 @@ class Experiment(FSM):
             else:
                 config = copy(self.scan_configuration)
 
-            if hasattr(config, 'sequence'):
+            if not inspect.isasyncgenfunction(config.sequence):
                 is_inverted = True
                 # run the experiment in inverted control as is standard
                 all_scopes = itertools.chain(self.app.actors.keys(), self.app.managed_instruments.keys())
@@ -493,7 +495,7 @@ class Experiment(FSM):
                 return tuple(c)
 
             if isinstance(c, str):
-                return tokenize_access_path(str)
+                return tokenize_access_path(c)
 
             return c.full_path_()
 
@@ -540,12 +542,14 @@ class Experiment(FSM):
         else:
             async for data in self.current_run.sequence:
                 self.current_run.steps_taken.append({
-                    'step': {'direct_control_step': self.current_run.step},
+                    'step': self.current_run.step,
                     'time': datetime.datetime.now()
                 })
                 self.current_run.step += 1
                 for qual_name, value in data.items():
                     self.record_data(tokenize_access_path(qual_name), value)
+
+            self.messages.put_nowait('stop')
 
     def record_data(self, qual_name: Tuple, value: any):
         self.current_run.daq_values[qual_name].append({

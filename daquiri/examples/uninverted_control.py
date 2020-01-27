@@ -5,6 +5,7 @@ from daquiri import Daquiri
 from daquiri.mock import MockMotionController, MockScalarDetector
 from daquiri.experiment import Experiment
 
+
 @dataclass
 class SimpleScan:
     n_steps: int = 100
@@ -21,9 +22,9 @@ class SimpleScan:
         for i, x in enumerate(np.linspace(self.start, self.stop, self.n_steps)):
             with experiment.point():
                 experiment.comment(f'Starting point at step {i}')
-                moved_to = await mc.stages[0].write(x)
+                await mc.stages[0].write(x)
                 read_value = await power_meter.device.read()
-                yield {'mc.stages[0]': moved_to,
+                yield {'mc.stages[0]': x,
                        'power_meter.device': read_value}
 
 
