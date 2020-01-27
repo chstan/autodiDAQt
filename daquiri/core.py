@@ -305,7 +305,8 @@ class Daquiri:
 
     async def process_events(self):
         while True:
-            await asyncio.sleep(0)
+            # Only really need 30ish FPS UI update rate
+            await asyncio.sleep(0.03)
             self.qt_app.processEvents()
 
     async def master(self):
