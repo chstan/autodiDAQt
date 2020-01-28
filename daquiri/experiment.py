@@ -619,7 +619,10 @@ class Experiment(FSM):
     @property
     def current_progress(self):
         try:
-            n_points = self.scan_configuration.n_points
+            if self.current_run is not None:
+                n_points = self.current_run.config.n_points
+            else:
+                n_points = self.scan_configuration.n_points
         except AttributeError:
             n_points = None
 
