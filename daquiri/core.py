@@ -13,6 +13,7 @@ from concurrent.futures import ProcessPoolExecutor
 
 from pathlib import Path
 
+from PyQt5.QtGui import QFontDatabase
 from dotenv import load_dotenv
 from loguru import logger
 from pyqt_led import Led
@@ -30,6 +31,7 @@ from daquiri.panels import InstrumentManager
 from daquiri.state import DaquiriStateAtRest, generate_state_filename, find_newest_state_filename, SerializationSchema, \
     AppState
 from daquiri.ui import led, button, vertical, horizontal, CollectUI
+from daquiri.utils import default_stylesheet
 from daquiri.version import VERSION
 
 __all__ = ('Daquiri',)
@@ -383,6 +385,13 @@ class Daquiri:
     def start(self):
         logger.info('Application in startup.')
         self.qt_app = QApplication(sys.argv)
+        self.font_db = QFontDatabase()
+
+        for font in (Path(__file__).parent / 'resources' / 'fonts').glob('*.ttf'):
+            self.font_db.addApplicationFont(str(font))
+
+        self.qt_app.setStyleSheet(default_stylesheet())
+
         if USE_QUAMASH:
             loop = QEventLoop(self.qt_app)
             asyncio.set_event_loop(loop)
