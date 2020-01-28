@@ -86,7 +86,7 @@ ACTIVE_UI = None
 
 def ui_builder(f):
     @functools.wraps(f)
-    def wrapped_ui_builder(*args, id=None, **kwargs):
+    def wrapped_ui_builder(*args, id=None, class_name=None, **kwargs):
         global ACTIVE_UI
         if id is not None:
             try:
@@ -99,7 +99,12 @@ def ui_builder(f):
         if id:
             ui[id] = ui_element
 
+        if class_name is not None:
+            # CSS equivalent of classes
+            ui_element.setProperty('className', class_name)
+
         return ui_element
+
 
     return wrapped_ui_builder
 
