@@ -245,7 +245,7 @@ class ExperimentPanel(Panel):
             queue_main_widget.layout().addWidget(
                 self.widget_for_scan_config(config, i))
 
-    def soft_update(self):
+    def soft_update(self, force=False, render_all=False):
         """
         Here, we update the UI tree so it includes the newly
         published data. This amounts to traversing the UI, taking the newly
@@ -259,7 +259,7 @@ class ExperimentPanel(Panel):
             dynamic_layout = dynamic_layout_container.layout()
 
             self.dynamic_state_mounted = True
-            self.last_plot_update = now
+            self.last_plot_update = None
 
             # clear the layout
             for i in reversed(range(dynamic_layout.count())):
@@ -337,7 +337,7 @@ class ExperimentPanel(Panel):
             self.data_stream_views = data_stream_views
             dynamic_layout.addWidget(data_stream_views)
 
-        if (now - self.last_plot_update).total_seconds() < self.update_every:
+        if self.last_plot_update and (now - self.last_plot_update).total_seconds() < self.update_every and not force:
             return
 
         self.update_timing_ui()
@@ -345,10 +345,18 @@ class ExperimentPanel(Panel):
         self.last_plot_update = now
         viewing_plot = self.data_stream_views.currentIndex()
 
-        if viewing_plot < len(self.pg_plots):
-            self.update_data_stream_plot(*list(self.pg_plots.items())[viewing_plot])
+        if render_all:
+            for plot_item in self.pg_plots.items():
+                self.update_data_stream_plot(*plot_item)
+
+            for user_plot_name in self.additional_plots:
+                self.update_user_stream_plot(user_plot_name)
+
         else:
-            self.update_user_stream_plot(*list(self.additional_plots.keys())[viewing_plot - len(self.pg_plots)])
+            if viewing_plot < len(self.pg_plots):
+                self.update_data_stream_plot(*list(self.pg_plots.items())[viewing_plot])
+            else:
+                self.update_user_stream_plot(*list(self.additional_plots)[viewing_plot - len(self.pg_plots)])
 
     def update_user_stream_plot(self, user_plot_key):
         name, ind, dep = [user_plot_key[k] for k in ['name', 'independent', 'dependent']]

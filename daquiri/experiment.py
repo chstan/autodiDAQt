@@ -538,6 +538,7 @@ class Experiment(FSM):
                 await self.take_step(next_step)
             except StopIteration:
                 # We're done! Time to save your data.
+                self.ui.soft_update(force=True, render_all=True)
                 self.messages.put_nowait('stop')
         else:
             async for data in self.current_run.sequence:
@@ -549,6 +550,7 @@ class Experiment(FSM):
                 for qual_name, value in data.items():
                     self.record_data(tokenize_access_path(qual_name), value)
 
+            self.ui.soft_update(force=True, render_all=True)
             self.messages.put_nowait('stop')
 
     def record_data(self, qual_name: Tuple, value: any):
