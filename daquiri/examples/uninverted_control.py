@@ -12,6 +12,10 @@ class SimpleScan:
     start: float = 0
     stop: float = 20
 
+    @property
+    def n_points(self):
+        return self.n_steps
+
     async def sequence(self, experiment: Experiment, mc: MockMotionController,
                        power_meter: MockScalarDetector):
         experiment.collate(
