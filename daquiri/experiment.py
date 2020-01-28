@@ -579,11 +579,7 @@ class Experiment(FSM):
             return
 
         instrument = self.app.managed_instruments[scope]
-        last_instrument = instrument
-
         for p in (path[:-1] if is_property else path):
-            last_instrument = instrument
-
             if isinstance(p, int):
                 instrument = instrument[p]
             else:

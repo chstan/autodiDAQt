@@ -56,7 +56,7 @@ class Specification:
 
         return axis_cls(key_name, driver_instance, instrument)
 
-    def to_scan_axis(self, over, path, *args, **kwargs):
+    def to_scan_axis(self, over, path, rest, *args, **kwargs):
         raise NotImplementedError()
 
 
@@ -81,11 +81,16 @@ class AxisDescriptor(Specification):
     def where_list(self):
         return [f'@axis_{self.name}']
 
-    def to_scan_axis(self, over, path, *args, **kwargs):
-        raise NotImplementedError()
+    def to_scan_axis(self, over, path, rest, *args, **kwargs):
+        from daquiri.scan import ScanAxis
+        return ScanAxis([over] + path + list(rest), *args, **kwargs)
 
-    def realize(self, key_name, driver_instance, instrument) -> Axis:
-        raise NotImplementedError()
+    def realize(self, key_name, driver_instance, instrument) -> Union[Axis, List[Axis], Dict[str, Axis]]:
+        axis_cls = self.axis_cls
+        if isinstance(driver_instance, MockDriver):
+            axis_cls = self.test_axis_cls
+
+        return axis_cls(key_name, self.schema, self, instrument)
 
     # "property" syntax
     def write(self, fwrite):
@@ -207,7 +212,7 @@ class AxisSpecification(Specification):
         return axis_cls(name=key_name, schema=self.schema, where=self.where, driver=driver_instance,
                         read=self.read, write=self.write, settle=self.settle, **init_kwargs)
 
-    def to_scan_axis(self, over, path, *args, **kwargs):
+    def to_scan_axis(self, over, path, rest, *args, **kwargs):
         from daquiri.scan import ScanAxis
         return ScanAxis([over] + path, *args, **kwargs)
 

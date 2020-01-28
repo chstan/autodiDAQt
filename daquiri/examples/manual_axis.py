@@ -28,7 +28,7 @@ class MockSimpleDetector(ManagedInstrument):
 
     @device.mock_read
     async def device(self):
-        return np.normal.normal() + 5
+        return np.random.normal() + 5
 
 
 @dataclass
@@ -41,8 +41,8 @@ class SimpleScan:
         experiment.collate(
             independent=[[mc.stages[0], 'dx']],
             dependent=[
-                [power_meter.device, 'power'],
                 [ccd.device, 'spectrum'],
+                [power_meter.device, 'power'],
             ]
         )
 

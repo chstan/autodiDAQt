@@ -9,7 +9,6 @@ import rx
 from daquiri.schema import default_value_for_schema
 from daquiri.state import LogicalAxisState
 from rx.subject import Subject
-from daquiri.data import reactive_frame
 
 __all__ = ('Axis', 'TestAxis', 'ProxiedAxis', 'LogicalAxis',
            'ManualAxis', 'TestManualAxis',
@@ -96,13 +95,14 @@ class ManualAxis(Axis):
     raw_value_stream: Optional[Subject]
     collected_value_stream: Optional[rx.Observable]
 
-    def __init__(self, name, schema, axis_descriptor):
-        self.name = name
-        self.schema = schema
+    def __init__(self, name, schema, axis_descriptor, instrument):
+        super().__init__(name, schema)
+
         self.axis_descriptor = axis_descriptor
+        self.instrument = instrument
 
     async def write(self, value):
-        value = await self.axis_descriptor.fwrite(value)
+        value = await self.axis_descriptor.fwrite(self.instrument, value)
 
         if self.raw_value_stream:
             self.raw_value_stream.on_next({'value': value, 'time': datetime.datetime.now().timestamp()})
@@ -110,15 +110,21 @@ class ManualAxis(Axis):
         return value
 
     async def read(self):
-        await self.axis_descriptor.fread()
+        value = await self.axis_descriptor.fread(self.instrument)
+        return value
 
 
 class TestManualAxis(ManualAxis):
+    @property
+    def readonly(self):
+        return self.axis_descriptor.fmockwrite is None
+
     async def write(self, value):
-        await self.axis_descriptor.fmockwrite(value)
+        await self.axis_descriptor.fmockwrite(self.instrument, value)
 
     async def read(self):
-        await self.axis_descriptor.fmockread()
+        value = await self.axis_descriptor.fmockread(self.instrument)
+        return value
 
 
 class LogicalSubaxis(Axis):
@@ -233,6 +239,7 @@ class ProxiedAxis(Axis):
         self.where = where
         self.driver = driver
         self._status = Axis.IDLE
+        self.readonly = write is None
 
         print(name, where, read, write)
 
@@ -371,6 +378,7 @@ class TestAxis(Axis):
         self._mock_settle = self.mock.get('settle')
         self.init_args = args
         self.init_kwargs = kwargs
+        self.readonly = self._mock_write is None
 
     async def read(self):
         if self._mock_read:
