@@ -7,7 +7,7 @@
   "log_format": "{time}-{user}-{session}",
 
   "data_directory": "out/data",
-  "data_format": "{user}/{date}-{session}-{run}",
+  "data_format": "{user}/{date}-{time}-{session}-{run}",
 
   "maintain_state": true,
   "state_directory": "out/state",
