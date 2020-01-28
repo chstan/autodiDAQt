@@ -4,13 +4,12 @@ import datetime
 import rx.operators
 import json
 import pyqtgraph as pg
-import pandas as pd
 
 from typing import List, Union
 
 from loguru import logger
 
-from daquiri.instrument.axis import ProxiedAxis, LogicalAxis, TestAxis, Axis, LogicalSubaxis
+from daquiri.instrument.axis import ProxiedAxis, LogicalAxis, TestAxis, Axis, LogicalSubaxis, ManualAxis, TestManualAxis
 from daquiri.instrument.method import Method, TestMethod
 from daquiri.instrument.property import ChoiceProperty
 from daquiri.schema import ArrayType
@@ -114,8 +113,15 @@ class ProxiedAxisView(AxisView):
 
         async def perform_move():
             await self.axis.write(value)
+            await self.axis.read()
 
         asyncio.get_event_loop().create_task(perform_move())
+
+    def read(self, *_):
+        async def perform_read():
+            await self.axis.read()
+
+        asyncio.get_event_loop().create_task(perform_read())
 
     def jog(self, rel_speed=1):
         try:
@@ -145,24 +151,28 @@ class ProxiedAxisView(AxisView):
             self.axis.raw_value_stream.pipe(throttle).subscribe(
                 lambda v: label_widget.setText(str(v['value'])))
 
-        if self.joggable:
-            neg_fast, neg_slow, pos_slow, pos_fast, jog_speed = [
-                ui[f'{self.id}-jog_{k}'] for k in ['neg_fast', 'neg_slow', 'pos_slow', 'pos_fast', 'speed']]
+            ui[f'{self.id}-read'].subject.subscribe(self.read)
 
-            def set_speed(v):
-                self.raw_jog_speed = v
-            jog_speed.subject.subscribe(set_speed)
+        if not self.axis.readonly:
+            sub_value = submit(f'{self.id}-set', [f'{self.id}-edit'], ui)
+            sub_value.subscribe(lambda v: self.move(list(v.values())[0]))
 
-            for axis, relative_speed in zip([neg_fast, neg_slow, pos_slow, pos_fast], [-5, -1, 1, 5]):
-                def close_over_jog_info(rel_speed):
-                    def jog(_):
-                        self.jog(rel_speed=rel_speed)
-                    return jog
+            if self.joggable:
+                neg_fast, neg_slow, pos_slow, pos_fast, jog_speed = [
+                    ui[f'{self.id}-jog_{k}'] for k in ['neg_fast', 'neg_slow', 'pos_slow', 'pos_fast', 'speed']]
 
-                axis.subject.subscribe(close_over_jog_info(relative_speed))
+                def set_speed(v):
+                    self.raw_jog_speed = v
+                jog_speed.subject.subscribe(set_speed)
 
-        sub_value = submit(f'{self.id}-set', [f'{self.id}-edit'], ui)
-        sub_value.subscribe(lambda v: self.move(list(v.values())[0]))
+                for axis, relative_speed in zip([neg_fast, neg_slow, pos_slow, pos_fast], [-5, -1, 1, 5]):
+                    def close_over_jog_info(rel_speed):
+                        def jog(_):
+                            self.jog(rel_speed=rel_speed)
+                        return jog
+
+                    axis.subject.subscribe(close_over_jog_info(relative_speed))
+
 
     def layout(self):
         jog_controls = []
@@ -178,19 +188,23 @@ class ProxiedAxisView(AxisView):
             logger.warning('Not live plotting image: not currently supported. '
                            'Complain at Conrad if this sufficiently upsets you.')
 
-        if self.joggable:
-            jog_controls = [
-                horizontal('Jog',
-                           button('<<-', id=f'{self.id}-jog_neg_fast'), button('<-', id=f'{self.id}-jog_neg_slow'),
-                           button('->', id=f'{self.id}-jog_pos_slow'), button('->>', id=f'{self.id}-jog_pos_fast')),
-                horizontal('Slow Jog Amt. (Fast = 5x)', line_edit('0', id=f'{self.id}-jog_speed')),
-            ]
+        write_controls = []
+
+        if not self.axis.readonly:
+            write_controls = [horizontal('Write', line_edit('', id=f'{self.id}-edit'), button('Set', id=f'{self.id}-set')),]
+            if self.joggable:
+                jog_controls = [
+                    horizontal('Jog',
+                        button('<<-', id=f'{self.id}-jog_neg_fast'), button('<-', id=f'{self.id}-jog_neg_slow'),
+                        button('->', id=f'{self.id}-jog_pos_slow'), button('->>', id=f'{self.id}-jog_pos_fast')),
+                    horizontal('Slow Jog Amt. (Fast = 5x)', line_edit('0', id=f'{self.id}-jog_speed')),
+                ]
 
         return vertical(
             group(
                 'Driver',
-                horizontal('Read', label('Last Value', id=f'{self.id}-last_value')),
-                horizontal('Write', line_edit('', id=f'{self.id}-edit'), button('Set', id=f'{self.id}-set')),
+                horizontal('Read', label('Last Value', id=f'{self.id}-last_value'), button('Read', id=f'{self.id}-read')),
+                *write_controls,
                 *jog_controls,
                 *live_plots,
             ),
@@ -277,7 +291,10 @@ class BasicInstrumentPanel(Panel):
     def layout_for_single_axis(self, description: Union[ProxiedAxis, LogicalAxis, TestAxis], path_to_axis):
         view_cls = {
             ProxiedAxis: ProxiedAxisView,
+            ManualAxis: ProxiedAxisView,
             LogicalAxis: LogicalAxisView,
+
+            TestManualAxis: TestAxisView,
             TestAxis: TestAxisView,
         }.get(type(description))
 
