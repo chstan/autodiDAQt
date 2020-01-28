@@ -111,6 +111,8 @@ class ManualAxis(Axis):
 
     async def read(self):
         value = await self.axis_descriptor.fread(self.instrument)
+        if self.raw_value_stream:
+            self.raw_value_stream.on_next({'value': value, 'time': datetime.datetime.now().timestamp()})
         return value
 
 
@@ -124,6 +126,8 @@ class TestManualAxis(ManualAxis):
 
     async def read(self):
         value = await self.axis_descriptor.fmockread(self.instrument)
+        if self.raw_value_stream:
+            self.raw_value_stream.on_next({'value': value, 'time': datetime.datetime.now().timestamp()})
         return value
 
 
