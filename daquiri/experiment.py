@@ -307,6 +307,7 @@ class Run:
             user=self.user,
             session=self.session,
             run=self.number,
+            time=datetime.datetime.now().time().isoformat().split('.')[0].replace(':', '-'),
             date=datetime.date.today().isoformat(),
         ))
 
@@ -323,6 +324,11 @@ class Run:
             save_directory = Path(save_directory)
 
         save_directory.mkdir(parents=True, exist_ok=True)
+
+        with open(save_directory / 'metadata-small.json', 'w+') as f:
+            json.dump({
+                'metadata': self.metadata,
+            }, f, cls=RichEncoder, indent=2)
 
         with open(save_directory / 'metadata.json', 'w+') as f:
             json.dump({
