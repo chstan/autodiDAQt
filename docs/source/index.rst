@@ -10,7 +10,9 @@ DAQuiri is a nuts and bolts included framework for scientific data acquisition (
 for rapid prototyping and the challenging DAQ environment of angle resolved photoemission
 spectroscopy. If you specify how to *sequence* motions and data collection, daquiri can manage
 the user interface, talking to and managing instruments, plotting interim data, data collation,
-and IO for you.
+and IO for you. Despite all this, DAQuiri is very low overhead and is profiled before
+each release: acquisition rates faster than 100μs are possible on synthetic tasks, meaning
+most reasonable experiments will be IO bound using DAQuiri.
 
 If DAQuiri doesn't do exactly what you need, get in contact with us or check out the
 examples. There's a good chance that if it isn't built in, DAQuiri is flexible enough to support

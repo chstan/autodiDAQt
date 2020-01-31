@@ -35,6 +35,12 @@ the temperature between each internal experiment. As another example, during opt
 experiments, we perform data collection out-of-sequence in order to remove the effect of
 laser power drift during experiments.
 
+**Inverted control enforces collecting raw data.** It can be tempting to do some data reduction
+at analysis time as a convenience. This is generally a bad idea because these transforms
+are typically one way functions. DAQuiri has uninverted (imperative) data collection modes
+that let you run arbitrary code, but it prefers you use the inverted interface which
+incentivizes analyzing data after it is collected.
+
 Other benefits of experiments in DAQuiri
 ----------------------------------------
 

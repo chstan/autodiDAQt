@@ -21,8 +21,8 @@ What's possible with DAQuiri
 
 DAQuiri wraps all your scientific hardware in a uniform asynchronous interface:
 axes are anything you can read from (their position), configure, and *maybe* write to (move).
-This includes your lock-in amplifiers, your cameras, and your electron spectrometers--all read only--
-not just your motion controllers.
+This includes your lock-in amplifiers, your cameras, and your electron spectrometers, not just your
+motion controllers.
 
 Once you've done this, DAQuiri only asks you specify what sequence of motions and data collection you need
 (this is *your* experiment so no assumption here, but we make simple) and it will handle:
@@ -35,6 +35,10 @@ Once you've done this, DAQuiri only asks you specify what sequence of motions an
    properties with millisecond timestamps
 6. Conveniences like pause/resume, estimated completion times, notifications on error/finish,
    scan queueing, and more
+7. Resuming or re-scanning from the historical record of completed scans.
+8. Partial data save in the event of unrecoverable error.
+9. Very low overhead (on modern hardware, < 100us per DAQ step) and asynchronous by design for
+   high throughput data collection
 
 All this said, DAQuiri doesn't make any assumptions about what you need, you can do full-fledged UI
 programming and whatever else you need, keeping abstractions at whatever level is appropriate for your work.
