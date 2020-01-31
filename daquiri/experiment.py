@@ -611,7 +611,7 @@ class Experiment(FSM):
             else:
                 await instrument.write(write)
 
-            self.record_data(qual_name, write if set is None else None)
+            self.record_data(qual_name, write if set is None else set)
 
     async def take_step(self, step):
         self.current_run.steps_taken.append({
