@@ -1,0 +1,25 @@
+@import './vars';
+
+QWidget {
+    background-color: $white;
+}
+
+
+@import './tabs';
+@import './buttons';
+@import './dropdowns';
+@import './text_inputs';
+@import './scans';
+
+* {
+    font-size: 12pt;
+    font-family: 'Source Sans Pro', sans-serif;
+}
+
+
+*[cssClass="experiment_header"] {
+    background-color: $light-gray;
+    .QWidget, QLabel, QGroupBox {
+        background-color: $light-gray;
+    }
+}

@@ -1,0 +1,22 @@
+@import './vars';
+
+QTabBar::tab {
+    background-color: transparent;
+    min-width: 8em;
+}
+
+QTabBar {
+    background-color: transparent;
+}
+
+QTabBar::tab:selected {
+    background: $light-gray;
+    font-weight: bold;
+    border-bottom: 5px solid $black;
+}
+
+QTabBar {
+    border-top: $tab-border;
+}
+
+

@@ -1,0 +1,62 @@
+@import './vars';
+
+*[cssClass="scans"] {
+    background-color: $primary-800;
+}
+
+*[cssClass="scans"] *[cssClass="which_scan"] {
+    background-color: $primary-800;
+
+    QLabel {
+        background-color: $primary-800;
+        color: white;
+        font-weight: bold;
+    }
+}
+
+*[cssClass="scans"] QTabBar::tab:selected {
+    background: darken($primary-800, 20%);
+    color: white;
+    font-weight: bold;
+    border-top: none;
+    border-bottom: 5px solid white;
+}
+
+
+*[cssClass="scans"] QTabBar::tab, *[cssClass="scans"] QTabBar::pane {
+    background-color: darken($primary-800, 20%);
+    border-bottom: none;
+    border-top: none;
+    color: white;
+}
+
+*[cssClass="scans"] QTabBar {
+    border-bottom: none;
+    border-top: none;
+    background-color: darken($primary-800, 20%);
+}
+
+*[cssClass="scans"] QTabWidget {
+    color: white;
+}
+
+*[cssClass="scans"] QTabWidget::pane * {
+    background-color: $primary-800;
+    color: white;
+}
+
+*[cssClass="scans"] QTabWidget::pane > * {
+    background-color: darken($primary-800, 20%);
+    color: white;
+}
+
+
+*[cssClass="scans"] QTabWidget::pane {
+    QLineEdit, QComboBox, QSpinBox, QDoubleSpinBox {
+        background-color: white;
+        color: black;
+    }
+    QGroupBox {
+        font-weight: bold;
+    }
+}

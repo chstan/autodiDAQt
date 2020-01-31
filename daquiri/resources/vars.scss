@@ -1,0 +1,35 @@
+// standard colors
+$light-gray: rgb(230, 230, 230);
+$gray: rgb(150, 150, 150);
+$dark-gray: rgb(110, 110, 110);
+$hover-gray: rgb(240, 240, 240);
+
+$white: rgb(255, 255, 255);
+$black: rgb(0, 0, 0);
+
+$dark-text-color: rgb(40, 40, 40);
+$light-text-color: $white;
+
+// borders
+$light-border: 1px solid $light-gray;
+$tab-border: 1px solid $gray;
+$darker-border: 1px solid darken($light-gray, 20%);
+
+$primary-50: #e1f4fa;
+$primary-100: #b4e2f3;
+$primary-200: #85d0eb;
+$primary-300: #5bbde2;
+$primary-400: #41afde;
+$primary-500: #2ea2d9;
+$primary-600: #2995cb;
+$primary-700: #2182b8;
+$primary-800: #1e71a4;
+$primary-900: #155282;
+$primary: $primary-300;
+
+$complement: #d9642e;
+
+$analog: #2ed9ba;
+$analog-2:#2e4ed9;
+
+$red: #f44336;
