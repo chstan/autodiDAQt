@@ -1,5 +1,7 @@
+from pathlib import Path
 from typing import Type
 
+from PyQt5.QtGui import QFontDatabase
 from matplotlib.backends.backend_qt5agg import (
     FigureCanvasQTAgg as FigureCanvas,
     NavigationToolbar2QT as NavigationToolbar,
@@ -104,6 +106,11 @@ class Panel(QWidget):
 
 def open_appless_panel(panel_cls: Type[Panel]):
     app = QApplication([])
+    font_db = QFontDatabase()
+
+    for font in (Path(__file__).parent / 'resources' / 'fonts').glob('*.ttf'):
+        font_db.addApplicationFont(str(font))
+
     app.setStyleSheet(default_stylesheet())
 
     class FauxParent:
@@ -122,6 +129,6 @@ def open_appless_panel(panel_cls: Type[Panel]):
     window.app = None
 
     window.show()
-    #app.exec_()
+    app.exec_()
 
     return window
