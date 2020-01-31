@@ -3,27 +3,43 @@ from rx.subject import BehaviorSubject, Subject
 
 from PyQt5.QtWidgets import (
     QPushButton, QCheckBox, QComboBox,
-    QSpinBox, QTextEdit, QSlider,
+    QSpinBox, QDoubleSpinBox, QTextEdit, QSlider,
     QLineEdit, QRadioButton,
     QWidget, QFileDialog, QHBoxLayout,
 )
 
 __all__ = (
-    'SubjectivePushButton', 'SubjectiveCheckBox',
-    'SubjectiveComboBox', 'SubjectiveFileDialog',
-    'SubjectiveLineEdit', 'SubjectiveRadioButton',
-    'SubjectiveSlider', 'SubjectiveSpinBox',
-    'SubjectiveTextEdit',
+    'PushButton', 'CheckBox',
+    'ComboBox', 'FileDialog',
+    'LineEdit', 'RadioButton',
+    'Slider', 'SpinBox', 'DoubleSpinBox',
+    'TextEdit',
 )
 
-class SubjectiveComboBox(QComboBox):
+
+class Subjective:
+    subject = None
+
+    def subscribe(self, *args, **kwargs):
+        self.subject.subscribe(*args, **kwargs)
+
+    def on_next(self, *args, **kwargs):
+        self.subject.on_next(*args, **kwargs)
+
+
+class ComboBox(QComboBox, Subjective):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.subject = BehaviorSubject(self.currentData())
         self.currentIndexChanged.connect(lambda: self.subject.on_next(self.currentText()))
+        self.subject.subscribe(self.update_ui)
+
+    def update_ui(self, value):
+        if self.currentText() != value:
+            self.setCurrentText(value)
 
 
-class SubjectiveSpinBox(QSpinBox):
+class SpinBox(QSpinBox, Subjective):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.subject = BehaviorSubject(self.value())
@@ -34,7 +50,7 @@ class SubjectiveSpinBox(QSpinBox):
         self.setValue(value)
 
 
-class SubjectiveTextEdit(QTextEdit):
+class TextEdit(QTextEdit, Subjective):
     def __init__(self, *args):
         super().__init__(*args)
         self.subject = BehaviorSubject(self.toPlainText())
@@ -46,7 +62,7 @@ class SubjectiveTextEdit(QTextEdit):
             self.setPlainText(value)
 
 
-class SubjectiveSlider(QSlider):
+class Slider(QSlider, Subjective):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.subject = BehaviorSubject(self.value())
@@ -57,7 +73,7 @@ class SubjectiveSlider(QSlider):
         self.setValue(value)
 
 
-class SubjectiveLineEdit(QLineEdit):
+class LineEdit(QLineEdit, Subjective):
     def __init__(self, *args):
         super().__init__(*args)
         self.subject = BehaviorSubject(self.text())
@@ -69,7 +85,7 @@ class SubjectiveLineEdit(QLineEdit):
             self.setText(value)
 
 
-class SubjectiveRadioButton(QRadioButton):
+class RadioButton(QRadioButton, Subjective):
     def __init__(self, *args):
         super().__init__(*args)
         self.subject = BehaviorSubject(self.isChecked())
@@ -80,7 +96,7 @@ class SubjectiveRadioButton(QRadioButton):
         self.setChecked(value)
 
 
-class SubjectiveFileDialog(QWidget):
+class FileDialog(QWidget, Subjective):
     def __init__(self, *args, single=True, dialog_root=None):
         if dialog_root is None:
             dialog_root = os.getcwd()
@@ -91,7 +107,7 @@ class SubjectiveFileDialog(QWidget):
         self.subject = BehaviorSubject(None)
 
         layout = QHBoxLayout()
-        self.btn = SubjectivePushButton('Open')
+        self.btn = PushButton('Open')
         if single:
             self.btn.subject.subscribe(on_next=lambda _: self.get_file())
         else:
@@ -115,14 +131,14 @@ class SubjectiveFileDialog(QWidget):
             self.subject.on_next(filenames)
 
 
-class SubjectivePushButton(QPushButton):
+class PushButton(QPushButton, Subjective):
     def __init__(self, *args, **kwargs):
         super().__init__(*args)
         self.subject = Subject()
         self.clicked.connect(lambda: self.subject.on_next(True))
 
 
-class SubjectiveCheckBox(QCheckBox):
+class CheckBox(QCheckBox,Subjective):
     def __init__(self, *args, **kwargs):
         super().__init__(*args)
         self.subject = BehaviorSubject(self.checkState())
@@ -132,3 +148,24 @@ class SubjectiveCheckBox(QCheckBox):
     def update_ui(self, value):
         self.setCheckState(value)
 
+
+class SpinBox(QSpinBox, Subjective):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.subject = BehaviorSubject(self.value())
+        self.valueChanged.connect(self.subject.on_next)
+        self.subject.subscribe(self.update_ui)
+
+    def update_ui(self, value):
+        self.setValue(int(value))
+
+
+class DoubleSpinBox(QDoubleSpinBox, Subjective):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.subject = BehaviorSubject(self.value())
+        self.valueChanged.connect(self.subject.on_next)
+        self.subject.subscribe(self.update_ui)
+
+    def update_ui(self, value):
+        self.setValue(float(value))

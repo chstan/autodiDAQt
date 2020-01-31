@@ -46,14 +46,14 @@ from pyqt_led import Led
 import rx.operators as ops
 import rx
 
-from typing import Dict, List, Optional, Any, Type, Union
+from typing import Dict, List, Optional, Any, Type, Union, Hashable
 
 import functools
 from PyQt5.QtWidgets import (
     QGridLayout, QWidget, QVBoxLayout, QHBoxLayout, QTabWidget,
     QSplitter,
-    QGroupBox, QLabel,
-)
+    QGroupBox, QLabel, QScrollArea,
+    QSizePolicy)
 from PyQt5.QtCore import Qt
 from PyQt5 import QtGui
 
@@ -71,6 +71,7 @@ __all__ = (
     # widgets
     'group', 'label', 'tabs', 'button', 'check_box', 'combo_box', 'file_dialog',
     'line_edit', 'radio_button', 'slider', 'spin_box', 'text_edit', 'led', 'numeric_input',
+    'scroll_area',
 
     # Observable tools
     'submit',
@@ -78,6 +79,7 @@ __all__ = (
      # @dataclass utils
     'layout_dataclass',
     'bind_dataclass',
+    'update_dataclass',
 )
 
 ACTIVE_UI_STACK = []
@@ -91,20 +93,24 @@ def ui_builder(f):
         if id is not None:
             try:
                 id, ui = id
+                if isinstance(ui, str):
+                    id = (id, ui)
+                    ui = ACTIVE_UI
             except ValueError:
                 id, ui = id, ACTIVE_UI
 
         ui_element = f(*args, **kwargs)
 
-        if id:
+        if id and ui is not None:
             ui[id] = ui_element
 
         if class_name is not None:
             # CSS equivalent of classes
-            ui_element.setProperty('className', class_name)
+            ui_element.setProperty('cssClass', class_name)
+            ui_element.style().unpolish(ui_element)
+            ui_element.style().polish(ui_element)
 
         return ui_element
-
 
     return wrapped_ui_builder
 
@@ -132,7 +138,20 @@ class CollectUI:
 
 
 @ui_builder
-def layout(*children, layout_cls=None, widget=None, min_width=None, min_height=None):
+def scroll_area(*children):
+    scroll = QScrollArea()
+    internal_layout = QVBoxLayout()
+
+    for child in children:
+        internal_layout.addWidget(_wrap_text(child))
+
+    scroll.setLayout(internal_layout)
+    return scroll
+
+
+@ui_builder
+def layout(*children, layout_cls=None, widget=None, min_width=None, min_height=None,
+           margin=0, content_margin=0, spacing=0, alignment=None):
     if layout_cls is None:
         layout_cls = QGridLayout
 
@@ -141,8 +160,23 @@ def layout(*children, layout_cls=None, widget=None, min_width=None, min_height=N
 
     internal_layout = layout_cls()
 
+    if layout_cls not in {QVBoxLayout, QHBoxLayout}:
+        internal_layout.setMargin(margin)
+
+    if layout_cls not in {}:
+        if isinstance(content_margin, (int, float, str,)):
+            content_margin = [content_margin] * 4
+
+        internal_layout.setContentsMargins(*content_margin)
+
+    if layout_cls not in {}:
+        internal_layout.setSpacing(spacing)
+
     for child in children:
         internal_layout.addWidget(_wrap_text(child))
+
+    if alignment is not None:
+        internal_layout.setAlignment(alignment)
 
     widget.setLayout(internal_layout)
     if min_width:
@@ -159,8 +193,9 @@ horizontal = functools.partial(layout, layout_cls=QHBoxLayout)
 
 
 @ui_builder
-def splitter(first, second, direction=Qt.Vertical, size=None):
+def splitter(first, second, direction=Qt.Vertical, size=None, handle_width=12):
     split_widget = QSplitter(direction)
+    split_widget.setHandleWidth(handle_width)
 
     split_widget.addWidget(first)
     split_widget.addWidget(second)
@@ -200,42 +235,66 @@ def label(text, *args):
     return QLabel(text, *args)
 
 @ui_builder
-def tabs(*children):
+def tabs(*children, document_mode=True):
     widget = QTabWidget()
     for name, child in children:
         widget.addTab(child, name)
 
+    widget.setDocumentMode(document_mode)
+
     return widget
 
 @ui_builder
-def button(text, *args):
-    return SubjectivePushButton(text, *args)
+def button(text, horiz_expand=False, *args):
+    button = PushButton(text, *args)
+
+    if horiz_expand:
+        pass
+    else:
+        button.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+
+    return button
 
 @ui_builder
 def check_box(text, *args):
-    return SubjectiveCheckBox(text, *args)
+    return CheckBox(text, *args)
 
 @ui_builder
-def combo_box(items, *args):
-    widget = SubjectiveComboBox(*args)
+def combo_box(items, content_margin=8, *args):
+    widget = ComboBox(*args)
     widget.addItems(items)
+
+    if isinstance(content_margin, (int, float, str)):
+        content_margin = [content_margin] * 4
+
+    if content_margin is not None:
+        widget.setContentsMargins(*content_margin)
+
     return widget
 
 @ui_builder
 def file_dialog(*args):
-    return SubjectiveFileDialog(*args)
+    return FileDialog(*args)
 
 @ui_builder
-def line_edit(*args):
-    return SubjectiveLineEdit(*args)
+def line_edit(value, text_margin=8, *args):
+    edit = LineEdit(value, *args)
+
+    if isinstance(text_margin, (int, float, str)):
+        text_margin = [text_margin] * 4
+
+    if text_margin is not None:
+        edit.setTextMargins(*text_margin)
+
+    return edit
 
 @ui_builder
 def radio_button(text, *args):
-    return SubjectiveRadioButton(text, *args)
+    return RadioButton(text, *args)
 
 @ui_builder
 def slider(minimum=0, maximum=10, interval=None, horizontal=True):
-    widget = SubjectiveSlider(orientation=Qt.Horizontal if horizontal else Qt.Vertical)
+    widget = Slider(orientation=Qt.Horizontal if horizontal else Qt.Vertical)
     widget.setMinimum(minimum)
     widget.setMaximum(maximum)
 
@@ -244,9 +303,20 @@ def slider(minimum=0, maximum=10, interval=None, horizontal=True):
 
     return widget
 
+
+class RenderAs(Enum):
+    INPUT = 0
+    SPINBOX = 1
+    TEXTAREA = 2
+    LINE_EDIT = 3
+
+
 @ui_builder
-def spin_box(minimum=0, maximum=10, step=1, adaptive=True, value=None):
-    widget = SubjectiveSpinBox()
+def spin_box(minimum=0, maximum=10, step=1, content_margin=8, adaptive=True, value=None, kind: type = int):
+    if kind == int:
+        widget = SpinBox()
+    else:
+        widget = DoubleSpinBox()
 
     widget.setRange(minimum, maximum)
 
@@ -254,20 +324,25 @@ def spin_box(minimum=0, maximum=10, step=1, adaptive=True, value=None):
         widget.subject.on_next(value)
 
     if adaptive:
-        widget.setStepType(SubjectiveSpinBox.AdaptiveDecimalStepType)
+        widget.setStepType(SpinBox.AdaptiveDecimalStepType)
     else:
         widget.setSingleStep(step)
+
+    if isinstance(content_margin, (int, float, str)):
+        content_margin = [content_margin] * 4
+
+    if content_margin is not None:
+        widget.setContentsMargins(*content_margin)
 
     return widget
 
 @ui_builder
 def text_edit(text='', *args):
-    return SubjectiveTextEdit(text, *args)
+    return TextEdit(text, *args)
 
 @ui_builder
 def led(*args, **kwargs):
     return Led(*args, **kwargs)
-
 
 @ui_builder
 def numeric_input(value=0, input_type: type = float, *args, validator_settings=None):
@@ -290,7 +365,7 @@ def numeric_input(value=0, input_type: type = float, *args, validator_settings=N
     if validator_settings is None:
         validator_settings = default_settings.get(input_type)
 
-    widget = SubjectiveLineEdit(str(value), *args)
+    widget = LineEdit(str(value), *args)
     widget.setValidator(validators.get(input_type, QtGui.QIntValidator)(**validator_settings))
 
     return widget
