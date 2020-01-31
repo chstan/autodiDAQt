@@ -295,8 +295,10 @@ def numeric_input(value=0, input_type: type = float, *args, validator_settings=N
 
     return widget
 
+
 def _wrap_text(str_or_widget):
     return label(str_or_widget) if isinstance(str_or_widget, str) else str_or_widget
+
 
 def _unwrap_subject(subject_or_widget):
     try:
@@ -304,9 +306,12 @@ def _unwrap_subject(subject_or_widget):
     except AttributeError:
         return subject_or_widget
 
-def submit(gate: str, keys: List[str], ui: Dict[str, QWidget]) -> rx.Observable:
-    if isinstance(gate, str):
+
+def submit(gate: Hashable, keys: List[Hashable], ui: Dict[Hashable, QWidget]) -> rx.Observable:
+    try:
         gate = ui[gate]
+    except (ValueError, TypeError):
+        pass
 
     gate = _unwrap_subject(gate)
     items = [_unwrap_subject(ui[k]) for k in keys]
@@ -323,26 +328,37 @@ def submit(gate: str, keys: List[str], ui: Dict[str, QWidget]) -> rx.Observable:
     )
 
 
-def _layout_dataclass_field(dataclass_cls, field_name: str, prefix: str):
-        id_for_field = f'{prefix}.{field_name}'
+def _layout_dataclass_field(field, field_name: str, prefix: str, annotation: Dict[str, Any]):
+    id_for_field = (prefix, field_name,)
 
-        field = dataclass_cls.__dataclass_fields__[field_name]
-        if field.type in [int, float,]:
-            field_input = numeric_input(value=0, input_type=field.type, id=id_for_field)
-        elif field.type == str:
-            field_input = line_edit('', id=id_for_field)
-        elif issubclass(field.type, enum.Enum):
-            enum_options = enum_option_names(field.type)
-            field_input = combo_box(enum_options, id=id_for_field)
-        elif field.type == bool:
-            field_input = check_box(field_name, id=id_for_field)
+    allowable_range = annotation.get('range', (-1e5, 1e5))
+    label = annotation.get('label', field_name)
+    label_transform = annotation.get('label_transform', lambda x: x.replace('_', ' ').title())
+    label = label_transform(label)
+
+    if field.type in [int, float,]:
+        render_as = annotation.get('render_as', RenderAs.SPINBOX)
+        if render_as == RenderAs.SPINBOX:
+            field_input = spin_box(value=0, kind=field.type, id=id_for_field,
+                                   minimum=allowable_range[0], maximum=allowable_range[1])
         else:
-            raise Exception('Could not render field: {}'.format(field))
+            field_input = numeric_input(value=0, input_type=field.type, id=id_for_field)
 
-        return group(
-            field_name,
-            field_input,
-        )
+    elif field.type == str:
+        render_as = annotation.get('render_as', RenderAs.LINE_EDIT)
+        if render_as == RenderAs.LINE_EDIT:
+            field_input = line_edit('', id=id_for_field)
+        else:
+            field_input = text_edit('', id=id_for_field)
+    elif issubclass(field.type, enum.Enum):
+        enum_options = enum_option_names(field.type)
+        field_input = combo_box(enum_options, id=id_for_field)
+    elif field.type == bool:
+        field_input = check_box(field_name, id=id_for_field)
+    else:
+        raise Exception('Could not render field: {}'.format(field))
+
+    return group(label, field_input,)
 
 
 def _layout_function_parameter(parameter: Parameter, prefix: str):
@@ -410,7 +426,7 @@ def bind_function_call(function, prefix: str, ui: Dict[str, QWidget],
     submit(f'{prefix}submit', [f'{prefix}{k}' for k in signature.parameters.keys()], ui).subscribe(perform_call)
 
 
-def layout_dataclass(dataclass_cls, prefix: Optional[str] = None):
+def layout_dataclass(dataclass_cls, prefix: Optional[str] = None, submit=None):
     """
     Renders a dataclass instance to QtWidgets. See also `bind_dataclass` below
     to get one way data binding to the instance
@@ -425,13 +441,40 @@ def layout_dataclass(dataclass_cls, prefix: Optional[str] = None):
     if prefix is None:
         prefix = dataclass_cls.__name__
 
-    return vertical(
-        *[_layout_dataclass_field(dataclass_cls, field_name, prefix)
-          for field_name in dataclass_cls.__dataclass_fields__]
-    )
+    annotations = getattr(dataclass_cls, '_field_annotations', {})
+
+    contents = []
+    for field_name, field in dataclass_cls.__dataclass_fields__.items():
+        contents.append(_layout_dataclass_field(
+            field, field_name, prefix, annotations.get(field_name, {})))
+
+    if submit:
+        contents.append(button(submit, id=(prefix, 'submit!')))
+
+    return vertical(*contents, alignment=Qt.AlignTop, content_margin=8)
 
 
-def bind_dataclass(dataclass_instance, prefix: str, ui: Dict[str, QWidget]):
+def update_dataclass(dataclass_instance, prefix: str, ui: Dict[Hashable, QWidget]):
+    """
+    Because we do not support two way data binding here at the moment, we need to have a utility
+    that lets us manually push updates to the UI. This is a kludge.
+
+    Args:
+        dataclass_instance: The instance to pull data from, it should typically be but does not have to be
+        the one originally bound to the UI. If it is a different one, then the originally bound instance will be
+        updated
+        prefix: Prefix for the widgets, see also `layout_dataclass` and `bind_dataclass`
+        ui: Collected UI Elements
+    """
+
+    instance_widgets = {k[1]: v for k, v in ui.items() if k[0] == prefix}
+    for field_name, field in dataclass_instance.__dataclass_fields__.items():
+        translate_from_field, translate_to_field = transforms_for_field(field)
+        current_value = translate_from_field(getattr(dataclass_instance, field_name))
+        instance_widgets[field_name].on_next(current_value)
+
+
+def bind_dataclass(dataclass_instance, prefix: str, ui: Dict[Hashable, QWidget]):
     """
     One-way data binding between a dataclass instance and a collection of widgets in the UI.
 
@@ -444,31 +487,14 @@ def bind_dataclass(dataclass_instance, prefix: str, ui: Dict[str, QWidget]):
         prefix: Prefix for widget IDs in the UI
         ui: Collected UI elements
     """
-    relevant_widgets = {k.split(prefix)[1]: v for k, v in ui.items() if k.startswith(prefix)}
+    instance_widgets = {k[1]: v for k, v in ui.items() if k[0] == prefix}
+    submit_button = instance_widgets.pop('submit!', None)
+
+    setters = {}
     for field_name, field in dataclass_instance.__dataclass_fields__.items():
-        translate_from_field, translate_to_field = {
-            int: (lambda x: str(x), lambda x: int(x)),
-            float: (lambda x: str(x), lambda x: float(x)),
-        }.get(field.type, (lambda x: x, lambda x: x))
-
-        if issubclass(field.type, Enum):
-            forward_mapping = dict(sorted(enum_mapping(field.type).items(), key=lambda x: int(x[1])))
-            inverse_mapping = {v: k for k, v in forward_mapping.items()}
-
-            def extract_field(v):
-                try:
-                    return v.value
-                except AttributeError:
-                    return v
-
-            translate_to_field = lambda x: forward_mapping[x]
-            translate_from_field = lambda x: inverse_mapping[extract_field(x)]
-
+        translate_from_field, translate_to_field = transforms_for_field(field)
         current_value = translate_from_field(getattr(dataclass_instance, field_name))
-        w = relevant_widgets[field_name]
-
-        # write the current value to the UI
-        w.subject.on_next(current_value)
+        instance_widgets[field_name].on_next(current_value)
 
         # close over the translation function
         def build_setter(translate, name):
@@ -482,4 +508,43 @@ def bind_dataclass(dataclass_instance, prefix: str, ui: Dict[str, QWidget]):
 
             return setter
 
-        w.subject.subscribe(build_setter(translate_to_field, field_name))
+        setter = build_setter(translate_to_field, field_name)
+        setters[field_name] = setter
+
+        if submit_button is None:
+            instance_widgets[field_name].subscribe(setter)
+
+    def write_all(values):
+        values = {k[1]: v for k, v in values.items()}
+        for k, v in values.items():
+            setters[k](v)
+
+    if submit_button:
+        submit(gate=(prefix, 'submit!'), keys=[(prefix, k) for k in instance_widgets], ui=ui).\
+            subscribe(write_all)
+
+
+def transforms_for_field(field):
+    MAP_TYPES = {
+        int: (lambda x: str(x), lambda x: int(x)),
+        float: (lambda x: str(x), lambda x: float(x)),
+    }
+
+    translate_from_field, translate_to_field = MAP_TYPES.get(field.type, (lambda x: x, lambda x: x))
+
+    if issubclass(field.type, Enum):
+        enum_type = type(list(field.type.__members__.values())[0].value)
+
+        forward_mapping = dict(sorted(enum_mapping(field.type).items(), key=lambda x: enum_type(x[1])))
+        inverse_mapping = {v: k for k, v in forward_mapping.items()}
+
+        def extract_field(v):
+            try:
+                return v.value
+            except AttributeError:
+                return v
+
+        translate_to_field = lambda x: field.type(forward_mapping[x])
+        translate_from_field = lambda x: inverse_mapping[extract_field(x)]
+
+    return translate_from_field, translate_to_field
