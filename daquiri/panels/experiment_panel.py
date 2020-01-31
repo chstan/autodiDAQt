@@ -469,7 +469,7 @@ class ExperimentPanel(Panel):
 
         for scan_method in scan_methods:
             name = scan_method.__name__
-            bind_dataclass(experiment.scan_configurations[name], prefix=name + '.', ui=ui)
+            bind_dataclass(experiment.scan_configurations[name], prefix=name, ui=ui)
 
         ui['start'].subject.subscribe(self.start)
         ui['enqueue'].subject.subscribe(self.add_to_queue)

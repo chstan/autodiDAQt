@@ -242,7 +242,7 @@ class LogicalAxisView(AxisView):
                 layout_dataclass(self.axis.internal_state_cls, prefix='state')
             )
 
-        bind_dataclass(self.axis.internal_state, prefix='state.', ui=ui)
+        bind_dataclass(self.axis.internal_state, prefix='state', ui=ui)
         return layout
 
 
