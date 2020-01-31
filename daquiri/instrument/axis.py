@@ -373,7 +373,7 @@ class ProxiedAxis(Axis):
 
 
 class TestAxis(Axis):
-    def __init__(self, name, schema, mock=None, *args, **kwargs):
+    def __init__(self, name, schema, mock=None, readonly=True, *args, **kwargs):
         super().__init__(name, schema)
         self._value = default_value_for_schema(schema)
         self.mock = mock or {}
@@ -382,7 +382,7 @@ class TestAxis(Axis):
         self._mock_settle = self.mock.get('settle')
         self.init_args = args
         self.init_kwargs = kwargs
-        self.readonly = self._mock_write is None
+        self.readonly = readonly
 
     async def read(self):
         if self._mock_read:

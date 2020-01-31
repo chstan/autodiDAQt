@@ -146,9 +146,11 @@ class AxisListSpecification(Specification):
         where_root = tokenize_access_path(self.where(np.nan))
         where_root = where_root[:where_root.index(np.nan)]
 
+        kwargs = {}
         if isinstance(driver_instance, MockDriver):
             axis_cls = TestAxis
             n = self.mock['n']
+            kwargs = {'readonly': self.mock.get('readonly', False)}
         else:
             axis_cls = ProxiedAxis
             g = driver_instance
@@ -162,7 +164,7 @@ class AxisListSpecification(Specification):
 
         return [
             axis_cls(name=key_name, schema=self.schema, where=self.where(i), driver=driver_instance,
-                     settle=self.settle, read=self.read, write=self.write)
+                     settle=self.settle, read=self.read, write=self.write, **kwargs)
             for i in range(n)
         ]
 

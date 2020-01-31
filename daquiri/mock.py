@@ -16,7 +16,7 @@ class MockMotionController(ManagedInstrument):
         read='position',
         write='move',
         # create three mocked axes
-        mock=dict(n=3),
+        mock=dict(n=3, readonly=False),
     )
 
 
