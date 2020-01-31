@@ -54,6 +54,7 @@ requirements = [
     'loguru>=0.3.2',
     'rx>=3.0.1',
     'pyqtgraph',
+    'qtsass',
 
     'appdirs',
 

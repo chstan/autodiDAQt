@@ -1,4 +1,6 @@
 import datetime
+import contextlib
+import os
 import functools
 from json import JSONEncoder
 from pathlib import Path
@@ -27,9 +29,15 @@ PathlikeType = Union[PathFragmentType, Path]
 
 
 def default_stylesheet() -> str:
-    with open(str(DAQUIRI_LIB_ROOT / 'resources' / 'default_styles.css')) as fqss:
-        styles = fqss.read()
-        return styles
+    with open(str(DAQUIRI_LIB_ROOT / 'resources' / 'default_styles.scss')) as f:
+        styles = f.read()
+
+    with open(os.devnull, 'w') as devnull:
+        with contextlib.redirect_stdout(devnull):
+            import qtsass  # <- why is this printing on import?
+            compiled = qtsass.compile(styles, include_paths=[str(DAQUIRI_LIB_ROOT / 'resources')])
+
+    return compiled
 
 
 def safe_lookup(d: Any, s: PathlikeType):
