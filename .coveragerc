@@ -3,3 +3,7 @@ include =
     daquiri/*
 omit =
     tests/*
+    daquiri/panels/*
+    daquiri/examples/*
+    daquiri/ui.py
+    daquiri/widgets.py
