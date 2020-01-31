@@ -47,6 +47,7 @@ class InstrumentState:
 class AppState:
     user: str = 'test_user'
     session_name: str = 'test_session'
+    profile: str = None
 
 
 @dataclass
