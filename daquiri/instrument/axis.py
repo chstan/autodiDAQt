@@ -245,8 +245,6 @@ class ProxiedAxis(Axis):
         self._status = Axis.IDLE
         self.readonly = write is None
 
-        print(name, where, read, write)
-
         if read is None:
             read = where[-1]
 

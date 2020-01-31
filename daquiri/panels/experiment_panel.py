@@ -496,9 +496,6 @@ class ExperimentPanel(Panel):
         self.experiment.scan_deque.clear()
         self.update_queue_ui()
 
-    def update_n_points(self):
-        print('update n_points')
-
     def set_scan_method(self, scan_method):
         self.experiment.use_method = scan_method
 

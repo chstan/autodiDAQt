@@ -49,7 +49,6 @@ class ChoiceProperty(Property):
         self.labels = labels
         super().__init__(name, where, driver)
 
-        print(where)
         self._bound_driver = safe_lookup(driver, where[:-1])
 
         def bound_get():
@@ -62,12 +61,10 @@ class ChoiceProperty(Property):
         self._bound_set = bound_set
 
     def get(self):
-        print('get', self.name, self.driver)
         return self._bound_get()
 
     def set(self, value):
         self.value = value
-        print('set', value, self.name, self.driver)
         self._bound_set(value)
 
 
