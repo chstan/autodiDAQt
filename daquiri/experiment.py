@@ -303,7 +303,7 @@ class Run:
         self.sequence = None
 
     def save_directory(self, app):
-        return Path(str(app.app_root / app.config.data_directory / app.config.data_format).format(
+        directory = Path(str(app.app_root / app.config.data_directory / app.config.data_format).format(
             user=self.user,
             session=self.session,
             run=self.number,
@@ -311,26 +311,27 @@ class Run:
             date=datetime.date.today().isoformat(),
         ))
 
+        if directory.exists():
+            warnings.warn('Save directory already exists. Postfixing with the current time.')
+            directory = (
+                    str(directory) + '_' +
+                    datetime.datetime.now().time().isoformat().replace('.', '-').replace(':', '-')
+            )
+            directory = Path(directory)
+
+        directory.mkdir(parents=True, exist_ok=True)
+        return directory
+
     def save(self, save_directory: Path, extra=None):
         if extra is None:
             extra = {}
 
-        if save_directory.exists():
-            warnings.warn('Save directory already exists. Postfixing with the current time.')
-            save_directory = (
-                str(save_directory) + '_' +
-                datetime.datetime.now().time().isoformat().replace('.', '-').replace(':', '-')
-            )
-            save_directory = Path(save_directory)
-
-        save_directory.mkdir(parents=True, exist_ok=True)
-
-        with open(save_directory / 'metadata-small.json', 'w+') as f:
+        with open(str(save_directory / 'metadata-small.json'), 'w+') as f:
             json.dump({
                 'metadata': self.metadata,
             }, f, cls=RichEncoder, indent=2)
 
-        with open(save_directory / 'metadata.json', 'w+') as f:
+        with open(str(save_directory / 'metadata.json'), 'w+') as f:
             json.dump({
                 'metadata': self.metadata,
                 'point_started': self.point_started,
@@ -471,7 +472,7 @@ class Experiment(FSM):
 
             self.collation = None
             self.current_run = Run(
-                number=self.run_number, user='test_user', session='test_session',
+                number=self.run_number, user=self.app.user.user, session=self.app.user.session_name,
                 config=config, sequence=sequence, is_inverted=is_inverted)
 
     async def enter_running(self, *_):

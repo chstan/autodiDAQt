@@ -6,6 +6,9 @@ import warnings
 import multiprocessing
 import itertools
 import signal
+from dataclasses import make_dataclass
+from enum import Enum
+
 import appdirs
 from copy import deepcopy
 from typing import Dict, Optional, Type
@@ -30,7 +33,7 @@ from daquiri.instrument import ManagedInstrument
 from daquiri.panels import InstrumentManager
 from daquiri.state import DaquiriStateAtRest, generate_state_filename, find_newest_state_filename, SerializationSchema, \
     AppState
-from daquiri.ui import led, button, vertical, horizontal, CollectUI
+from daquiri.ui import led, button, vertical, horizontal, CollectUI, layout_dataclass, bind_dataclass, update_dataclass
 from daquiri.utils import default_stylesheet
 from daquiri.version import VERSION
 
@@ -65,7 +68,6 @@ class DaquiriMainWindow(QMainWindow):
             w = self._panels[name]['panel']
             w.setWindowState(
                 w.windowState() & ~QtCore.Qt.WindowMinimized | QtCore.Qt.WindowActive | QtCore.Qt.WindowStaysOnTopHint)
-            w.activateWindow()
             w.show()
             w.setWindowFlags(w.windowFlags() & ~QtCore.Qt.WindowStaysOnTopHint)
             w.show()
@@ -94,27 +96,37 @@ class DaquiriMainWindow(QMainWindow):
         self.win = QWidget()
         self.win.resize(50, 50) # smaller than minimum size, so will resize appropriately
 
-        ui = {}
-        with CollectUI(ui):
-            horizontal(
-                vertical(
-                    *[button('Restart {}'.format(self.app.panel_definitions[panel_name].TITLE),
-                             id=f'restart-{panel_name}') for panel_name in self.panel_order]
+        self.ui = {}
+        with CollectUI(self.ui):
+            vertical(
+                horizontal(
+                    vertical(
+                        *[button('Restart {}'.format(self.app.panel_definitions[panel_name].TITLE),
+                                 id=f'restart-{panel_name}') for panel_name in self.panel_order],
+                        spacing=8,
+                    ),
+                    vertical(
+                        *[led(None, shape=Led.circle, id='indicator-{}'.format(panel_name))
+                          for panel_name in self.panel_order],
+                        spacing=8,
+                    ),
+                    spacing=8,
                 ),
-                vertical(
-                    *[led(None, shape=Led.circle, id='indicator-{}'.format(panel_name))
-                      for panel_name in self.panel_order]
-                ),
+                layout_dataclass(self.app.user, prefix='app_user'),
+                content_margin=8,
+                spacing=8,
                 widget=self.win,
             )
+
+        bind_dataclass(self.app.user, prefix='app_user', ui=self.ui)
 
         for k in self.panel_order:
             def bind_panel(name):
                 return lambda _: self.launch_panel(name=name)
 
-            ui[f'restart-{k}'].subject.subscribe(bind_panel(k))
-            self._panels[k]['indicator'] = ui[f'indicator-{k}']
-            self._panels[k]['restart'] = ui[f'restart-{k}']
+            self.ui[f'restart-{k}'].subject.subscribe(bind_panel(k))
+            self._panels[k]['indicator'] = self.ui[f'indicator-{k}']
+            self._panels[k]['restart'] = self.ui[f'restart-{k}']
 
         self.win.show()
         self.win.setWindowTitle('DAQuiri')
@@ -179,6 +191,14 @@ class Daquiri:
         self.import_name = import_name
         self.extract_from_dotenv()
         self.load_config()
+        self.profile_enum = Enum('UserProfile', dict(zip(self.config.profiles, self.config.profiles)))
+        self.user_cls = make_dataclass('UserData', [
+            *([] if not self.config.use_profiles else [('profile', self.profile_enum,
+                                                        self.profile_enum(list(self.config.profiles)[0]))]),
+            ('user', str, 'global-user'),
+            ('session_name', str, 'global-session'),
+        ])
+        self.user = self.user_cls()
         self.meta = MetaData()
         self.app_state = AppState()
 
@@ -276,7 +296,6 @@ class Daquiri:
     @property
     def name(self):
         if self.import_name == '__main__':
-            print('here')
             module_file = getattr(sys.modules['__main__'], '__file__', None)
             if module_file is None:
                 return self.import_name
@@ -337,8 +356,14 @@ class Daquiri:
             daquiri_version=VERSION, user_version=self.config.version,
             app_root=self.app_root, commit='')
 
+        try:
+            profile = self.user.profile.value
+        except:
+            profile = None
+
         return deepcopy(DaquiriStateAtRest(
-            daquiri_state=self.app_state,
+            daquiri_state=AppState(
+                user=self.user.user, session_name=self.user.session_name, profile=profile),
             schema=ser_schema,
             panels={k: p.collect_state() for k, p in self.main_window.open_panels.items()},
             actors={k: a.collect_state() for k, a in self.actors.items()},
@@ -347,6 +372,14 @@ class Daquiri:
 
     def receive_state(self, state: DaquiriStateAtRest):
         self.app_state = state.daquiri_state
+        self.user.user = self.app_state.user
+        self.user.session_name = self.app_state.session_name
+
+        if self.app_state.profile:
+            try:
+                self.user.profile = self.profile_enum(self.app_state.profile)
+            except (ValueError, AttributeError):
+                pass
 
         for k, p in self.main_window.open_panels.items():
             if k in state.panels:
@@ -372,6 +405,7 @@ class Daquiri:
             state: DaquiriStateAtRest = pickle.load(state_f)
 
         self.receive_state(state)
+        update_dataclass(self.user, prefix='app_user', ui=self.main_window.ui)
 
     def save_state(self):
         logger.info('Saving application state.')
@@ -385,6 +419,10 @@ class Daquiri:
     def start(self):
         logger.info('Application in startup.')
         self.qt_app = QApplication(sys.argv)
+        self.qt_app.setEffectEnabled(QtCore.Qt.UI_AnimateCombo, False)
+        self.qt_app.setEffectEnabled(QtCore.Qt.UI_AnimateMenu, False)
+        self.qt_app.setEffectEnabled(QtCore.Qt.UI_AnimateToolBox, False)
+        self.qt_app.setEffectEnabled(QtCore.Qt.UI_AnimateTooltip, False)
         self.font_db = QFontDatabase()
 
         for font in (Path(__file__).parent / 'resources' / 'fonts').glob('*.ttf'):
