@@ -6,7 +6,7 @@ from typing import Union, Iterator, Any, Dict, Tuple, List
 import numpy as np
 import itertools
 
-from daquiri.instrument.spec import ChoicePropertySpecification
+from daquiri.instrument.spec import ChoicePropertySpecification, DataclassPropertySpecification
 from daquiri.utils import AccessRecorder, InstrumentScanAccessRecorder, tokenize_access_path, PathType
 
 __all__ = ('ScanAxis', 'scan')
@@ -26,8 +26,14 @@ FieldSetType = Tuple[str, type, Field]
 class ScanDegreeOfFreedom:
     devices: PathType
 
-    def to_fields(self, base_name: str) -> List[FieldSetType]:
+    def to_postfixless_fields(self) -> List[FieldSetType]:
         raise NotImplementedError()
+
+    def to_fields(self, base_name: str) -> List[FieldSetType]:
+        def postfix(f: FieldSetType) -> FieldSetType:
+            return f'{f[0]}_{base_name}', f[1], f[2]
+
+        return [postfix(f) for f in self.to_postfixless_fields()]
 
     def write(self, value) -> Dict[str, Any]:
         return {'write': value, 'path': list(self.devices[1:]), 'scope': self.devices[0], }
@@ -36,9 +42,7 @@ class ScanDegreeOfFreedom:
         raise NotImplementedError()
 
 
-class ScanChoiceProperty(ScanDegreeOfFreedom):
-    spec: ChoicePropertySpecification
-
+class ScanProperty(ScanDegreeOfFreedom):
     def __init__(self, device_name: Union[str, AccessRecorder], spec):
         self.spec = spec
 
@@ -48,10 +52,41 @@ class ScanChoiceProperty(ScanDegreeOfFreedom):
             self.devices = tokenize_access_path(device_name)
 
     def __repr__(self):
-        return f'ScanChoiceProperty(device_name={self.devices})'
+        return f'{self.__class__.__name__}(device_name={self.devices})'
 
     def write(self, value):
-        return {'set': value, 'path': list(self.devices[1:]), 'scope': self.devices[0],}
+        return {'set': value, 'path': list(self.devices[1:]), 'scope': self.devices[0], }
+
+
+def field_to_ranged_ui_fields(field_name, f):
+    """
+    Takes the definition of a field from a dataclass and determines how to
+    provide "range controls".
+
+    Args:
+        field_name (str): Name of the field being rendered currently.
+        f: Internal field specification created by @dataclasses.dataclass
+    """
+    return None
+
+
+class ScanDataclassProperty(ScanProperty):
+    spec: DataclassPropertySpecification
+
+    def __repr__(self):
+        return f'ScanDataclassProperty(device_name={self.devices}, spec.data_cls={self.spec.data_cls})'
+
+    def to_fields(self, base_name: str) -> List[FieldSetType]:
+        for field_name, f in self.spec.data_cls.__dataclass_fields__.items():
+            print(field_to_ui_fields(field_name, f))
+
+    def iterate(self, fields: Any, base_name: str) -> Iterator[Any]:
+        pass
+
+
+class ScanChoiceProperty(ScanProperty):
+    spec: ChoicePropertySpecification
+    inclusive = True
 
     def to_fields(self, base_name: str) -> List[FieldSetType]:
         enum_items = {v: i + 1 for i, (k, v) in enumerate(self.spec.labels.items())}
@@ -63,10 +98,10 @@ class ScanChoiceProperty(ScanDegreeOfFreedom):
         ]
 
     def iterate(self, fields: Any, base_name: str) -> Iterator[Any]:
-        start = getattr(fields, f'start_{base_name}')
-        stop = getattr(fields, f'stop_{base_name}')
-        return list(self.spec.choices.values())[start-1:stop-1]
-
+        start = getattr(fields, f'start_{base_name}').value
+        stop = getattr(fields, f'stop_{base_name}').value
+        stop_delta = 0 if self.inclusive else -1
+        return list(self.spec.choices.values())[start-1:stop+stop_delta]
 
 
 class ScanAxis(ScanDegreeOfFreedom):

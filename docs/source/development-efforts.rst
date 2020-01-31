@@ -11,7 +11,6 @@ Related to Axes
 ---------------
 
 1. (1.2.0) Axis settling, mostly finished: API depends on user requirements
-2. (1.0.0) Dataclass properties
 
 Related to UI/UI Generation
 ---------------------------

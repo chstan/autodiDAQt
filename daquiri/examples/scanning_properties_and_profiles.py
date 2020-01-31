@@ -35,17 +35,16 @@ class ManagedDSP7265(ManagedInstrument):
     }
 
 
+dx = MockMotionController.scan('mc').stages[0](limits=[-10, 10])
+dsensitivity = ManagedDSP7265.scan('lockin').sensitivity()
+dtime_constant = ManagedDSP7265.scan('lockin').time_constant()
+read_power = {'power': 'power_meter.device', }
+
+
 class MyExperiment(Experiment):
-    dx = MockMotionController.scan('mc').stages[0](limits=[-10, 10])
-    dsensitivity = ManagedDSP7265.scan('lockin').sensitivity()
-    dtime_constant = ManagedDSP7265.scan('lockin').time_constant()
-
-    read_power = {'power': 'power_meter.device', }
-
     scan_methods = [
-        scan(x=dx, sensitivity=dsensitivity, name='Sensitivity Scan', read=read_power),
+        scan(sensitivity=dsensitivity, x=dx, name='Sensitivity Scan', read=read_power),
         scan(x=dx, tc=dtime_constant, name='Time Constant Scan', read=read_power),
-
         scan(x=dx, name='Fast Scan', read=read_power, profiles=dict(lockin='Fast')),
         scan(x=dx, name='Slow Scan', read=read_power, profiles=dict(lockin='Slow')),
     ]
