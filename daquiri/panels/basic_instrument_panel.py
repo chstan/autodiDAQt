@@ -36,10 +36,10 @@ class MethodView:
         with CollectUI(ui):
             layout = group(
                 self.method.name,
-                layout_function_call(self.method.signature)
+                layout_function_call(self.method.signature, prefix=self.method.name)
             )
 
-        bind_function_call(self.method.call, '', ui,
+        bind_function_call(self.method.call, self.method.name, ui,
                            self.method.signature, values=self.method.last_kwargs)
         return layout
 

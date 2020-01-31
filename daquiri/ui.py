@@ -441,12 +441,12 @@ def _layout_function_parameter(parameter: Parameter, prefix: str):
     widget_cls = {
         float: lambda id: numeric_input(0, float, id=id),
         int: lambda id: numeric_input(0, int, id=id),
-        str: lambda id: line_edit(id=id),
+        str: lambda id: line_edit('', id=id),
     }[parameter_type]
 
     return group(
         f'{parameter.name} : {parameter_type.__name__}',
-        widget_cls(id=f'{prefix}{parameter.name}'),
+        widget_cls(id=(prefix, parameter.name)),
     )
 
 
@@ -467,7 +467,7 @@ def layout_function_call(signature: Signature, prefix: Optional[str] = None):
 
     return vertical(
         *[_layout_function_parameter(parameter, prefix) for parameter in signature.parameters.values()],
-        button('Call', id='submit'),
+        button('Call', id=(prefix, 'submit')),
     )
 
 
@@ -492,13 +492,14 @@ def bind_function_call(function, prefix: str, ui: Dict[str, QWidget],
     translations = {k: translate(signature.parameters[k]) for k in signature.parameters.keys()}
 
     for k, v in values.items():
-        ui[f'{prefix}{k}'].subject.on_next(translations[k][0](v))
+        ui[(prefix, k,)].subject.on_next(translations[k][0](v))
 
     def perform_call(call_kwargs):
+        call_kwargs = {k[1]: v for k, v in call_kwargs.items()}
         safe_call_kwargs = {k: translations[k][1](v) for k, v in call_kwargs.items()}
         function(**safe_call_kwargs)
 
-    submit(f'{prefix}submit', [f'{prefix}{k}' for k in signature.parameters.keys()], ui).subscribe(perform_call)
+    submit((prefix, 'submit'), [(prefix, k,) for k in signature.parameters.keys()], ui).subscribe(perform_call)
 
 
 def layout_dataclass(dataclass_cls, prefix: Optional[str] = None, submit=None):
