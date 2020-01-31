@@ -191,7 +191,7 @@ class ProxiedAxisView(AxisView):
         write_controls = []
 
         if not self.axis.readonly:
-            write_controls = [horizontal('Write', line_edit('', id=f'{self.id}-edit'), button('Set', id=f'{self.id}-set')),]
+            write_controls = [horizontal('Write', line_edit('', id=f'{self.id}-edit'), button('Set', id=f'{self.id}-set', class_name='primary')),]
             if self.joggable:
                 jog_controls = [
                     horizontal('Jog',
@@ -203,7 +203,7 @@ class ProxiedAxisView(AxisView):
         return vertical(
             group(
                 'Driver',
-                horizontal('Read', label('Last Value', id=f'{self.id}-last_value'), button('Read', id=f'{self.id}-read')),
+                horizontal('Read', label('Last Value', id=f'{self.id}-last_value'), button('Read', id=f'{self.id}-read', class_name='primary')),
                 *write_controls,
                 *jog_controls,
                 *live_plots,

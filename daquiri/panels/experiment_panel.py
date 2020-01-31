@@ -195,7 +195,7 @@ class ExperimentPanel(Panel):
 
             self.update_queue_ui()
 
-        remove_button = button('Remove')
+        remove_button = button('Remove', class_name="warning")
         remove_button.subject.subscribe(remove_this_item)
         copy_button = button('Copy')
         copy_button.subject.subscribe(copy_this_item)
@@ -401,7 +401,7 @@ class ExperimentPanel(Panel):
         with CollectUI(self.queue_ui):
             queue_page = splitter(
                 vertical(
-                    button('Clear Queue', id='clear-queue'),
+                    button('Clear Queue', id='clear-queue', class_name="warning"),
                 ),
                 vertical(
                     id='queue-layout',
@@ -433,13 +433,16 @@ class ExperimentPanel(Panel):
         with CollectUI(ui):
             vertical(
                 horizontal(
-                    button('Start', id='start'),
-                    button('Add to Q', id='enqueue'),
+                    button('Start', id='start', class_name="primary"),
+                    button('Add to Q', id='enqueue', class_name="primary"),
                     button('Pause', id='pause'),
-                    button('Stop', id='stop'),
+                    button('Stop', id='stop', class_name="warning"),
                     label('Waiting...', id='status-box'),
                     self.layout_timing_group(),
                     min_height=120,
+                    class_name="experiment_header",
+                    spacing=20,
+                    content_margin=(20, 0, 0, 0),
                 ),
                 tabs(*[
                     ['Scan', splitter(
@@ -447,13 +450,16 @@ class ExperimentPanel(Panel):
                             horizontal(
                                 'Use',
                                 combo_box([s.__name__ for s in scan_methods], id='selected_scan_method'),
+                                content_margin=20,
+                                class_name="which_scan",
                             ),
                             tabs(
                                 ['Scans', tabs(
-                                    *self.layout_scan_methods(scan_methods)
+                                    *self.layout_scan_methods(scan_methods),
                                 )],
                                 *self.extra_panels,
                             ),
+                            class_name="scans",
                         ),
                         vertical(
                             '[Data Streams]',

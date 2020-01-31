@@ -74,10 +74,12 @@ class InstrumentManager(Panel):
                 'Instrument Manager',
                 horizontal(
                     vertical(*[button(f'Restart {panel_name}', id=f'restart-{panel_name}')
-                               for panel_name in self.panel_order]),
+                               for panel_name in self.panel_order], spacing=8),
                     vertical(*[led(None, shape=Led.circle, id='indicator-{}'.format(panel_name))
-                               for panel_name in self.panel_order]),
+                               for panel_name in self.panel_order], spacing=8),
+                    spacing=8,
                 ),
+                content_margin=20,
                 widget=self,
             )
 
