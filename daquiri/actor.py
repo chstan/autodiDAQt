@@ -23,7 +23,7 @@ class Actor:
         return ActorState()
 
     def receive_state(self, state: ActorState):
-        print(self, 'Received state', state)
+        pass
 
 
 class EchoActor(Actor):
