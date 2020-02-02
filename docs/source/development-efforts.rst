@@ -20,6 +20,12 @@ Related to UI/UI Generation
 Related to Experiments
 ----------------------
 
+1. (1.4.0) Refactor declarative eperiments to be completely pure functions in order to
+           better allow strategies. This mostly involves changing how ``experiment.point``
+           and a few related functions work in order to make them fully declarative.
+2. (1.1.0) Add strategies for axes
+3. (1.4.0) Add strategies for explicitly sequenced experiments
+
 Tests
 -----
 
