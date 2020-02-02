@@ -8,7 +8,8 @@ import itertools
 import random
 
 from daquiri.instrument.spec import ChoicePropertySpecification, DataclassPropertySpecification
-from daquiri.utils import AccessRecorder, InstrumentScanAccessRecorder, tokenize_access_path, PathType
+from daquiri.utils import AccessRecorder, InstrumentScanAccessRecorder, tokenize_access_path, PathType, \
+    _try_unwrap_value
 
 __all__ = ('ScanAxis', 'scan', 'randomly',
            'forwards_and_backwards', 'backwards', 'staircase_product',
@@ -237,8 +238,9 @@ class ScanChoiceProperty(ScanProperty):
         ]
 
     def iterate(self, fields: Any, base_name: str) -> Iterator[Any]:
-        start = getattr(fields, f'start_{base_name}').value
-        stop = getattr(fields, f'stop_{base_name}').value
+        start = _try_unwrap_value(getattr(fields, f'start_{base_name}'))
+        stop = _try_unwrap_value(getattr(fields, f'stop_{base_name}'))
+
         stop_delta = 0 if self.inclusive else -1
         return list(self.spec.choices.values())[start-1:stop+stop_delta]
 
