@@ -1,15 +1,40 @@
 from dataclasses import make_dataclass, field, Field
 from enum import Enum
 
-from typing import Union, Iterator, Any, Dict, Tuple, List
+from typing import Union, Iterator, Any, Dict, Tuple, List, Callable, Iterable
 
 import numpy as np
 import itertools
+import random
 
 from daquiri.instrument.spec import ChoicePropertySpecification, DataclassPropertySpecification
 from daquiri.utils import AccessRecorder, InstrumentScanAccessRecorder, tokenize_access_path, PathType
 
-__all__ = ('ScanAxis', 'scan')
+__all__ = ('ScanAxis', 'scan', 'randomly',
+           'forwards_and_backwards', 'backwards', 'staircase_product',
+           'only')
+
+
+def randomly(seq):
+    seq = list(seq)
+    random.shuffle(seq)
+    yield from seq
+
+
+def only(n):
+    def strategy(seq):
+        yield from itertools.islice(seq, n)
+
+    return strategy
+
+
+def backwards(seq):
+    yield from list(seq)[::-1]
+
+
+def forwards_and_backwards(seq):
+    yield from seq
+    yield from backwards(seq)
 
 
 def _set_profile(scope, profile_name):
@@ -26,6 +51,13 @@ FieldSetType = Tuple[str, type, Field]
 class ScanDegreeOfFreedom:
     devices: PathType
 
+    @property
+    def independent_axes(self) -> List[PathType]:
+        return [self.devices]
+
+    def independent_renamings(self, name: str) -> List[Tuple[PathType, str]]:
+        return [(self.devices, name,)]
+
     def to_postfixless_fields(self) -> List[FieldSetType]:
         raise NotImplementedError()
 
@@ -35,11 +67,118 @@ class ScanDegreeOfFreedom:
 
         return [postfix(f) for f in self.to_postfixless_fields()]
 
-    def write(self, value) -> Dict[str, Any]:
-        return {'write': value, 'path': list(self.devices[1:]), 'scope': self.devices[0], }
+    def write(self, value) -> List[Dict[str, Any]]:
+        return [{'write': value, 'path': list(self.devices[1:]), 'scope': self.devices[0], }]
 
     def iterate(self, fields: Any, base_name: str) -> Iterator[Any]:
         raise NotImplementedError()
+
+    def step(self, *strategies):
+        return SimpleStrategyScan(self, strategies)
+
+
+class SimpleStrategyScan(ScanDegreeOfFreedom):
+    def __init__(self, internal_scan: ScanDegreeOfFreedom, strategies: Iterable[Callable] = None):
+        self.internal_scan = internal_scan
+        self.strategies = strategies or []
+
+    def to_fields(self, base_name: str) -> List[FieldSetType]:
+        return self.internal_scan.to_fields(base_name)
+
+    def to_postfixless_fields(self) -> List[FieldSetType]:
+        return self.internal_scan.to_postfixless_fields()
+
+    def write(self, value) -> List[Dict[str, Any]]:
+        return self.internal_scan.write(value)
+
+    def iterate(self, fields: Any, base_name: str) -> Iterator[Any]:
+        base_iterator = self.internal_scan.iterate(fields=fields, base_name=base_name)
+
+        for strategy in self.strategies:
+            base_iterator = strategy(base_iterator)
+
+        yield from base_iterator
+
+    @property
+    def devices(self):
+        return self.internal_scan.devices
+
+    def independent_renamings(self, name: str) -> List[Tuple[PathType, str]]:
+        return self.internal_scan.independent_renamings(name)
+
+
+class StaircaseProduct(ScanDegreeOfFreedom):
+    def __init__(self, scan_outer: ScanDegreeOfFreedom, scan_inner: ScanDegreeOfFreedom):
+        self.scan_outer = scan_outer
+        self.scan_inner = scan_inner
+
+    def to_fields(self, base_name: str) -> List[FieldSetType]:
+        return (
+            self.scan_outer.to_fields(base_name=f'outer_{base_name}') +
+            self.scan_inner.to_fields(base_name=f'inner_{base_name}')
+        )
+
+    @property
+    def independent_axes(self) -> List[PathType]:
+        return list(self.scan_outer.independent_axes) + \
+               list(self.scan_inner.independent_axes)
+
+    def independent_renamings(self, name: str) -> List[Tuple[PathType, str]]:
+        return list(self.scan_inner.independent_renamings(name=f'{name}-inner')) + \
+               list(self.scan_outer.independent_renamings(name=f'{name}-outer'))
+
+    def write(self, value) -> List[Dict[str, Any]]:
+        writes = []
+
+        if value[0] is not None:
+            writes += self.scan_outer.write(value[0])
+
+        if value[1] is not None:
+            writes += self.scan_inner.write(value[1])
+
+        return writes
+
+    def iterate(self, fields: Any, base_name: str) -> Iterator[Any]:
+        flat_inner = list(self.scan_inner.iterate(fields, base_name=f'inner_{base_name}'))
+
+        forwards = True
+        for outer in self.scan_outer.iterate(fields, base_name=f'outer_{base_name}'):
+            yield (outer, flat_inner[0] if forwards else flat_inner[-1])
+            yield from zip(itertools.cycle([outer]), flat_inner if forwards else flat_inner[::-1])
+            forwards = not forwards
+
+
+def staircase_product(outer: ScanDegreeOfFreedom, inner: ScanDegreeOfFreedom) -> ScanDegreeOfFreedom:
+    return StaircaseProduct(scan_outer=outer, scan_inner=inner)
+
+
+class ScanTogether(ScanDegreeOfFreedom):
+    def __init__(self, *inner_scans: ScanDegreeOfFreedom):
+        self.inner_scans = inner_scans
+
+    def to_fields(self, base_name: str) -> List[FieldSetType]:
+        return list(itertools.chain(*[inner_scan.to_fields(base_name=f'{i}_{base_name}')
+                                      for i, inner_scan in enumerate(self.inner_scans)]))
+
+    def iterate(self, fields: Any, base_name: str) -> Iterator[Any]:
+        yield from zip(*[inner_scan.iterate(fields, f'{i}_{base_name}')
+                         for i, inner_scan in enumerate(self.inner_scans)])
+
+    @property
+    def independent_axes(self) -> List[PathType]:
+        return list(itertools.chain(*[inner_scan.independent_axes for inner_scan in self.inner_scans]))
+
+    def independent_renamings(self, name: str) -> List[Tuple[PathType, str]]:
+        return list(itertools.chain(*[
+            inner_scan.independent_renamings(name=f'{name}-{i}')
+            for i, inner_scan in enumerate(self.inner_scans)]))
+
+    def write(self, value) -> List[Dict[str, Any]]:
+        return list(itertools.chain(*[s.write(v) for v, s in zip(value, self.inner_scans)]))
+
+
+def step_together(*scans: ScanDegreeOfFreedom):
+    return ScanTogether(*scans)
 
 
 class ScanProperty(ScanDegreeOfFreedom):
@@ -54,8 +193,8 @@ class ScanProperty(ScanDegreeOfFreedom):
     def __repr__(self):
         return f'{self.__class__.__name__}(device_name={self.devices})'
 
-    def write(self, value):
-        return {'set': value, 'path': list(self.devices[1:]), 'scope': self.devices[0], }
+    def write(self, value) -> List[Dict[str, Any]]:
+        return [{'set': value, 'path': list(self.devices[1:]), 'scope': self.devices[0], }]
 
 
 def field_to_ranged_ui_fields(field_name, f):
@@ -139,9 +278,8 @@ class ScanAxis(ScanDegreeOfFreedom):
                 (f'stop_{base_name}', ValuesEnum, field(default=len(self.values)))
             ]
 
-    def write(self, value):
-        return {'write': value, 'path': list(self.devices[1:]), 'scope': self.devices[0],
-                'is_property': self.is_property}
+    def write(self, value) -> List[Dict[str, Any]]:
+        return [{'write': value, 'path': list(self.devices[1:]), 'scope': self.devices[0],}]
 
     def iterate(self, fields, base_name) -> Iterator[Any]:
         if self.values is None:
@@ -157,7 +295,7 @@ class ScanAxis(ScanDegreeOfFreedom):
 
 
 def scan(name=None, read=None, profiles=None, setup=None, teardown=None,
-         preconditions=None, **axes: Union[str, ScanAxis, AccessRecorder]):
+         preconditions=None, **axes: Union[str, ScanDegreeOfFreedom, AccessRecorder]):
     if name is None:
         raise ValueError('You must provide a name for the scan.')
 
@@ -172,15 +310,14 @@ def scan(name=None, read=None, profiles=None, setup=None, teardown=None,
     def sequence_scan(self, experiment, **kwargs):
         dependent = {read_name: tokenize_access_path(read_device)
                      for read_name, read_device in read.items()}
-        experiment.collate(
-            independent=[[axis.devices, name]
-                         for name, axis in axes.items()],
-            dependent=[[dependent[read_name], read_name]
-                       for read_name in read.keys()],
-        )
 
-        ax_names = list(axes.keys())
-        device_spaces = [axis.iterate(fields=self, base_name=name) for name, axis in axes.items()]
+        independent = list(itertools.chain(
+            *[axis.independent_renamings(name) for name, axis in axes.items()]))
+        extra = []
+        experiment.collate(
+            independent=independent,
+            dependent=[[dependent[read_name], read_name] for read_name in read.keys()] + extra,
+        )
 
         if preconditions:
             yield [{'preconditions': preconditions}]
@@ -191,10 +328,13 @@ def scan(name=None, read=None, profiles=None, setup=None, teardown=None,
         if setup:
             yield from setup(experiment, **kwargs)
 
-        for locations in itertools.product(*device_spaces):
+        ax_names = list(axes.keys())
+        coordinate_spaces = [axis.iterate(fields=self, base_name=name) for name, axis in axes.items()]
+        for locations in itertools.product(*coordinate_spaces):
             with experiment.point():
                 experiment.comment(f'Moving {ax_names} to {locations}')
-                yield [axes[ax_name].write(location) for ax_name, location in zip(ax_names, locations)]
+                yield list(itertools.chain(*[axes[ax_name].write(location)
+                                             for ax_name, location in zip(ax_names, locations)]))
                 yield [
                     {'read': None, 'path': dependent[read_name][1:], 'scope': dependent[read_name][0],}
                     for read_name in read.keys()
