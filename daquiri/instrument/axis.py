@@ -133,11 +133,13 @@ class TestManualAxis(ManualAxis):
 
 class LogicalSubaxis(Axis):
     def __init__(self, name, schema, parent_axis, subaxis_name, index):
+        schema = schema[subaxis_name]
         super().__init__(name, schema)
 
         self.parent_axis = parent_axis
         self.subaxis_name = subaxis_name
         self.index = index
+        self.readonly = False
 
     async def write(self, value):
         old_state = list(self.parent_axis.logical_state)
@@ -171,9 +173,11 @@ class LogicalAxis(Axis):
                  logical_state, internal_state=None):
 
         self.physical_axes = physical_axes
-
         self.logical_coordinate_names = list(inverse_transforms.keys())
         self.physical_coordinate_names = list(forward_transforms.keys())
+
+        if schema is None:
+            schema = {k: float for k in self.logical_coordinate_names}
 
         self.forward_transforms = forward_transforms
         self.inverse_transforms = inverse_transforms

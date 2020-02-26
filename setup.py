@@ -55,6 +55,7 @@ requirements = [
     'rx>=3.0.1',
     'pyqtgraph',
     'qtsass',
+    'pymeasure',
 
     'appdirs',
 

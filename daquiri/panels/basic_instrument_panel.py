@@ -173,7 +173,6 @@ class ProxiedAxisView(AxisView):
 
                     axis.subject.subscribe(close_over_jog_info(relative_speed))
 
-
     def layout(self):
         jog_controls = []
         live_plots = []
@@ -211,6 +210,22 @@ class ProxiedAxisView(AxisView):
         )
 
 
+class LogicalSubaxisView(ProxiedAxisView):
+    def read(self, *_):
+        pass
+
+    def move(self, raw_value):
+        try:
+            value = self.axis.schema(raw_value)
+        except ValueError:
+            return
+
+        async def perform_move():
+            await self.axis.write(value)
+
+        asyncio.get_event_loop().create_task(perform_move())
+
+
 class LogicalAxisView(AxisView):
     axis: LogicalAxis
     sub_axes: List[LogicalSubaxis] = None
@@ -222,7 +237,7 @@ class LogicalAxisView(AxisView):
 
     def layout(self):
         self.sub_axes = [getattr(self.axis, n) for n in self.axis.logical_coordinate_names]
-        self.sub_views = [ProxiedAxisView(axis, self.path_to_axis + [n])
+        self.sub_views = [LogicalSubaxisView(axis, self.path_to_axis + [n])
                           for axis, n in zip(self.sub_axes, self.axis.logical_coordinate_names)]
 
         state_panel = []
