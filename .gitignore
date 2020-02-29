@@ -24,3 +24,5 @@ logs/
 
 *.webm
 daquiri/examples/config.json
+
+node_modules/
