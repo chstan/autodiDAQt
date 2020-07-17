@@ -3,13 +3,13 @@ from typing import Type
 
 from daquiri.state import ActorState
 
-__all__ = ('Actor', 'EchoActor')
+__all__ = ("Actor", "EchoActor")
 
 
 class Actor:
     panel_cls = None
 
-    def __init__(self, app: Type['Daquiri']):
+    def __init__(self, app: Type["Daquiri"]):
         self.app = app
         self.messages = None
 

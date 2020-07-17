@@ -1,7 +1,8 @@
 import os
+
 import slack
 
-__all__ = ('send_slack_message',)
+__all__ = ("send_slack_message",)
 
 
 def send_slack_message(msg, app, to=None):
@@ -20,7 +21,7 @@ def send_slack_message(msg, app, to=None):
         app: Running DAQuiri application
         to: Optional channel override to send on
     """
-    token = os.environ['SLACK_TOKEN']
+    token = os.environ["SLACK_TOKEN"]
     client = slack.WebClient(token=token)
 
     if to is None:

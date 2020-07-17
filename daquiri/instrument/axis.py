@@ -1,18 +1,25 @@
 import asyncio
+import datetime
 import warnings
 from dataclasses import dataclass
-from typing import Optional, Dict, List, Callable, Any
+from typing import Any, Callable, Dict, List, Optional
 
-import datetime
 import rx
+from rx.subject import Subject
 
 from daquiri.schema import default_value_for_schema
 from daquiri.state import LogicalAxisState
-from rx.subject import Subject
 
-__all__ = ('Axis', 'TestAxis', 'ProxiedAxis', 'LogicalAxis',
-           'ManualAxis', 'TestManualAxis',
-           'PolledRead', 'PolledWrite')
+__all__ = (
+    "Axis",
+    "TestAxis",
+    "ProxiedAxis",
+    "LogicalAxis",
+    "ManualAxis",
+    "TestManualAxis",
+    "PolledRead",
+    "PolledWrite",
+)
 
 
 @dataclass
@@ -41,6 +48,7 @@ class Axis:
     Additionally, measurements may take finite time, and in the case of event stream axes, you may not know
     when values will be produced.
     """
+
     IDLE = 0
     MOVING = 1
 
@@ -54,8 +62,8 @@ class Axis:
         pass
 
     def append_point_to_history(self, point):
-        self.collected_xs.append(point['time'])
-        self.collected_ys.append(point['value'])
+        self.collected_xs.append(point["time"])
+        self.collected_ys.append(point["value"])
 
     def reset_history(self):
         self.collected_xs = []
@@ -76,19 +84,19 @@ class Axis:
             self.collected_value_stream = None
 
     async def read(self):
-        raise NotImplementedError('')
+        raise NotImplementedError("")
 
     def sync_read(self):
-        raise NotImplementedError('')
+        raise NotImplementedError("")
 
     async def trigger(self):
-        raise NotImplementedError('')
+        raise NotImplementedError("")
 
     async def write(self, value):
-        raise NotImplementedError('')
+        raise NotImplementedError("")
 
     async def settle(self):
-        raise NotImplementedError('')
+        raise NotImplementedError("")
 
 
 class ManualAxis(Axis):
@@ -105,14 +113,18 @@ class ManualAxis(Axis):
         value = await self.axis_descriptor.fwrite(self.instrument, value)
 
         if self.raw_value_stream:
-            self.raw_value_stream.on_next({'value': value, 'time': datetime.datetime.now().timestamp()})
+            self.raw_value_stream.on_next(
+                {"value": value, "time": datetime.datetime.now().timestamp()}
+            )
 
         return value
 
     async def read(self):
         value = await self.axis_descriptor.fread(self.instrument)
         if self.raw_value_stream:
-            self.raw_value_stream.on_next({'value': value, 'time': datetime.datetime.now().timestamp()})
+            self.raw_value_stream.on_next(
+                {"value": value, "time": datetime.datetime.now().timestamp()}
+            )
         return value
 
 
@@ -127,7 +139,9 @@ class TestManualAxis(ManualAxis):
     async def read(self):
         value = await self.axis_descriptor.fmockread(self.instrument)
         if self.raw_value_stream:
-            self.raw_value_stream.on_next({'value': value, 'time': datetime.datetime.now().timestamp()})
+            self.raw_value_stream.on_next(
+                {"value": value, "time": datetime.datetime.now().timestamp()}
+            )
         return value
 
 
@@ -147,7 +161,7 @@ class LogicalSubaxis(Axis):
         await self.parent_axis.write(old_state)
 
     async def read(self):
-        raise NotImplementedError('Subaxis reads not supported.')
+        raise NotImplementedError("Subaxis reads not supported.")
 
     async def settle(self):
         await self.parent_axis.settle()
@@ -168,9 +182,16 @@ class LogicalAxis(Axis):
     internal_state_cls: type = None
     internal_state: Any = None
 
-    def __init__(self, name, schema,
-                 physical_axes: Dict[str, Axis], forward_transforms, inverse_transforms,
-                 logical_state, internal_state=None):
+    def __init__(
+        self,
+        name,
+        schema,
+        physical_axes: Dict[str, Axis],
+        forward_transforms,
+        inverse_transforms,
+        logical_state,
+        internal_state=None,
+    ):
 
         self.physical_axes = physical_axes
         self.logical_coordinate_names = list(inverse_transforms.keys())
@@ -195,7 +216,9 @@ class LogicalAxis(Axis):
         super().__init__(name, schema)
 
         for index, subaxis_name in enumerate(self.logical_coordinate_names):
-            subaxis = LogicalSubaxis(f'{self.name}.{subaxis_name}', self.schema, self, subaxis_name, index)
+            subaxis = LogicalSubaxis(
+                f"{self.name}.{subaxis_name}", self.schema, self, subaxis_name, index
+            )
             setattr(self, subaxis_name, subaxis)
 
     def collect_state(self) -> LogicalAxisState:
@@ -206,9 +229,13 @@ class LogicalAxis(Axis):
         )
 
     def receive_state(self, state: LogicalAxisState):
-        if self.internal_state_cls and not isinstance(state.internal_state, self.internal_state_cls):
-            warnings.warn(f'Logical Axis received invalid state {state}, '
-                          f'type did not match expected {self.internal_state_cls}.')
+        if self.internal_state_cls and not isinstance(
+            state.internal_state, self.internal_state_cls
+        ):
+            warnings.warn(
+                f"Logical Axis received invalid state {state}, "
+                f"type did not match expected {self.internal_state_cls}."
+            )
         else:
             self.internal_state = state.internal_state
 
@@ -264,7 +291,11 @@ class ProxiedAxis(Axis):
             write = PolledWrite(write=write, poll=None)
 
         # Exponential backoff constants, wait 30ms initially, then 45ms (30ms x 1.5) up to 200ms maximum
-        self.backoff = (0.03, 1.5, 0.2,)
+        self.backoff = (
+            0.03,
+            1.5,
+            0.2,
+        )
 
         def _bind(function_name):
             d = driver
@@ -279,7 +310,7 @@ class ProxiedAxis(Axis):
                     d = d[w]
 
             if not callable(d):
-                print('_bind sync', last, function_name)
+                print("_bind sync", last, function_name)
 
                 def bound(value=None):
                     if value:
@@ -289,7 +320,7 @@ class ProxiedAxis(Axis):
 
                 return bound
 
-            print('_bind', d)
+            print("_bind", d)
             return d
 
         try:
@@ -317,7 +348,9 @@ class ProxiedAxis(Axis):
                 value = await value
 
             if self.raw_value_stream:
-                self.raw_value_stream.on_next({'value': value, 'time': datetime.datetime.now().timestamp()})
+                self.raw_value_stream.on_next(
+                    {"value": value, "time": datetime.datetime.now().timestamp()}
+                )
             return value
         elif self._status == Axis.MOVING:
             sleep_time, sleep_backoff, sleep_maximum = self.backoff
@@ -328,7 +361,12 @@ class ProxiedAxis(Axis):
                     self._status = Axis.IDLE
                     value = self._bound_read()
                     if self.raw_value_stream:
-                        self.raw_value_stream.on_next({'value': value, 'time': datetime.datetime.now().timestamp()})
+                        self.raw_value_stream.on_next(
+                            {
+                                "value": value,
+                                "time": datetime.datetime.now().timestamp(),
+                            }
+                        )
                     return value
 
                 sleep_time *= sleep_backoff
@@ -336,7 +374,7 @@ class ProxiedAxis(Axis):
 
     async def write(self, value):
         if self._status == Axis.MOVING:
-            raise ValueError('Already moving!')
+            raise ValueError("Already moving!")
 
         if self._bound_poll_write is not None:
             self._status = Axis.MOVING
@@ -379,9 +417,9 @@ class TestAxis(Axis):
         super().__init__(name, schema)
         self._value = default_value_for_schema(schema)
         self.mock = mock or {}
-        self._mock_read = self.mock.get('read')
-        self._mock_write = self.mock.get('write')
-        self._mock_settle = self.mock.get('settle')
+        self._mock_read = self.mock.get("read")
+        self._mock_write = self.mock.get("write")
+        self._mock_settle = self.mock.get("settle")
         self.init_args = args
         self.init_kwargs = kwargs
         self.readonly = readonly
@@ -393,7 +431,9 @@ class TestAxis(Axis):
             value = self._value
 
         if self.raw_value_stream:
-            self.raw_value_stream.on_next({'value': value, 'time': datetime.datetime.now().timestamp()})
+            self.raw_value_stream.on_next(
+                {"value": value, "time": datetime.datetime.now().timestamp()}
+            )
 
         return value
 
@@ -404,7 +444,9 @@ class TestAxis(Axis):
             value = self._value
 
         if self.raw_value_stream:
-            self.raw_value_stream.on_next({'value': value, 'time': datetime.datetime.now().timestamp()})
+            self.raw_value_stream.on_next(
+                {"value": value, "time": datetime.datetime.now().timestamp()}
+            )
 
         return value
 

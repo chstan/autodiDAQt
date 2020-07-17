@@ -5,5 +5,5 @@ from daquiri import Daquiri
 
 app = Daquiri(__name__, {})
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     app.start()

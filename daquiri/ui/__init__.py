@@ -36,50 +36,54 @@ With the line above, whenever the button with id='submit' is pressed, we will lo
 the most recent values of the inputs {'check','slider','file'} as a dictionary with these keys. This
 allows building PyQt5 "forms" without effort.
 """
-from enum import Enum
-
 import enum
-from inspect import Signature, Parameter
+import functools
+from enum import Enum
+from inspect import Parameter, Signature
+from typing import Any, Dict, Hashable, List, Optional, Type, Union
 
+import rx
+import rx.operators as ops
+from PyQt5 import QtGui
+from PyQt5.QtCore import Qt
+from PyQt5.QtWidgets import (QGridLayout, QGroupBox, QHBoxLayout, QLabel,
+                             QListView, QScrollArea, QSizePolicy, QSplitter,
+                             QTableWidget, QTabWidget, QVBoxLayout, QWidget, QTableView)
 from pyqt_led import Led
 
-import rx.operators as ops
-import rx
-
-from typing import Dict, List, Optional, Any, Type, Union, Hashable
-
-import functools
-from PyQt5.QtWidgets import (
-    QGridLayout, QWidget, QVBoxLayout, QHBoxLayout, QTabWidget,
-    QSplitter,
-    QGroupBox, QLabel, QScrollArea,
-    QSizePolicy)
-from PyQt5.QtCore import Qt
-from PyQt5 import QtGui
-
-from daquiri.widgets import *
 from daquiri.utils import enum_mapping, enum_option_names
+from daquiri.widgets import *
 
 __all__ = (
-    'CollectUI',
-
+    "CollectUI",
     # layouts
-    'layout', 'grid', 'vertical', 'horizontal',
-
-    'splitter',
-
+    "layout",
+    "grid",
+    "vertical",
+    "horizontal",
+    "splitter",
     # widgets
-    'group', 'label', 'tabs', 'button', 'check_box', 'combo_box', 'file_dialog',
-    'line_edit', 'radio_button', 'slider', 'spin_box', 'text_edit', 'led', 'numeric_input',
-    'scroll_area',
-
+    "group",
+    "label",
+    "tabs",
+    "button",
+    "check_box",
+    "combo_box",
+    "file_dialog",
+    "line_edit",
+    "radio_button",
+    "slider",
+    "spin_box",
+    "text_edit",
+    "led",
+    "numeric_input",
+    "scroll_area",
     # Observable tools
-    'submit',
-
-     # @dataclass utils
-    'layout_dataclass',
-    'bind_dataclass',
-    'update_dataclass',
+    "submit",
+    # @dataclass utils
+    "layout_dataclass",
+    "bind_dataclass",
+    "update_dataclass",
 )
 
 ACTIVE_UI_STACK = []
@@ -106,7 +110,7 @@ def ui_builder(f):
 
         if class_name is not None:
             # CSS equivalent of classes
-            ui_element.setProperty('cssClass', class_name)
+            ui_element.setProperty("cssClass", class_name)
             ui_element.style().unpolish(ui_element)
             ui_element.style().polish(ui_element)
 
@@ -138,20 +142,25 @@ class CollectUI:
 
 
 @ui_builder
-def scroll_area(*children):
+def scroll_area(single_child):
     scroll = QScrollArea()
-    internal_layout = QVBoxLayout()
-
-    for child in children:
-        internal_layout.addWidget(_wrap_text(child))
-
-    scroll.setLayout(internal_layout)
+    scroll.setWidget(single_child)
+    scroll.setWidgetResizable(True)
     return scroll
 
 
 @ui_builder
-def layout(*children, layout_cls=None, widget=None, min_width=None, min_height=None,
-           margin=0, content_margin=0, spacing=0, alignment=None):
+def layout(
+    *children,
+    layout_cls=None,
+    widget=None,
+    min_width=None,
+    min_height=None,
+    margin=0,
+    content_margin=0,
+    spacing=0,
+    alignment=None,
+):
     if layout_cls is None:
         layout_cls = QGridLayout
 
@@ -193,6 +202,19 @@ horizontal = functools.partial(layout, layout_cls=QHBoxLayout)
 
 
 @ui_builder
+def list_view():
+    lv = QListView()
+
+    return lv
+
+
+@ui_builder
+def table_view():
+    tv = QTableView()
+    return tv
+
+
+@ui_builder
 def splitter(first, second, direction=Qt.Vertical, size=None, handle_width=12):
     split_widget = QSplitter(direction)
     split_widget.setHandleWidth(handle_width)
@@ -230,9 +252,16 @@ def group(*args, label=None, layout_cls=None):
     groupbox.setLayout(layout)
     return groupbox
 
+
 @ui_builder
 def label(text, *args):
     return QLabel(text, *args)
+
+
+@ui_builder
+def table(columns):
+    table_widget = QTableWidget()
+
 
 @ui_builder
 def tabs(*children, document_mode=True):
@@ -243,6 +272,7 @@ def tabs(*children, document_mode=True):
     widget.setDocumentMode(document_mode)
 
     return widget
+
 
 @ui_builder
 def button(text, horiz_expand=False, *args):
@@ -255,9 +285,11 @@ def button(text, horiz_expand=False, *args):
 
     return button
 
+
 @ui_builder
 def check_box(text, *args):
     return CheckBox(text, *args)
+
 
 @ui_builder
 def combo_box(items, content_margin=8, *args):
@@ -272,9 +304,11 @@ def combo_box(items, content_margin=8, *args):
 
     return widget
 
+
 @ui_builder
 def file_dialog(*args):
     return FileDialog(*args)
+
 
 @ui_builder
 def line_edit(value, text_margin=8, *args):
@@ -288,9 +322,11 @@ def line_edit(value, text_margin=8, *args):
 
     return edit
 
+
 @ui_builder
 def radio_button(text, *args):
     return RadioButton(text, *args)
+
 
 @ui_builder
 def slider(minimum=0, maximum=10, interval=None, horizontal=True):
@@ -312,7 +348,15 @@ class RenderAs(Enum):
 
 
 @ui_builder
-def spin_box(minimum=0, maximum=10, step=1, content_margin=8, adaptive=True, value=None, kind: type = int):
+def spin_box(
+    minimum=0,
+    maximum=10,
+    step=1,
+    content_margin=8,
+    adaptive=True,
+    value=None,
+    kind: type = int,
+):
     if kind == int:
         widget = SpinBox()
     else:
@@ -336,13 +380,16 @@ def spin_box(minimum=0, maximum=10, step=1, content_margin=8, adaptive=True, val
 
     return widget
 
+
 @ui_builder
-def text_edit(text='', *args):
+def text_edit(text="", *args):
     return TextEdit(text, *args)
+
 
 @ui_builder
 def led(*args, **kwargs):
     return Led(*args, **kwargs)
+
 
 @ui_builder
 def numeric_input(value=0, input_type: type = float, *args, validator_settings=None):
@@ -351,22 +398,17 @@ def numeric_input(value=0, input_type: type = float, *args, validator_settings=N
         float: QtGui.QDoubleValidator,
     }
     default_settings = {
-        int: {
-            'bottom': -1e6,
-            'top': 1e6,
-        },
-        float: {
-            'bottom': -1e6,
-            'top': 1e6,
-            'decimals': 3,
-        }
+        int: {"bottom": -1e6, "top": 1e6,},
+        float: {"bottom": -1e6, "top": 1e6, "decimals": 3,},
     }
 
     if validator_settings is None:
         validator_settings = default_settings.get(input_type)
 
     widget = LineEdit(str(value), *args)
-    widget.setValidator(validators.get(input_type, QtGui.QIntValidator)(**validator_settings))
+    widget.setValidator(
+        validators.get(input_type, QtGui.QIntValidator)(**validator_settings)
+    )
 
     return widget
 
@@ -382,7 +424,9 @@ def _unwrap_subject(subject_or_widget):
         return subject_or_widget
 
 
-def submit(gate: Hashable, keys: List[Hashable], ui: Dict[Hashable, QWidget]) -> rx.Observable:
+def submit(
+    gate: Hashable, keys: List[Hashable], ui: Dict[Hashable, QWidget]
+) -> rx.Observable:
     try:
         gate = ui[gate]
     except (ValueError, TypeError):
@@ -392,46 +436,58 @@ def submit(gate: Hashable, keys: List[Hashable], ui: Dict[Hashable, QWidget]) ->
     items = [_unwrap_subject(ui[k]) for k in keys]
 
     combined = items[0].pipe(
-        ops.combine_latest(*items[1:]),
-        ops.map(lambda vs: dict(zip(keys, vs)))
+        ops.combine_latest(*items[1:]), ops.map(lambda vs: dict(zip(keys, vs)))
     )
 
     return gate.pipe(
-        ops.filter(lambda x: x),
-        ops.with_latest_from(combined),
-        ops.map(lambda x: x[1])
+        ops.filter(lambda x: x), ops.with_latest_from(combined), ops.map(lambda x: x[1])
     )
 
 
-def _layout_dataclass_field(field, field_name: str, prefix: str, annotation: Dict[str, Any]):
-    id_for_field = (prefix, field_name,)
+def _layout_dataclass_field(
+    field, field_name: str, prefix: str, annotation: Dict[str, Any]
+):
+    id_for_field = (
+        prefix,
+        field_name,
+    )
 
-    allowable_range = annotation.get('range', (-1e5, 1e5))
-    label = annotation.get('label', field_name)
-    label_transform = annotation.get('label_transform', lambda x: x.replace('_', ' ').title())
+    allowable_range = annotation.get("range", (-1e5, 1e5))
+    label = annotation.get("label", field_name)
+    label_transform = annotation.get(
+        "label_transform", lambda x: x.replace("_", " ").title()
+    )
     label = label_transform(label)
 
-    if field.type in [int, float,]:
-        render_as = annotation.get('render_as', RenderAs.SPINBOX)
+    if field.type in [
+        int,
+        float,
+    ]:
+        render_as = annotation.get("render_as", RenderAs.SPINBOX)
         if render_as == RenderAs.SPINBOX:
-            field_input = spin_box(value=0, kind=field.type, id=id_for_field,
-                                   minimum=allowable_range[0], maximum=allowable_range[1])
+            field_input = spin_box(
+                value=0,
+                kind=field.type,
+                id=id_for_field,
+                minimum=allowable_range[0],
+                maximum=allowable_range[1],
+            )
         else:
             field_input = numeric_input(value=0, input_type=field.type, id=id_for_field)
 
     elif field.type == str:
-        render_as = annotation.get('render_as', RenderAs.LINE_EDIT)
+        render_as = annotation.get("render_as", RenderAs.LINE_EDIT)
         if render_as == RenderAs.LINE_EDIT:
-            field_input = line_edit('', id=id_for_field)
+            field_input = line_edit("", id=id_for_field)
         else:
-            field_input = text_edit('', id=id_for_field)
+            field_input = text_edit("", id=id_for_field)
     elif issubclass(field.type, enum.Enum):
         enum_options = enum_option_names(field.type)
         field_input = combo_box(enum_options, id=id_for_field)
     elif field.type == bool:
         field_input = check_box(field_name, id=id_for_field)
     else:
-        raise Exception('Could not render field: {}'.format(field))
+        raise Exception("Could not render field: {}".format(field))
 
     return group(label, field_input,)
 
@@ -441,11 +497,11 @@ def _layout_function_parameter(parameter: Parameter, prefix: str):
     widget_cls = {
         float: lambda id: numeric_input(0, float, id=id),
         int: lambda id: numeric_input(0, int, id=id),
-        str: lambda id: line_edit('', id=id),
+        str: lambda id: line_edit("", id=id),
     }[parameter_type]
 
     return group(
-        f'{parameter.name} : {parameter_type.__name__}',
+        f"{parameter.name} : {parameter_type.__name__}",
         widget_cls(id=(prefix, parameter.name)),
     )
 
@@ -463,17 +519,24 @@ def layout_function_call(signature: Signature, prefix: Optional[str] = None):
         Rendered Qt widgets, without any callbacks/subscriptions in place.
     """
     if prefix is None:
-        prefix = ''
+        prefix = ""
 
     return vertical(
-        *[_layout_function_parameter(parameter, prefix) for parameter in signature.parameters.values()],
-        button('Call', id=(prefix, 'submit')),
+        *[
+            _layout_function_parameter(parameter, prefix)
+            for parameter in signature.parameters.values()
+        ],
+        button("Call", id=(prefix, "submit")),
     )
 
 
-def bind_function_call(function, prefix: str, ui: Dict[str, QWidget],
-                       signature: Signature = None, values: Dict[Any, Any] = None):
-
+def bind_function_call(
+    function,
+    prefix: str,
+    ui: Dict[str, QWidget],
+    signature: Signature = None,
+    values: Dict[Any, Any] = None,
+):
     def translate(kind: Union[Parameter, Type]):
         if isinstance(kind, Parameter):
             if not kind.annotation == kind.empty:
@@ -489,7 +552,9 @@ def bind_function_call(function, prefix: str, ui: Dict[str, QWidget],
     if values is None:
         values = {}
 
-    translations = {k: translate(signature.parameters[k]) for k in signature.parameters.keys()}
+    translations = {
+        k: translate(signature.parameters[k]) for k in signature.parameters.keys()
+    }
 
     for k, v in values.items():
         ui[(prefix, k,)].subject.on_next(translations[k][0](v))
@@ -499,7 +564,9 @@ def bind_function_call(function, prefix: str, ui: Dict[str, QWidget],
         safe_call_kwargs = {k: translations[k][1](v) for k, v in call_kwargs.items()}
         function(**safe_call_kwargs)
 
-    submit((prefix, 'submit'), [(prefix, k,) for k in signature.parameters.keys()], ui).subscribe(perform_call)
+    submit(
+        (prefix, "submit"), [(prefix, k,) for k in signature.parameters.keys()], ui
+    ).subscribe(perform_call)
 
 
 def layout_dataclass(dataclass_cls, prefix: Optional[str] = None, submit=None):
@@ -517,15 +584,18 @@ def layout_dataclass(dataclass_cls, prefix: Optional[str] = None, submit=None):
     if prefix is None:
         prefix = dataclass_cls.__name__
 
-    annotations = getattr(dataclass_cls, '_field_annotations', {})
+    annotations = getattr(dataclass_cls, "_field_annotations", {})
 
     contents = []
     for field_name, field in dataclass_cls.__dataclass_fields__.items():
-        contents.append(_layout_dataclass_field(
-            field, field_name, prefix, annotations.get(field_name, {})))
+        contents.append(
+            _layout_dataclass_field(
+                field, field_name, prefix, annotations.get(field_name, {})
+            )
+        )
 
     if submit:
-        contents.append(button(submit, id=(prefix, 'submit!')))
+        contents.append(button(submit, id=(prefix, "submit!")))
 
     return vertical(*contents, alignment=Qt.AlignTop, content_margin=8)
 
@@ -564,7 +634,7 @@ def bind_dataclass(dataclass_instance, prefix: str, ui: Dict[Hashable, QWidget])
         ui: Collected UI elements
     """
     instance_widgets = {k[1]: v for k, v in ui.items() if k[0] == prefix}
-    submit_button = instance_widgets.pop('submit!', None)
+    submit_button = instance_widgets.pop("submit!", None)
 
     setters = {}
     for field_name, field in dataclass_instance.__dataclass_fields__.items():
@@ -596,8 +666,11 @@ def bind_dataclass(dataclass_instance, prefix: str, ui: Dict[Hashable, QWidget])
             setters[k](v)
 
     if submit_button:
-        submit(gate=(prefix, 'submit!'), keys=[(prefix, k) for k in instance_widgets], ui=ui).\
-            subscribe(write_all)
+        submit(
+            gate=(prefix, "submit!"),
+            keys=[(prefix, k) for k in instance_widgets],
+            ui=ui,
+        ).subscribe(write_all)
 
 
 def transforms_for_field(field):
@@ -606,12 +679,16 @@ def transforms_for_field(field):
         float: (lambda x: str(x), lambda x: float(x)),
     }
 
-    translate_from_field, translate_to_field = MAP_TYPES.get(field.type, (lambda x: x, lambda x: x))
+    translate_from_field, translate_to_field = MAP_TYPES.get(
+        field.type, (lambda x: x, lambda x: x)
+    )
 
     if issubclass(field.type, Enum):
         enum_type = type(list(field.type.__members__.values())[0].value)
 
-        forward_mapping = dict(sorted(enum_mapping(field.type).items(), key=lambda x: enum_type(x[1])))
+        forward_mapping = dict(
+            sorted(enum_mapping(field.type).items(), key=lambda x: enum_type(x[1]))
+        )
         inverse_mapping = {v: k for k, v in forward_mapping.items()}
 
         def extract_field(v):

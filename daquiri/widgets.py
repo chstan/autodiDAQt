@@ -1,19 +1,21 @@
 import os
-from rx.subject import BehaviorSubject, Subject
 
 from PyQt5.QtWidgets import (
-    QPushButton, QCheckBox, QComboBox,
-    QSpinBox, QDoubleSpinBox, QTextEdit, QSlider,
-    QLineEdit, QRadioButton,
-    QWidget, QFileDialog, QHBoxLayout,
-)
+    QCheckBox, QComboBox, QDoubleSpinBox, QFileDialog, QHBoxLayout, QLineEdit,
+    QPushButton, QRadioButton, QSlider, QSpinBox, QTextEdit, QWidget)
+from rx.subject import BehaviorSubject, Subject
 
 __all__ = (
-    'PushButton', 'CheckBox',
-    'ComboBox', 'FileDialog',
-    'LineEdit', 'RadioButton',
-    'Slider', 'SpinBox', 'DoubleSpinBox',
-    'TextEdit',
+    "PushButton",
+    "CheckBox",
+    "ComboBox",
+    "FileDialog",
+    "LineEdit",
+    "RadioButton",
+    "Slider",
+    "SpinBox",
+    "DoubleSpinBox",
+    "TextEdit",
 )
 
 
@@ -31,7 +33,9 @@ class ComboBox(QComboBox, Subjective):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.subject = BehaviorSubject(self.currentData())
-        self.currentIndexChanged.connect(lambda: self.subject.on_next(self.currentText()))
+        self.currentIndexChanged.connect(
+            lambda: self.subject.on_next(self.currentText())
+        )
         self.subject.subscribe(self.update_ui)
 
     def update_ui(self, value):
@@ -107,7 +111,7 @@ class FileDialog(QWidget, Subjective):
         self.subject = BehaviorSubject(None)
 
         layout = QHBoxLayout()
-        self.btn = PushButton('Open')
+        self.btn = PushButton("Open")
         if single:
             self.btn.subject.subscribe(on_next=lambda _: self.get_file())
         else:
@@ -117,8 +121,7 @@ class FileDialog(QWidget, Subjective):
         self.setLayout(layout)
 
     def get_file(self):
-        filename = QFileDialog.getOpenFileName(
-            self, 'Open File', self.dialog_root)
+        filename = QFileDialog.getOpenFileName(self, "Open File", self.dialog_root)
 
         self.subject.on_next(filename[0])
 
@@ -138,7 +141,7 @@ class PushButton(QPushButton, Subjective):
         self.clicked.connect(lambda: self.subject.on_next(True))
 
 
-class CheckBox(QCheckBox,Subjective):
+class CheckBox(QCheckBox, Subjective):
     def __init__(self, *args, **kwargs):
         super().__init__(*args)
         self.subject = BehaviorSubject(self.checkState())

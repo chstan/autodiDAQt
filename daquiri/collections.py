@@ -1,6 +1,10 @@
-from typing import Dict, Any
+from typing import Any, Dict
 
-__all__ = ('AttrDict', 'map_tree_leaves', 'map_treelike_nodes',)
+__all__ = (
+    "AttrDict",
+    "map_tree_leaves",
+    "map_treelike_nodes",
+)
 
 
 class AttrDict(dict):
@@ -95,4 +99,3 @@ def map_tree_leaves(tree: dict, transform):
             tree[k] = transform(v)
 
     return tree
-

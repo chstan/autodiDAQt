@@ -1,16 +1,19 @@
 from typing import Dict, Optional, Tuple
 
 import pandas as pd
-
 import rx
 import rx.operators as ops
 from rx.subject import Subject
 
+__all__ = (
+    "reactive_frame",
+    "ReactivePlot",
+)
 
-__all__ = ('reactive_frame', 'ReactivePlot',)
 
-
-def reactive_frame(initial: Optional[pd.DataFrame] = None, mutate=False) -> Tuple[Subject, rx.Observable]:
+def reactive_frame(
+    initial: Optional[pd.DataFrame] = None, mutate=False
+) -> Tuple[Subject, rx.Observable]:
     """
     Creates a pair of observables, a subject that allows generating a stream of data, and
     a DataFrame accumulator computed from the data. This can operate in either mutable (where the
@@ -37,9 +40,7 @@ def reactive_frame(initial: Optional[pd.DataFrame] = None, mutate=False) -> Tupl
 
         return pd.concat([old_frame, pd.DataFrame([new_item])], ignore_index=True)
 
-    accumulated = subject.pipe(
-        ops.scan(append_to_frame, initial)
-    )
+    accumulated = subject.pipe(ops.scan(append_to_frame, initial))
 
     return subject, accumulated
 
@@ -55,7 +56,9 @@ class ReactivePlot:
     3. strategy='replot', the safest and slowest, deletes and replots the element each time
     """
 
-    def __init__(self, ax, source: rx.Observable, method: str, x=None, y=None, strategy='call'):
+    def __init__(
+        self, ax, source: rx.Observable, method: str, x=None, y=None, strategy="call"
+    ):
         self.source = source
         self.method = method
         self.ax = ax
@@ -66,12 +69,12 @@ class ReactivePlot:
         self.source.subscribe(self.on_plot)
 
     @classmethod
-    def link_plot(cls, axes, source: rx.Observable, x=None, y=None, strategy='call'):
-        return ReactivePlot(axes, source, method='plot', x=x, y=y, strategy=strategy)
+    def link_plot(cls, axes, source: rx.Observable, x=None, y=None, strategy="call"):
+        return ReactivePlot(axes, source, method="plot", x=x, y=y, strategy=strategy)
 
     @classmethod
-    def link_scatter(cls, axes, source: rx.Observable, x=None, y=None, strategy='call'):
-        return ReactivePlot(axes, source, method='scatter', x=x, y=y, strategy=strategy)
+    def link_scatter(cls, axes, source: rx.Observable, x=None, y=None, strategy="call"):
+        return ReactivePlot(axes, source, method="scatter", x=x, y=y, strategy=strategy)
 
     def infer_x(self, df: pd.DataFrame):
         """
@@ -110,7 +113,11 @@ class ReactivePlot:
         if self.last_index is None:
             return df
 
-        return df.loc[df.index > self.last_index] if self.x is None else df.loc[df[self.x] > self.last_index]
+        return (
+            df.loc[df.index > self.last_index]
+            if self.x is None
+            else df.loc[df[self.x] > self.last_index]
+        )
 
     def on_plot(self, df: pd.DataFrame):
         if self.last_index is None:
@@ -123,7 +130,7 @@ class ReactivePlot:
 
         lim = self.ax.get_xlim()
         for i, y in enumerate(self.y):
-            self.ax.scatter(x, data_since[y].values, c=f'C{i}')
+            self.ax.scatter(x, data_since[y].values, c=f"C{i}")
         self.ax.set_xlim(lim)
 
         self.ax.figure.canvas.draw()

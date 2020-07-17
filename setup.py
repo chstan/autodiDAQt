@@ -56,6 +56,7 @@ requirements = [
     'pyqtgraph',
     'qtsass',
     'pymeasure',
+    'pyrsistent',
 
     'appdirs',
 

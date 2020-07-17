@@ -1,22 +1,25 @@
 import asyncio
-import functools
 import datetime
-import rx.operators
+import functools
 import json
-import pyqtgraph as pg
-
 from typing import List, Union
 
+import pyqtgraph as pg
+import rx.operators
 from loguru import logger
 
-from daquiri.instrument.axis import ProxiedAxis, LogicalAxis, TestAxis, Axis, LogicalSubaxis, ManualAxis, TestManualAxis
+from daquiri.instrument.axis import (Axis, LogicalAxis, LogicalSubaxis,
+                                     ManualAxis, ProxiedAxis, TestAxis,
+                                     TestManualAxis)
 from daquiri.instrument.method import Method, TestMethod
 from daquiri.instrument.property import ChoiceProperty
-from daquiri.schema import ArrayType
-from daquiri.utils import safe_lookup
-from daquiri.ui import grid, tabs, vertical, group, horizontal, label, line_edit, button, CollectUI, submit, \
-    layout_dataclass, bind_dataclass, combo_box, layout_function_call, bind_function_call
 from daquiri.panel import Panel
+from daquiri.schema import ArrayType
+from daquiri.ui import (CollectUI, bind_dataclass, bind_function_call, button,
+                        combo_box, grid, group, horizontal, label,
+                        layout_dataclass, layout_function_call, line_edit,
+                        submit, tabs, vertical)
+from daquiri.utils import safe_lookup
 
 
 class TimeAxisItem(pg.AxisItem):
@@ -36,11 +39,16 @@ class MethodView:
         with CollectUI(ui):
             layout = group(
                 self.method.name,
-                layout_function_call(self.method.signature, prefix=self.method.name)
+                layout_function_call(self.method.signature, prefix=self.method.name),
             )
 
-        bind_function_call(self.method.call, self.method.name, ui,
-                           self.method.signature, values=self.method.last_kwargs)
+        bind_function_call(
+            self.method.call,
+            self.method.name,
+            ui,
+            self.method.signature,
+            values=self.method.last_kwargs,
+        )
         return layout
 
 
@@ -53,21 +61,25 @@ class ChoicePropertyView:
     def layout(self):
         ui = {}
 
-        inverse_mapping = dict(zip(self.prop.labels.values(), self.prop.choices.values()))
+        inverse_mapping = dict(
+            zip(self.prop.labels.values(), self.prop.choices.values())
+        )
         inverse_values = dict(zip(self.prop.choices.values(), self.prop.choices.keys()))
 
         with CollectUI(ui):
-            layout = group(self.prop.name, combo_box(self.prop.labels.values(), id='combo'))
+            layout = group(
+                self.prop.name, combo_box(self.prop.labels.values(), id="combo")
+            )
 
         def on_change(value):
             self.prop.set(inverse_mapping[value])
 
         try:
-            ui['combo'].subject.on_next(inverse_values[self.prop.value])
+            ui["combo"].subject.on_next(inverse_values[self.prop.value])
         except:
             pass
 
-        ui['combo'].subject.subscribe(on_change)
+        ui["combo"].subject.subscribe(on_change)
         return layout
 
 
@@ -77,7 +89,7 @@ class AxisView:
     def __init__(self, axis, path_to_axis: List[Union[str, int]]):
         self.axis = axis
         self.path_to_axis = path_to_axis
-        self.id = '.'.join(map(str, path_to_axis))
+        self.id = ".".join(map(str, path_to_axis))
 
     @property
     def joggable(self):
@@ -135,7 +147,7 @@ class ProxiedAxisView(AxisView):
             asyncio.get_event_loop().create_task(perform_jog())
 
         except ValueError:
-            logger.error(f'Cannot jog with speed {self.raw_jog_speed}')
+            logger.error(f"Cannot jog with speed {self.raw_jog_speed}")
 
     def update_plot(self, _):
         self.live_plot.setData(self.axis.collected_xs, self.axis.collected_ys)
@@ -146,29 +158,37 @@ class ProxiedAxisView(AxisView):
             self.axis.raw_value_stream.pipe(throttle).subscribe(self.update_plot)
 
         if self.axis.raw_value_stream:
-            label_widget = ui[f'{self.id}-last_value']
+            label_widget = ui[f"{self.id}-last_value"]
             throttle = rx.operators.sample(0.2)
             self.axis.raw_value_stream.pipe(throttle).subscribe(
-                lambda v: label_widget.setText(str(v['value'])))
+                lambda v: label_widget.setText(str(v["value"]))
+            )
 
-            ui[f'{self.id}-read'].subject.subscribe(self.read)
+            ui[f"{self.id}-read"].subject.subscribe(self.read)
 
         if not self.axis.readonly:
-            sub_value = submit(f'{self.id}-set', [f'{self.id}-edit'], ui)
+            sub_value = submit(f"{self.id}-set", [f"{self.id}-edit"], ui)
             sub_value.subscribe(lambda v: self.move(list(v.values())[0]))
 
             if self.joggable:
                 neg_fast, neg_slow, pos_slow, pos_fast, jog_speed = [
-                    ui[f'{self.id}-jog_{k}'] for k in ['neg_fast', 'neg_slow', 'pos_slow', 'pos_fast', 'speed']]
+                    ui[f"{self.id}-jog_{k}"]
+                    for k in ["neg_fast", "neg_slow", "pos_slow", "pos_fast", "speed"]
+                ]
 
                 def set_speed(v):
                     self.raw_jog_speed = v
+
                 jog_speed.subject.subscribe(set_speed)
 
-                for axis, relative_speed in zip([neg_fast, neg_slow, pos_slow, pos_fast], [-5, -1, 1, 5]):
+                for axis, relative_speed in zip(
+                    [neg_fast, neg_slow, pos_slow, pos_fast], [-5, -1, 1, 5]
+                ):
+
                     def close_over_jog_info(rel_speed):
                         def jog(_):
                             self.jog(rel_speed=rel_speed)
+
                         return jog
 
                     axis.subject.subscribe(close_over_jog_info(relative_speed))
@@ -177,32 +197,53 @@ class ProxiedAxisView(AxisView):
         jog_controls = []
         live_plots = []
         if self.live_line_plottable:
-            widget = pg.PlotWidget(axisItems={'bottom': TimeAxisItem(orientation='bottom')})
+            widget = pg.PlotWidget(
+                axisItems={"bottom": TimeAxisItem(orientation="bottom")}
+            )
             self.live_plot = widget.plot()
             widget.setTitle(self.id)
 
             live_plots = [widget]
 
         if self.live_image_plottable:
-            logger.warning('Not live plotting image: not currently supported. '
-                           'Complain at Conrad if this sufficiently upsets you.')
+            logger.warning(
+                "Not live plotting image: not currently supported. "
+                "Complain at Conrad if this sufficiently upsets you."
+            )
 
         write_controls = []
 
         if not self.axis.readonly:
-            write_controls = [horizontal('Write', line_edit('', id=f'{self.id}-edit'), button('Set', id=f'{self.id}-set', class_name='primary')),]
+            write_controls = [
+                horizontal(
+                    "Write",
+                    line_edit("", id=f"{self.id}-edit"),
+                    button("Set", id=f"{self.id}-set", class_name="primary"),
+                ),
+            ]
             if self.joggable:
                 jog_controls = [
-                    horizontal('Jog',
-                        button('<<-', id=f'{self.id}-jog_neg_fast'), button('<-', id=f'{self.id}-jog_neg_slow'),
-                        button('->', id=f'{self.id}-jog_pos_slow'), button('->>', id=f'{self.id}-jog_pos_fast')),
-                    horizontal('Slow Jog Amt. (Fast = 5x)', line_edit('0', id=f'{self.id}-jog_speed')),
+                    horizontal(
+                        "Jog",
+                        button("<<-", id=f"{self.id}-jog_neg_fast"),
+                        button("<-", id=f"{self.id}-jog_neg_slow"),
+                        button("->", id=f"{self.id}-jog_pos_slow"),
+                        button("->>", id=f"{self.id}-jog_pos_fast"),
+                    ),
+                    horizontal(
+                        "Slow Jog Amt. (Fast = 5x)",
+                        line_edit("0", id=f"{self.id}-jog_speed"),
+                    ),
                 ]
 
         return vertical(
             group(
-                'Driver',
-                horizontal('Read', label('Last Value', id=f'{self.id}-last_value'), button('Read', id=f'{self.id}-read', class_name='primary')),
+                "Driver",
+                horizontal(
+                    "Read",
+                    label("Last Value", id=f"{self.id}-last_value"),
+                    button("Read", id=f"{self.id}-read", class_name="primary"),
+                ),
                 *write_controls,
                 *jog_controls,
                 *live_plots,
@@ -236,17 +277,28 @@ class LogicalAxisView(AxisView):
             view.attach(ui)
 
     def layout(self):
-        self.sub_axes = [getattr(self.axis, n) for n in self.axis.logical_coordinate_names]
-        self.sub_views = [LogicalSubaxisView(axis, self.path_to_axis + [n])
-                          for axis, n in zip(self.sub_axes, self.axis.logical_coordinate_names)]
+        self.sub_axes = [
+            getattr(self.axis, n) for n in self.axis.logical_coordinate_names
+        ]
+        self.sub_views = [
+            LogicalSubaxisView(axis, self.path_to_axis + [n])
+            for axis, n in zip(self.sub_axes, self.axis.logical_coordinate_names)
+        ]
 
         state_panel = []
         if self.axis.internal_state_cls is not None:
-            state_panel = [['State', self.layout_state_panel()],]
+            state_panel = [
+                ["State", self.layout_state_panel()],
+            ]
 
         return tabs(
-            *[[n, sub_view.layout()] for sub_view, n in zip(self.sub_views, self.axis.logical_coordinate_names)],
-            *state_panel
+            *[
+                [n, sub_view.layout()]
+                for sub_view, n in zip(
+                    self.sub_views, self.axis.logical_coordinate_names
+                )
+            ],
+            *state_panel,
         )
 
     def layout_state_panel(self):
@@ -254,10 +306,10 @@ class LogicalAxisView(AxisView):
         with CollectUI(ui):
             layout = group(
                 self.axis.internal_state_cls.__name__,
-                layout_dataclass(self.axis.internal_state_cls, prefix='state')
+                layout_dataclass(self.axis.internal_state_cls, prefix="state"),
             )
 
-        bind_dataclass(self.axis.internal_state, prefix='state', ui=ui)
+        bind_dataclass(self.axis.internal_state, prefix="state", ui=ui)
         return layout
 
 
@@ -286,7 +338,7 @@ class BasicInstrumentPanel(Panel):
         self.description = instrument_description
         self.actor = instrument_actor
         self.id_to_path = {}
-        self.TITLE = f'{id} (Instrument)'
+        self.TITLE = f"{id} (Instrument)"
 
         self.axis_views = []
         self.property_views = []
@@ -303,12 +355,13 @@ class BasicInstrumentPanel(Panel):
     def write_to_instrument(self):
         pass
 
-    def layout_for_single_axis(self, description: Union[ProxiedAxis, LogicalAxis, TestAxis], path_to_axis):
+    def layout_for_single_axis(
+        self, description: Union[ProxiedAxis, LogicalAxis, TestAxis], path_to_axis
+    ):
         view_cls = {
             ProxiedAxis: ProxiedAxisView,
             ManualAxis: ProxiedAxisView,
             LogicalAxis: LogicalAxisView,
-
             TestManualAxis: TestAxisView,
             TestAxis: TestAxisView,
         }.get(type(description))
@@ -318,30 +371,28 @@ class BasicInstrumentPanel(Panel):
         return view.layout()
 
     def tab_for_axis_group(self, key):
-        description = self.description['axes'][key]
+        description = self.description["axes"][key]
         if isinstance(description, list):
             return tabs(
-                *[[str(i), self.layout_for_single_axis(d, path_to_axis=[key, i])] for i, d in enumerate(description)]
+                *[
+                    [str(i), self.layout_for_single_axis(d, path_to_axis=[key, i])]
+                    for i, d in enumerate(description)
+                ]
             )
 
         return self.layout_for_single_axis(description, path_to_axis=[key])
 
     def render_property(self, key):
-        ins_property = self.description['properties'][key]
-        view_cls = {
-            ChoiceProperty: ChoicePropertyView,
-        }.get(type(ins_property))
+        ins_property = self.description["properties"][key]
+        view_cls = {ChoiceProperty: ChoicePropertyView,}.get(type(ins_property))
 
         view = view_cls(ins_property)
         self.property_views.append(view)
         return view.layout()
 
     def render_method(self, key):
-        method = self.description['methods'][key]
-        view_cls = {
-            Method: MethodView,
-            TestMethod: MethodView,
-        }.get(type(method))
+        method = self.description["methods"][key]
+        view_cls = {Method: MethodView, TestMethod: MethodView,}.get(type(method))
 
         view = view_cls(method)
         self.method_views.append(view)
@@ -351,20 +402,36 @@ class BasicInstrumentPanel(Panel):
         with CollectUI(self.ui):
             grid(
                 tabs(
-                    *[[k, self.tab_for_axis_group(k)] for k in self.description['axes']],
-                    ['Settings', grid(
-                        'Settings',
-                        *[self.render_property(k) for k in self.description['properties']],
-                    )],
-                    ['Methods', grid(
-                        'Methods',
-                        *[self.render_method(k) for k in self.description['methods']],
-                    )],
-                    #['Connection', grid('Connection')],
-                    #['Statistics', grid('Statistics')],
-                    #['Terminal', grid('Terminal')],
+                    *[
+                        [k, self.tab_for_axis_group(k)]
+                        for k in self.description["axes"]
+                    ],
+                    [
+                        "Settings",
+                        grid(
+                            "Settings",
+                            *[
+                                self.render_property(k)
+                                for k in self.description["properties"]
+                            ],
+                        ),
+                    ],
+                    [
+                        "Methods",
+                        grid(
+                            "Methods",
+                            *[
+                                self.render_method(k)
+                                for k in self.description["methods"]
+                            ],
+                        ),
+                    ],
+                    # ['Connection', grid('Connection')],
+                    # ['Statistics', grid('Statistics')],
+                    # ['Terminal', grid('Terminal')],
                 ),
-                widget=self)
+                widget=self,
+            )
 
         for axis_view in self.axis_views:
             axis_view.attach(self.ui)

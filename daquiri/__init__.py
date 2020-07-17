@@ -1,7 +1,6 @@
-from .version import VERSION
-
-from .core import Daquiri
-from .panel import Panel
 from .actor import Actor
+from .core import Daquiri
 from .experiment import Experiment
 from .instrument import ManagedInstrument
+from .panel import Panel
+from .version import VERSION

@@ -7,14 +7,16 @@ from daquiri.utils import DAQUIRI_LIB_ROOT
 
 from .collections import AttrDict, deep_update
 
-__all__ = ('Config', 'MetaData', 'default_config_for_platform')
+__all__ = ("Config", "MetaData", "default_config_for_platform")
 
 
 def default_config_for_platform() -> Path:
-    configs = {'win32': 'default_config_windows.json', }
-    cfile = configs.get(sys.platform, 'default_config.json')
+    configs = {
+        "win32": "default_config_windows.json",
+    }
+    cfile = configs.get(sys.platform, "default_config.json")
 
-    return DAQUIRI_LIB_ROOT / 'resources' / cfile
+    return DAQUIRI_LIB_ROOT / "resources" / cfile
 
 
 class Config:
@@ -41,33 +43,36 @@ class MetaData:
     __getattr__ before we have actually set the attribute and
     a KeyError results.
     """
+
     def __init__(self):
         date_started = datetime.date.today()
         datetime_started = datetime.datetime.today()
         time_started = datetime_started.time()
 
-        self.__dict__['_internal'] = {
-            'date': lambda: MetaData.safe_time_string(
-                datetime.date.today().isoformat()),
-            'time': lambda: MetaData.safe_time_string(
-                datetime.datetime.now().time().isoformat()),
-            'datetime': lambda: MetaData.safe_time_string(
-                datetime.datetime.now().isoformat()),
-            'date_started': lambda: MetaData.safe_time_string(
-                date_started.isoformat()),
-            'time_started': lambda: MetaData.safe_time_string(
-                time_started.isoformat()),
-            'datetime_started': lambda: MetaData.safe_time_string(
-                datetime_started.isoformat()),
+        self.__dict__["_internal"] = {
+            "date": lambda: MetaData.safe_time_string(
+                datetime.date.today().isoformat()
+            ),
+            "time": lambda: MetaData.safe_time_string(
+                datetime.datetime.now().time().isoformat()
+            ),
+            "datetime": lambda: MetaData.safe_time_string(
+                datetime.datetime.now().isoformat()
+            ),
+            "date_started": lambda: MetaData.safe_time_string(date_started.isoformat()),
+            "time_started": lambda: MetaData.safe_time_string(time_started.isoformat()),
+            "datetime_started": lambda: MetaData.safe_time_string(
+                datetime_started.isoformat()
+            ),
         }
 
     @staticmethod
     def safe_time_string(time_str):
-        return time_str.replace(':', '-').replace('.', '-')
+        return time_str.replace(":", "-").replace(".", "-")
 
     def __getattr__(self, item):
-        if item in self.__dict__['_internal']:
-            v = self.__dict__['_internal'][item]
+        if item in self.__dict__["_internal"]:
+            v = self.__dict__["_internal"][item]
             try:
                 return v()
             except TypeError:
@@ -77,9 +82,11 @@ class MetaData:
 
     def __setattr__(self, key, value):
         protected = {
-            'datetime', 'date', 'time',
-            'datetime_started', 'date_started', 'time_started',
+            "datetime",
+            "date",
+            "time",
+            "datetime_started",
+            "date_started",
+            "time_started",
         }
         self._internal[key] = value
-
-

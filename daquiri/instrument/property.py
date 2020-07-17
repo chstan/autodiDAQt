@@ -1,10 +1,12 @@
-from typing import Any, Union, Tuple, Dict
+from typing import Any, Dict, Tuple, Union
 
 from daquiri.utils import safe_lookup
 
-__all__ = ('Property', 'ChoiceProperty', 'TestProperty',)
-
-from daquiri.utils import safe_lookup
+__all__ = (
+    "Property",
+    "ChoiceProperty",
+    "TestProperty",
+)
 
 
 class Property:

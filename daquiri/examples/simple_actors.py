@@ -1,31 +1,30 @@
 """
 The absolute, bare minimum. Open an application with no panels.
 """
-from daquiri import Daquiri, Actor
 from asyncio import sleep
+
 from loguru import logger
+
+from daquiri import Actor, Daquiri
 
 
 class Speaker(Actor):
     async def run(self):
-        logger.info('Starting speaker.')
+        logger.info("Starting speaker.")
         while True:
             await sleep(0.5)
-            await self.app.actors['listens'].messages.put('Hello')
+            await self.app.actors["listens"].messages.put("Hello")
 
 
 class Listener(Actor):
     async def run(self):
-        logger.info('Starting listener.')
+        logger.info("Starting listener.")
         while True:
             message = await self.messages.get()
             logger.info(message)
 
 
-app = Daquiri(__name__, {}, {
-    'speaks': Speaker,
-    'listens': Listener,
-})
+app = Daquiri(__name__, {}, {"speaks": Speaker, "listens": Listener,})
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     app.start()

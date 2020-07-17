@@ -1,29 +1,37 @@
 import random
 
 from daquiri import Daquiri, Experiment
+from daquiri.interlock import InterlockException
 from daquiri.mock import MockMotionController, MockScalarDetector
 from daquiri.scan import scan
-from daquiri.interlock import InterlockException
 
 
 async def second_axis_is_retracted(experiment, mc, power_meter):
     second_stage_value = await mc.stages[1].read()
     if not (0 < second_stage_value < 5):
         raise InterlockException(
-            'The second manipulator axis must be retracted before starting the experiment!')
+            "The second manipulator axis must be retracted before starting the experiment!"
+        )
 
 
 async def high_voltage_is_off(*_):
     if random.random() < 0.5:
-        raise InterlockException('You forgot to turn off the high voltage!')
+        raise InterlockException("You forgot to turn off the high voltage!")
 
 
 class MyExperiment(Experiment):
-    dx = MockMotionController.scan('mc').stages[0]()
-    read_power = {'power': 'power_meter.device', }
+    dx = MockMotionController.scan("mc").stages[0]()
+    read_power = {
+        "power": "power_meter.device",
+    }
 
     scan_methods = [
-        scan(x=dx, name='dx Scan', read=read_power, preconditions=[second_axis_is_retracted]),
+        scan(
+            x=dx,
+            name="dx Scan",
+            read=read_power,
+            preconditions=[second_axis_is_retracted],
+        ),
     ]
 
     # can also set a "global" check, that can be verified whenever starting or resuming a scan
@@ -32,10 +40,12 @@ class MyExperiment(Experiment):
     interlocks = [high_voltage_is_off]
 
 
-app = Daquiri(__name__, {}, {'experiment': MyExperiment}, {
-    'mc': MockMotionController,
-    'power_meter': MockScalarDetector,
-})
+app = Daquiri(
+    __name__,
+    {},
+    {"experiment": MyExperiment},
+    {"mc": MockMotionController, "power_meter": MockScalarDetector,},
+)
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     app.start()

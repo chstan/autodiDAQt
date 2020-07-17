@@ -1,24 +1,26 @@
-import datetime
+import asyncio
 import contextlib
-import os
+import datetime
+import enum
 import functools
+import os
 from json import JSONEncoder
 from pathlib import Path
-import enum
-import asyncio
-from typing import Dict, List, Type, TypeVar, Any, Union, Tuple
+from typing import Any, Dict, List, Tuple, Type, TypeVar, Union
 
 __all__ = (
-    'DAQUIRI_LIB_ROOT',
-
-    'run_on_loop', 'gather_dict', 'find_conflict_free_matches',
-    'enum_option_names', 'enum_mapping',
-    'tokenize_access_path', 'safe_lookup',
-
-    'AccessRecorder',
-    'ScanAccessRecorder',
-    'InstrumentScanAccessRecorder',
-    'RichEncoder',
+    "DAQUIRI_LIB_ROOT",
+    "run_on_loop",
+    "gather_dict",
+    "find_conflict_free_matches",
+    "enum_option_names",
+    "enum_mapping",
+    "tokenize_access_path",
+    "safe_lookup",
+    "AccessRecorder",
+    "ScanAccessRecorder",
+    "InstrumentScanAccessRecorder",
+    "RichEncoder",
 )
 
 DAQUIRI_LIB_ROOT = Path(__file__).parent.absolute()
@@ -29,13 +31,16 @@ PathlikeType = Union[PathFragmentType, Path]
 
 
 def default_stylesheet() -> str:
-    with open(str(DAQUIRI_LIB_ROOT / 'resources' / 'default_styles.scss')) as f:
+    with open(str(DAQUIRI_LIB_ROOT / "resources" / "default_styles.scss")) as f:
         styles = f.read()
 
-    with open(os.devnull, 'w') as devnull:
+    with open(os.devnull, "w") as devnull:
         with contextlib.redirect_stdout(devnull):
             import qtsass  # <- why is this printing on import?
-            compiled = qtsass.compile(styles, include_paths=[str(DAQUIRI_LIB_ROOT / 'resources')])
+
+            compiled = qtsass.compile(
+                styles, include_paths=[str(DAQUIRI_LIB_ROOT / "resources")]
+            )
 
     return compiled
 
@@ -63,7 +68,9 @@ def tokenize_string_path(s: str):
         except ValueError:
             return str(value)
 
-    return tuple(safe_unwrap_int(x) for x in s.replace('[', '.').replace(']', '').split('.') if x)
+    return tuple(
+        safe_unwrap_int(x) for x in s.replace("[", ".").replace("]", "").split(".") if x
+    )
 
 
 def tokenize_access_path(str_or_list) -> Tuple[Union[str, int]]:
@@ -93,7 +100,7 @@ def _try_unwrap_value(v):
 
 
 def enum_option_names(enum_cls: Type[enum.Enum]) -> List[str]:
-    names = [x for x in dir(enum_cls) if '__' not in x]
+    names = [x for x in dir(enum_cls) if "__" not in x]
     values = [_try_unwrap_value(getattr(enum_cls, n)) for n in names]
 
     return [x[0] for x in sorted(zip(names, values), key=lambda x: x[1])]
@@ -123,7 +130,9 @@ async def gather_dict(tasks, **ktasks):
     return dict(zip(all.keys(), values))
 
 
-T = TypeVar('T')
+T = TypeVar("T")
+
+
 def find_conflict_free_matches(constraints: Dict[str, List[T]]) -> Dict[str, T]:
     """
     Given allowable matches between keys and lists of values, finds a pairing such that every
@@ -156,11 +165,14 @@ def find_conflict_free_matches(constraints: Dict[str, List[T]]) -> Dict[str, T]:
                 break
 
         if found_key is None:
-            raise ValueError('Matches not consistent.')
+            raise ValueError("Matches not consistent.")
         else:
             results[found_key] = options[0]
-            current = {k: [v for v in vs if v != options[0]]
-                       for k, vs in current.items() if k != found_key}
+            current = {
+                k: [v for v in vs if v != options[0]]
+                for k, vs in current.items()
+                if k != found_key
+            }
 
     return results
 
@@ -191,7 +203,7 @@ class AccessRecorder:
         return self
 
     def name_(self):
-        return '.'.join(map(str, self.full_path_()))
+        return ".".join(map(str, self.full_path_()))
 
     def full_path_(self):
         return tuple(([] if self.scope is None else [self.scope]) + self.path)
@@ -199,24 +211,20 @@ class AccessRecorder:
 
 class ScanAccessRecorder(AccessRecorder):
     def write(self, value):
-        return {
-            'write': value,
-            'path': self.path,
-            'scope': self.scope
-        }
+        return {"write": value, "path": self.path, "scope": self.scope}
 
     def read(self):
         return {
-            'read': None,
-            'path': self.path,
-            'scope': self.scope,
+            "read": None,
+            "path": self.path,
+            "scope": self.scope,
         }
 
     def __call__(self, *args, **kwargs):
         return {
-            'call': (args, kwargs),
-            'path': self.path,
-            'scope': self.scope,
+            "call": (args, kwargs),
+            "path": self.path,
+            "scope": self.scope,
         }
 
 
@@ -233,7 +241,10 @@ class InstrumentScanAccessRecorder(AccessRecorder):
         first = self.path[0]
         if first in self.properties_:
             prop = self.properties_[first]
-            assert len(self.path) == 1 and "You can scan a property, but properties have no sub-attributes or items"
+            assert (
+                len(self.path) == 1
+                and "You can scan a property, but properties have no sub-attributes or items"
+            )
 
             if isinstance(prop, ChoiceProperty):
                 labels, choices = prop.labels, prop.choices
@@ -251,5 +262,3 @@ class InstrumentScanAccessRecorder(AccessRecorder):
 
     def is_property_(self):
         return len(self.path) == 1 and self.path[0] in self.properties_
-
-

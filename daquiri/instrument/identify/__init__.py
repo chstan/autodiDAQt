@@ -1,12 +1,18 @@
 import asyncio
-from concurrent.futures import ThreadPoolExecutor
-from daquiri.utils import run_on_loop, gather_dict, find_conflict_free_matches
 from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor
 
-from . import newport, srs, lakeshore
+from daquiri.utils import find_conflict_free_matches, gather_dict, run_on_loop
 
-__all__ = ('identification_protocols', 'idn_patterns', 'identify_resource',
-           'idn_string_for', 'identify_all_instruments',)
+from . import lakeshore, newport, srs
+
+__all__ = (
+    "identification_protocols",
+    "idn_patterns",
+    "identify_resource",
+    "idn_string_for",
+    "identify_all_instruments",
+)
 
 
 identification_protocols = {}
@@ -32,12 +38,14 @@ async def identify_all_instruments(instrument_map, manager=None):
 
     unidentified = set(instrument_map.keys())
     resources = {}
-    #resources = resource_manager.list_resources_info()
+    # resources = resource_manager.list_resources_info()
 
     for k, v in resources.items():
         try:
             resource = manager.open_resource(k)
-            idn_futures[k] = loop.run_in_executor(executor, run_on_loop, identify_resource, resource)
+            idn_futures[k] = loop.run_in_executor(
+                executor, run_on_loop, identify_resource, resource
+            )
             handles_by_address[k] = resource
         except Exception as e:
             pass
@@ -80,7 +88,7 @@ async def identify_resource(resource, additional_identification_modes=None):
     best_response = None
     best_dialogue = None
 
-    for dialogue in ['*IDN?', '?IDN']:
+    for dialogue in ["*IDN?", "?IDN"]:
         try:
             response = resource.ask(dialogue)
             if best_response is None or len(response) > len(best_response):
@@ -91,7 +99,10 @@ async def identify_resource(resource, additional_identification_modes=None):
 
     if best_response is None:
         # try the fallback dialogues
-        for instrument_option, identification_fn in additional_identification_modes.items():
+        for (
+            instrument_option,
+            identification_fn,
+        ) in additional_identification_modes.items():
             response = identification_fn(resource)
             if response:
                 best_response = response

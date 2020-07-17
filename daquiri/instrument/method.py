@@ -1,10 +1,13 @@
-from typing import Any, Tuple, Union, Dict
 import inspect
+from typing import Any, Dict, Tuple, Union
 
 from daquiri.schema import DEFAULT_VALUES
 from daquiri.utils import safe_lookup
 
-__all__ = ('Method', 'TestMethod',)
+__all__ = (
+    "Method",
+    "TestMethod",
+)
 
 
 class Method:
@@ -37,7 +40,9 @@ class Method:
             if not parameter.default == self.signature.empty:
                 self.last_kwargs[parameter.name] = parameter.default
             else:
-                self.last_kwargs[parameter.name] = DEFAULT_VALUES.get(parameter.annotation)
+                self.last_kwargs[parameter.name] = DEFAULT_VALUES.get(
+                    parameter.annotation
+                )
 
     def find_method(self):
         return safe_lookup(self.driver, self.where)
@@ -51,9 +56,11 @@ class Method:
 
 class TestMethod(Method):
     def find_method(self):
-        def mocked(x: float, y: int, z: str) -> float: return 5
+        def mocked(x: float, y: int, z: str) -> float:
+            return 5
+
         return mocked
 
     def call(self, *args, **kwargs):
-        print(f'Calling {self.name}: args={args}, kwargs={kwargs}')
+        print(f"Calling {self.name}: args={args}, kwargs={kwargs}")
         super().call(*args, **kwargs)

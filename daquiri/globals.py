@@ -1,3 +1,3 @@
-__all__ = ('APP',)
+__all__ = ("APP",)
 
 APP = None

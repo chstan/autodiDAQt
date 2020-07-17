@@ -22,7 +22,7 @@ class TestDataclass:
 
 
 class TestPanel(Panel):
-    SIZE = (1200, 800)
+    SIZE = (1200, 900)
     a = TestDataclass()
     b = TestDataclass()
 

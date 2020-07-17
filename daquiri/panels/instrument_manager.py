@@ -1,46 +1,54 @@
-from PyQt5 import QtCore
-
 from loguru import logger
+from PyQt5 import QtCore
 from pyqt_led import Led
 
 from daquiri.panel import Panel
-from daquiri.ui import grid, CollectUI, horizontal, vertical, button, led
+from daquiri.ui import CollectUI, button, grid, horizontal, led, vertical
 
-__all__ = ('InstrumentManager',)
+__all__ = ("InstrumentManager",)
 
 
 class InstrumentManager(Panel):
-    TITLE = 'Instruments'
+    TITLE = "Instruments"
     SIZE = (50, 50)
     DEFAULT_OPEN = True
 
     def client_panel_will_close(self, name):
-        self._panels[name]['indicator'].set_status(False)
-        self._panels[name]['indicator'].update()
+        self._panels[name]["indicator"].set_status(False)
+        self._panels[name]["indicator"].update()
 
     def launch_panel(self, name):
-        logger.info(f'Instrument Manager: Opening panel {name}')
+        logger.info(f"Instrument Manager: Opening panel {name}")
 
-        if self._panels[name]['panel'] is None:
+        if self._panels[name]["panel"] is None:
             # Open
             panel_cls = self.app.managed_instruments[name].panel_cls
-            w = panel_cls(parent=self, id=name, app=self.app,
-                          instrument_actor=self.app.managed_instruments[name],
-                          instrument_description=self.app.managed_instruments[name].ui_specification)
+            w = panel_cls(
+                parent=self,
+                id=name,
+                app=self.app,
+                instrument_actor=self.app.managed_instruments[name],
+                instrument_description=self.app.managed_instruments[
+                    name
+                ].ui_specification,
+            )
             self.app.managed_instruments[name].panel = w
-            self._panels[name]['panel'] = w
+            self._panels[name]["panel"] = w
             w.show()
         else:
             # Focus
-            w = self._panels[name]['panel']
+            w = self._panels[name]["panel"]
             w.setWindowState(
-                w.windowState() & ~QtCore.Qt.WindowMinimized | QtCore.Qt.WindowActive | QtCore.Qt.WindowStaysOnTopHint)
+                w.windowState() & ~QtCore.Qt.WindowMinimized
+                | QtCore.Qt.WindowActive
+                | QtCore.Qt.WindowStaysOnTopHint
+            )
             w.activateWindow()
             w.show()
             w.setWindowFlags(w.windowFlags() & ~QtCore.Qt.WindowStaysOnTopHint)
             w.show()
 
-        indicator = self._panels[name]['indicator']
+        indicator = self._panels[name]["indicator"]
         indicator.turn_on()
         indicator.update()
 
@@ -48,12 +56,8 @@ class InstrumentManager(Panel):
         super().__init__(*args, defer_layout=True, **kwargs)
 
         self._panels = {
-            k: {
-                'panel': None,
-                'running': False,
-                'indicator': None,
-                'restart': None,
-            } for k, C in self.app.managed_instrument_classes.items()
+            k: {"panel": None, "running": False, "indicator": None, "restart": None,}
+            for k, C in self.app.managed_instrument_classes.items()
         }
         self.panel_order = sorted(list(self._panels.keys()))
 
@@ -71,12 +75,26 @@ class InstrumentManager(Panel):
         ui = {}
         with CollectUI(ui):
             grid(
-                'Instrument Manager',
+                "Instrument Manager",
                 horizontal(
-                    vertical(*[button(f'Restart {panel_name}', id=f'restart-{panel_name}')
-                               for panel_name in self.panel_order], spacing=8),
-                    vertical(*[led(None, shape=Led.circle, id='indicator-{}'.format(panel_name))
-                               for panel_name in self.panel_order], spacing=8),
+                    vertical(
+                        *[
+                            button(f"Restart {panel_name}", id=f"restart-{panel_name}")
+                            for panel_name in self.panel_order
+                        ],
+                        spacing=8,
+                    ),
+                    vertical(
+                        *[
+                            led(
+                                None,
+                                shape=Led.circle,
+                                id="indicator-{}".format(panel_name),
+                            )
+                            for panel_name in self.panel_order
+                        ],
+                        spacing=8,
+                    ),
                     spacing=8,
                 ),
                 content_margin=20,
@@ -84,9 +102,10 @@ class InstrumentManager(Panel):
             )
 
         for k in self.panel_order:
+
             def bind_panel(name):
                 return lambda _: self.launch_panel(name=name)
 
-            ui[f'restart-{k}'].subject.subscribe(bind_panel(k))
-            self._panels[k]['indicator'] = ui[f'indicator-{k}']
-            self._panels[k]['restart'] = ui[f'restart-{k}']
+            ui[f"restart-{k}"].subject.subscribe(bind_panel(k))
+            self._panels[k]["indicator"] = ui[f"indicator-{k}"]
+            self._panels[k]["restart"] = ui[f"restart-{k}"]

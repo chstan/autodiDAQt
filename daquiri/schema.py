@@ -27,7 +27,7 @@ class ArrayType:
 DEFAULT_VALUES = {
     int: 0,
     float: 0,
-    str: '',
+    str: "",
 }
 
 

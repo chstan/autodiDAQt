@@ -1,7 +1,8 @@
 from dataclasses import dataclass
+
 import numpy as np
 
-from daquiri import Daquiri, ManagedInstrument, Experiment
+from daquiri import Daquiri, Experiment, ManagedInstrument
 from daquiri.instrument.spec import MockDriver, axis
 from daquiri.mock import MockMotionController
 from daquiri.schema import ArrayType
@@ -39,11 +40,8 @@ class SimpleScan:
 
     def sequence(self, experiment, mc, ccd, power_meter, **kwargs):
         experiment.collate(
-            independent=[[mc.stages[0], 'dx']],
-            dependent=[
-                [ccd.device, 'spectrum'],
-                [power_meter.device, 'power'],
-            ]
+            independent=[[mc.stages[0], "dx"]],
+            dependent=[[ccd.device, "spectrum"], [power_meter.device, "power"],],
         )
 
         for loc in np.linspace(self.start, self.stop, self.n_steps):
@@ -59,16 +57,20 @@ class SimpleScan:
 
 
 class MyExperiment(Experiment):
-    scan_methods = [SimpleScan,]
+    scan_methods = [
+        SimpleScan,
+    ]
 
 
-app = Daquiri(__name__, actors={
-    'experiment': MyExperiment,
-}, managed_instruments={
-    'mc': MockMotionController,
-    'ccd': MockImageDetector,
-    'power_meter': MockSimpleDetector,
-})
+app = Daquiri(
+    __name__,
+    actors={"experiment": MyExperiment,},
+    managed_instruments={
+        "mc": MockMotionController,
+        "ccd": MockImageDetector,
+        "power_meter": MockSimpleDetector,
+    },
+)
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     app.start()

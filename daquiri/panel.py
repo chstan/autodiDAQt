@@ -1,19 +1,22 @@
 from pathlib import Path
 from typing import Type
 
-from PyQt5.QtGui import QFontDatabase
-from matplotlib.backends.backend_qt5agg import (
-    FigureCanvasQTAgg as FigureCanvas,
-    NavigationToolbar2QT as NavigationToolbar,
-)
+from matplotlib.backends.backend_qt5agg import \
+    FigureCanvasQTAgg as FigureCanvas
+from matplotlib.backends.backend_qt5agg import \
+    NavigationToolbar2QT as NavigationToolbar
 from matplotlib.figure import Figure
-
-from PyQt5.QtWidgets import QWidget, QPushButton, QGridLayout, QLabel, QApplication, QMainWindow, QVBoxLayout
+from PyQt5.QtGui import QFontDatabase
+from PyQt5.QtWidgets import (QApplication, QGridLayout, QLabel, QMainWindow,
+                             QPushButton, QVBoxLayout, QWidget)
 
 from daquiri.state import PanelState
 from daquiri.utils import default_stylesheet
 
-__all__ = ('Panel', 'open_appless_panel',)
+__all__ = (
+    "Panel",
+    "open_appless_panel",
+)
 
 
 def figure(figsize=None, toolbar=None):
@@ -31,11 +34,15 @@ class Panel(QWidget):
     """
     A base class for windows that attach to the main application.
     """
-    TITLE = 'Panel'
-    CLOSE_TEXT = 'Close'
+
+    TITLE = "Panel"
+    CLOSE_TEXT = "Close"
     DEFAULT_OPEN = False
     RESTART = False
-    SIZE = (600, 600,)
+    SIZE = (
+        600,
+        600,
+    )
 
     def collect_state(self) -> PanelState:
         return PanelState(geometry=self.geometry())
@@ -97,7 +104,7 @@ class Panel(QWidget):
     def layout(self):
         layout = QGridLayout()
 
-        label = QLabel('A label')
+        label = QLabel("A label")
         layout.addWidget(label)
         layout.addWidget(self.close_button)
 
@@ -105,10 +112,11 @@ class Panel(QWidget):
 
 
 def open_appless_panel(panel_cls: Type[Panel]):
+    import asyncio
     app = QApplication([])
     font_db = QFontDatabase()
 
-    for font in (Path(__file__).parent / 'resources' / 'fonts').glob('*.ttf'):
+    for font in (Path(__file__).parent / "resources" / "fonts").glob("*.ttf"):
         font_db.addApplicationFont(str(font))
 
     app.setStyleSheet(default_stylesheet())
@@ -117,7 +125,18 @@ def open_appless_panel(panel_cls: Type[Panel]):
         def client_panel_will_close(self, _):
             app.exit()
 
-    window_widget = panel_cls(parent=FauxParent(), id='appless', app=None)
+    class Hooks:
+        qt_app = None
+
+        def __init__(self, qt_app):
+            self.qt_app = qt_app
+
+        async def process_events(self):
+            while True:
+                await asyncio.sleep(0.03)
+                self.qt_app.processEvents()
+
+    window_widget = panel_cls(parent=FauxParent(), id="appless", app=None)
 
     window = QMainWindow()
     window.setCentralWidget(window_widget)
@@ -127,8 +146,7 @@ def open_appless_panel(panel_cls: Type[Panel]):
     window.resize(*panel_cls.SIZE)
 
     window.app = None
-
     window.show()
-    app.exec_()
-
-    return window
+    loop = asyncio.get_event_loop()
+    asyncio.ensure_future(Hooks(app).process_events())
+    loop.run_forever()

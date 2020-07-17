@@ -1,4 +1,4 @@
-__all__ = ('InterlockException',)
+__all__ = ("InterlockException",)
 
 
 class InterlockException(Exception):

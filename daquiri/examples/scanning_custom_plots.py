@@ -1,6 +1,7 @@
-import numpy as np
 import itertools
 from dataclasses import dataclass
+
+import numpy as np
 
 from daquiri import Daquiri, Experiment
 from daquiri.mock import MockMotionController, MockScalarDetector
@@ -12,9 +13,17 @@ class XScan:
     n_points_y: int = 20
 
     def sequence(self, experiment, mc, power_meter):
-        experiment.plot(dependent='power_meter.device', independent=['mc.stages[0]'], name='Line Plot')
-        experiment.plot(dependent='power_meter.device', independent=['mc.stages[0]', 'mc.stages[1]'], name='Power',
-                        size=lambda value: np.abs(value))
+        experiment.plot(
+            dependent="power_meter.device",
+            independent=["mc.stages[0]"],
+            name="Line Plot",
+        )
+        experiment.plot(
+            dependent="power_meter.device",
+            independent=["mc.stages[0]", "mc.stages[1]"],
+            name="Power",
+            size=lambda value: np.abs(value),
+        )
 
         for x, y in itertools.product(range(self.n_points_x), (range(self.n_points_y))):
             with experiment.point():
@@ -26,10 +35,12 @@ class MyExperiment(Experiment):
     scan_methods = [XScan]
 
 
-app = Daquiri(__name__, {}, {'experiment': MyExperiment}, {
-    'mc': MockMotionController,
-    'power_meter': MockScalarDetector,
-})
+app = Daquiri(
+    __name__,
+    {},
+    {"experiment": MyExperiment},
+    {"mc": MockMotionController, "power_meter": MockScalarDetector,},
+)
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     app.start()

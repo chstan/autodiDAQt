@@ -1,9 +1,11 @@
 from dataclasses import dataclass
+
 import numpy as np
 
 from daquiri import Daquiri
-from daquiri.mock import MockMotionController, MockScalarDetector
 from daquiri.experiment import Experiment
+from daquiri.mock import MockMotionController, MockScalarDetector
+
 
 @dataclass
 class SimpleScan:
@@ -17,15 +19,19 @@ class SimpleScan:
 
     def sequence(self, experiment, mc, power_meter, **kwargs):
         experiment.collate(
-            independent=[[mc.stages[0], 'dx']],
-            dependent=[[power_meter.device, 'power'],]
+            independent=[[mc.stages[0], "dx"]],
+            dependent=[[power_meter.device, "power"],],
         )
 
         for i, x in enumerate(np.linspace(self.start, self.stop, self.n_steps)):
             with experiment.point():
-                experiment.comment(f'Starting point at step {i}')
-                yield [mc.stages[0].write(x),]
-                yield [power_meter.device.read(),]
+                experiment.comment(f"Starting point at step {i}")
+                yield [
+                    mc.stages[0].write(x),
+                ]
+                yield [
+                    power_meter.device.read(),
+                ]
 
 
 @dataclass
@@ -47,22 +53,14 @@ class TwoAxisScan:
 
     def sequence(self, experiment, mc, power_meter, **kwargs):
         experiment.collate(
-            independent=[
-                [mc.stages[0], 'dx'],
-                [mc.stages[1], 'dy']
-            ],
-            dependent=[
-                [power_meter.device, 'power']
-            ]
+            independent=[[mc.stages[0], "dx"], [mc.stages[1], "dy"]],
+            dependent=[[power_meter.device, "power"]],
         )
 
         for x in np.linspace(self.start_x, self.stop_x, self.n_steps_x):
             for y in np.linspace(self.start_y, self.stop_y, self.n_steps_y):
                 with experiment.point():
-                    yield [
-                        mc.stages[0].write(x),
-                        mc.stages[1].write(y)
-                    ]
+                    yield [mc.stages[0].write(x), mc.stages[1].write(y)]
                     yield [power_meter.device.read()]
 
 
@@ -70,12 +68,14 @@ class MyExperiment(Experiment):
     scan_methods = [SimpleScan, TwoAxisScan]
 
 
-app = Daquiri(__name__, actors={
-    'experiment': MyExperiment,
-}, managed_instruments={
-    'mc': MockMotionController,
-    'power_meter': MockScalarDetector,
-})
+app = Daquiri(
+    __name__,
+    actors={"experiment": MyExperiment,},
+    managed_instruments={
+        "mc": MockMotionController,
+        "power_meter": MockScalarDetector,
+    },
+)
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     app.start()

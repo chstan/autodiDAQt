@@ -1,14 +1,14 @@
+import itertools
 from dataclasses import dataclass
 from enum import Enum
 
-import itertools
 import numpy as np
 
 from daquiri import Daquiri
-from daquiri.instrument import ManagedInstrument
-from daquiri.instrument.spec import MockDriver, AxisSpecification
-from daquiri.mock import MockMotionController
 from daquiri.experiment import Experiment
+from daquiri.instrument import ManagedInstrument
+from daquiri.instrument.spec import AxisSpecification, MockDriver
+from daquiri.mock import MockMotionController
 from daquiri.schema import ArrayType
 
 
@@ -21,18 +21,23 @@ class MockImageDetector(ManagedInstrument):
 
     By mocking, we can coarsely test our DAQ programs even if we have none or only some of the physical hardware.
     """
-    driver_cls = MockDriver # <- specifies that we should always be mocking this instrument
+
+    driver_cls = (
+        MockDriver  # <- specifies that we should always be mocking this instrument
+    )
     device = AxisSpecification(
-        ArrayType([250, 250], float), where=['device'],
-        mock=dict(read=lambda: np.random.random((250, 250)))  # <- specifies how we want to fake reads
+        ArrayType([250, 250], float),
+        where=["device"],
+        mock=dict(
+            read=lambda: np.random.random((250, 250))
+        ),  # <- specifies how we want to fake reads
     )
 
 
 class MockSimpleDetector(ManagedInstrument):
     driver_cls = MockDriver
     device = AxisSpecification(
-        float, where=['device'],
-        mock=dict(read=lambda: np.random.normal() + 5)
+        float, where=["device"], mock=dict(read=lambda: np.random.normal() + 5)
     )
 
 
@@ -85,19 +90,18 @@ class SimpleScan:
         Additionally, we record the full metadata and DAQ sequence, always.
         """
         experiment.collate(
-            independent=[[mc.stages[0], 'dx']],
-            dependent=[
-                [power_meter.device, 'power'],
-                [ccd.device, 'spectrum']
-            ]
+            independent=[[mc.stages[0], "dx"]],
+            dependent=[[power_meter.device, "power"], [ccd.device, "spectrum"]],
         )
 
         for step_i in range(self.n_steps):
             with experiment.point():
-                experiment.comment(f'Starting point at step {step_i}')
+                experiment.comment(f"Starting point at step {step_i}")
 
                 # move the stages
-                next_location = self.start + (self.stop - self.start) * step_i / self.n_steps
+                next_location = (
+                    self.start + (self.stop - self.start) * step_i / self.n_steps
+                )
                 motions = [mc.stages[0].write(next_location)]
                 daq = [
                     ccd.device.read(),
@@ -128,13 +132,8 @@ class TwoAxisScan:
 
     def sequence(self, experiment, mc, power_meter, **kwargs):
         experiment.collate(
-            independent=[
-                [mc.stages[0], 'dx'],
-                [mc.stages[1], 'dy']
-            ],
-            dependent=[
-                [power_meter.device, 'power']
-            ]
+            independent=[[mc.stages[0], "dx"], [mc.stages[1], "dy"]],
+            dependent=[[power_meter.device, "power"]],
         )
 
         for step_x in range(self.n_steps_x):
@@ -144,10 +143,7 @@ class TwoAxisScan:
                 next_y = self.interp(self.start_y, self.stop_y, self.n_steps_y, step_y)
 
                 with experiment.point():
-                    yield [
-                        mc.stages[0].write(next_x),
-                        mc.stages[1].write(next_y)
-                    ]
+                    yield [mc.stages[0].write(next_x), mc.stages[1].write(next_y)]
                     yield [power_meter.device.read()]
 
 
@@ -155,13 +151,15 @@ class MyExperiment(Experiment):
     scan_methods = [SimpleScan, TwoAxisScan]
 
 
-app = Daquiri(__name__, actors={
-    'experiment': MyExperiment,
-}, managed_instruments={
-    'mc': MockMotionController,
-    'ccd': MockImageDetector,
-    'power_meter': MockSimpleDetector,
-})
+app = Daquiri(
+    __name__,
+    actors={"experiment": MyExperiment,},
+    managed_instruments={
+        "mc": MockMotionController,
+        "ccd": MockImageDetector,
+        "power_meter": MockSimpleDetector,
+    },
+)
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     app.start()
