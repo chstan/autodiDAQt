@@ -52,6 +52,7 @@ from PyQt5.QtWidgets import (QGridLayout, QGroupBox, QHBoxLayout, QLabel,
 from pyqt_led import Led
 
 from daquiri.utils import enum_mapping, enum_option_names
+from daquiri.ui.lens import Lens
 from daquiri.widgets import *
 
 __all__ = (
@@ -59,6 +60,7 @@ __all__ = (
     # layouts
     "layout",
     "grid",
+    "sized_grid",
     "vertical",
     "horizontal",
     "splitter",
@@ -200,6 +202,48 @@ grid = functools.partial(layout, layout_cls=QGridLayout)
 vertical = functools.partial(layout, layout_cls=QVBoxLayout)
 horizontal = functools.partial(layout, layout_cls=QHBoxLayout)
 
+@ui_builder
+def sized_grid(children, column_stretch=None, row_stretch=None, margin=0, content_margin=0, spacing=0, widget=None):
+    if row_stretch:
+        n_rows = len(row_stretch)
+    else:
+        n_rows = max(*[k[0] for k in children.keys()])
+        row_stretch = [1] * n_rows
+    
+    if column_stretch:
+        n_columns = len(column_stretch)
+    else:
+        n_columns = max(*[k[1] for k in children.keys()])
+        column_stretch = [1 / n_columns] * n_columns
+
+    layout = QGridLayout()
+    layout.setMargin(margin)
+    if isinstance(content_margin, (int, float, str)):
+        content_margin = [content_margin] * 4
+    
+    layout.setContentsMargins(*content_margin)
+
+    for row_i, stretch in enumerate(row_stretch):
+        layout.setRowStretch(row_i, stretch)
+
+    for col_i, stretch in enumerate(column_stretch):
+        layout.setColumnStretch(col_i, stretch)
+
+    for (row, column), child in children.items():
+        layout.addWidget(child, row, column)
+
+
+    if widget is None:
+        widget = QWidget()
+    
+    widget.setLayout(layout)
+    return widget
+
+
+
+    
+
+    raise NotImplementedError
 
 @ui_builder
 def list_view():
@@ -287,13 +331,13 @@ def button(text, horiz_expand=False, *args):
 
 
 @ui_builder
-def check_box(text, *args):
-    return CheckBox(text, *args)
+def check_box(text, *args, **kwargs):
+    return CheckBox(text, *args, **kwargs)
 
 
 @ui_builder
-def combo_box(items, content_margin=8, *args):
-    widget = ComboBox(*args)
+def combo_box(items, content_margin=8, *args, **kwargs):
+    widget = ComboBox(*args, **kwargs)
     widget.addItems(items)
 
     if isinstance(content_margin, (int, float, str)):
@@ -306,8 +350,8 @@ def combo_box(items, content_margin=8, *args):
 
 
 @ui_builder
-def file_dialog(*args):
-    return FileDialog(*args)
+def file_dialog(*args, **kwargs):
+    return FileDialog(*args, **kwargs)
 
 
 @ui_builder
@@ -324,13 +368,13 @@ def line_edit(value, text_margin=8, *args):
 
 
 @ui_builder
-def radio_button(text, *args):
-    return RadioButton(text, *args)
+def radio_button(text, *args, **kwargs):
+    return RadioButton(text, *args, **kwargs)
 
 
 @ui_builder
-def slider(minimum=0, maximum=10, interval=None, horizontal=True):
-    widget = Slider(orientation=Qt.Horizontal if horizontal else Qt.Vertical)
+def slider(minimum=0, maximum=10, interval=None, horizontal=True, **kwargs):
+    widget = Slider(orientation=Qt.Horizontal if horizontal else Qt.Vertical, **kwargs)
     widget.setMinimum(minimum)
     widget.setMaximum(maximum)
 
@@ -356,11 +400,12 @@ def spin_box(
     adaptive=True,
     value=None,
     kind: type = int,
+    **kwargs,
 ):
     if kind == int:
-        widget = SpinBox()
+        widget = SpinBox(**kwargs)
     else:
-        widget = DoubleSpinBox()
+        widget = DoubleSpinBox(**kwargs)
 
     widget.setRange(minimum, maximum)
 
@@ -382,8 +427,8 @@ def spin_box(
 
 
 @ui_builder
-def text_edit(text="", *args):
-    return TextEdit(text, *args)
+def text_edit(text="", *args, **kwargs):
+    return TextEdit(text, *args, **kwargs)
 
 
 @ui_builder
@@ -392,7 +437,7 @@ def led(*args, **kwargs):
 
 
 @ui_builder
-def numeric_input(value=0, input_type: type = float, *args, validator_settings=None):
+def numeric_input(value=0, input_type: type = float, *args, subject=None, validator_settings=None, **kwargs):
     validators = {
         int: QtGui.QIntValidator,
         float: QtGui.QDoubleValidator,
@@ -405,7 +450,12 @@ def numeric_input(value=0, input_type: type = float, *args, validator_settings=N
     if validator_settings is None:
         validator_settings = default_settings.get(input_type)
 
-    widget = LineEdit(str(value), *args)
+    if isinstance(value, (Lens, rx.Observable)):
+        subject = value
+        value = subject.value
+
+
+    widget = LineEdit(str(value), *args, subject=subject, **kwargs)
     widget.setValidator(
         validators.get(input_type, QtGui.QIntValidator)(**validator_settings)
     )

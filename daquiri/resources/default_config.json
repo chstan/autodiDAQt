@@ -6,6 +6,7 @@
   "logging_directory": "out/logs",
   "log_format": "{time}-{user}-{session}",
 
+  "save_format": "zarr",
   "data_directory": "out/data",
   "data_format": "{user}/{date}-{time}-{session}-{run}",
 

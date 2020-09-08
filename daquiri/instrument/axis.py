@@ -53,7 +53,6 @@ class Axis:
     MOVING = 1
 
     raw_value_stream: Optional[Subject]
-    collected_value_stream: Optional[rx.Observable]
 
     def collect_state(self):
         return None
@@ -73,15 +72,13 @@ class Axis:
         self.name = name
         self.schema = schema
 
+        self.raw_value_stream = Subject()
+
         # for scalar schemas we can provide a stream of values
         if schema in (float, int,):
-            self.raw_value_stream = Subject()
             self.collected_xs = []
             self.collected_ys = []
             self.raw_value_stream.subscribe(self.append_point_to_history)
-        else:
-            self.raw_value_stream = None
-            self.collected_value_stream = None
 
     async def read(self):
         raise NotImplementedError("")
@@ -101,7 +98,6 @@ class Axis:
 
 class ManualAxis(Axis):
     raw_value_stream: Optional[Subject]
-    collected_value_stream: Optional[rx.Observable]
 
     def __init__(self, name, schema, axis_descriptor, instrument):
         super().__init__(name, schema)
@@ -310,8 +306,6 @@ class ProxiedAxis(Axis):
                     d = d[w]
 
             if not callable(d):
-                print("_bind sync", last, function_name)
-
                 def bound(value=None):
                     if value:
                         setattr(last, function_name, value)
@@ -320,7 +314,6 @@ class ProxiedAxis(Axis):
 
                 return bound
 
-            print("_bind", d)
             return d
 
         try:

@@ -1,9 +1,12 @@
 import contextlib
+import pickle
 import datetime
 import inspect
 import itertools
 import json
 import warnings
+import functools
+import operator
 from asyncio import QueueEmpty, gather, get_running_loop, sleep
 from collections import defaultdict, deque
 from copy import copy
@@ -33,14 +36,14 @@ class ScopedAccessRecorder:
         return ScanAccessRecorder(self.scope)[item]
 
 
-def _save_on_separate_thread(run, directory, collation, extra_attrs=None):
+def _save_on_separate_thread(run, directory, collation, extra_attrs=None, save_format="zarr"):
     if collation:
         try:
             collated = collation.to_xarray(run.daq_values)
         except:
             collated = None
 
-    run.save(directory, {"collated": collated}, extra_attrs=extra_attrs)
+    run.save(directory, {"collated": collated}, extra_attrs=extra_attrs, save_format=save_format)
 
 
 class FSM(Actor):
@@ -334,7 +337,7 @@ class Run:
         directory.mkdir(parents=True, exist_ok=True)
         return directory
 
-    def save(self, save_directory: Path, extra=None, extra_attrs=None):
+    def save(self, save_directory: Path, extra=None, extra_attrs=None, save_format="zarr"):
         if extra is None:
             extra = {}
 
@@ -377,7 +380,13 @@ class Run:
             time_dim = f"{stream_name}-time"
 
             peeked = data[0]
-            if isinstance(peeked, np.ndarray):
+            
+            # if the data consists of numpy arrays and they are the same shape, then we can
+            # create dimensions and axes for them. It would probably be better to specify this
+            # more directly. A few possible mechanisms exist:
+            #   - Allow data schemas to specify how they collate data/multiple observations
+            #   - Look at the schema value and special case ArrayType from ObjectType
+            if isinstance(peeked, np.ndarray) and functools.reduce(operator.eq, [arr.shape for arr in data]):
                 data = np.stack(data, axis=-1)
                 data_coords = {
                     f"dim_{i}": np.arange(s) for i, s in enumerate(peeked.shape)
@@ -415,13 +424,25 @@ class Run:
             ]
         )
         daq = daq.assign_attrs(extra_attrs)
-        daq.to_zarr(save_directory / "raw_daq.zarr")
 
-        for k, v in extra.items():
-            if v is None:
-                continue
+        if save_format == "zarr":
+            daq.to_zarr(save_directory / "raw_daq.zarr")
 
-            v.to_zarr(save_directory / f"{k}.zarr")
+            for k, v in extra.items():
+                if v is None:
+                    continue
+
+                v.to_zarr(save_directory / f"{k}.zarr")
+        elif save_format == "pickle":
+            with open(str(save_directory / "raw_daq.pickle"), "wb+") as fpickle:
+                pickle.dump(daq, fpickle, protocol=-1)
+            
+            for k, v in extra.items():
+                if v is None:
+                    continue
+
+                with open(str(save_directory / f"{k}.pickle"), "wb+") as fpickle:
+                    pickle.dump(v, fpickle, protocol=-1)
 
 
 class Experiment(FSM):
@@ -739,6 +760,7 @@ class Experiment(FSM):
                 directory,
                 self.collation,
                 extra_attrs=metadata_from_registrar,
+                save_format=self.app.config.save_format,
             )
         else:
             loop = get_running_loop()
@@ -749,6 +771,7 @@ class Experiment(FSM):
                 directory,
                 self.collation,
                 metadata_from_registrar,
+                self.app.config.save_format,
             )
 
         self.current_run = None

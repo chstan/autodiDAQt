@@ -30,9 +30,13 @@ class Subjective:
 
 
 class ComboBox(QComboBox, Subjective):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, subject=None, **kwargs):
         super().__init__(*args, **kwargs)
-        self.subject = BehaviorSubject(self.currentData())
+
+        self.subject = subject
+        if self.subject is None:
+            self.subject = BehaviorSubject(self.currentData())
+
         self.currentIndexChanged.connect(
             lambda: self.subject.on_next(self.currentText())
         )
@@ -44,9 +48,13 @@ class ComboBox(QComboBox, Subjective):
 
 
 class SpinBox(QSpinBox, Subjective):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, subject=None, **kwargs):
         super().__init__(*args, **kwargs)
-        self.subject = BehaviorSubject(self.value())
+
+        self.subject = subject
+        if self.subject is None:
+            self.subject = BehaviorSubject(self.value())
+
         self.valueChanged.connect(self.subject.on_next)
         self.subject.subscribe(self.update_ui)
 
@@ -55,9 +63,13 @@ class SpinBox(QSpinBox, Subjective):
 
 
 class TextEdit(QTextEdit, Subjective):
-    def __init__(self, *args):
+    def __init__(self, *args, subject=None):
         super().__init__(*args)
-        self.subject = BehaviorSubject(self.toPlainText())
+
+        self.subject = subject
+        if self.subject is None:
+            self.subject = BehaviorSubject(self.toPlainText())
+
         self.textChanged.connect(lambda: self.subject.on_next(self.toPlainText()))
         self.subject.subscribe(self.update_ui)
 
@@ -67,9 +79,13 @@ class TextEdit(QTextEdit, Subjective):
 
 
 class Slider(QSlider, Subjective):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, subject=None, **kwargs):
         super().__init__(*args, **kwargs)
-        self.subject = BehaviorSubject(self.value())
+
+        self.subject = subject
+        if self.subject is None:
+            self.subject = BehaviorSubject(self.value())
+
         self.valueChanged.connect(self.subject.on_next)
         self.subject.subscribe(self.update_ui)
 
@@ -78,9 +94,13 @@ class Slider(QSlider, Subjective):
 
 
 class LineEdit(QLineEdit, Subjective):
-    def __init__(self, *args):
+    def __init__(self, *args, subject=None):
         super().__init__(*args)
-        self.subject = BehaviorSubject(self.text())
+
+        self.subject = subject
+        if self.subject is None:
+            self.subject = BehaviorSubject(self.text())
+
         self.textChanged[str].connect(self.subject.on_next)
         self.subject.subscribe(self.update_ui)
 
@@ -90,9 +110,13 @@ class LineEdit(QLineEdit, Subjective):
 
 
 class RadioButton(QRadioButton, Subjective):
-    def __init__(self, *args):
+    def __init__(self, *args, subject=None):
         super().__init__(*args)
-        self.subject = BehaviorSubject(self.isChecked())
+
+        self.subject = subject
+        if self.subject is None:
+            self.subject = BehaviorSubject(self.isChecked())
+
         self.toggled.connect(lambda: self.subject.on_next(self.isChecked()))
         self.subject.subscribe(self.update_ui)
 
@@ -101,14 +125,17 @@ class RadioButton(QRadioButton, Subjective):
 
 
 class FileDialog(QWidget, Subjective):
-    def __init__(self, *args, single=True, dialog_root=None):
+    def __init__(self, *args, subject=None, single=True, dialog_root=None):
         if dialog_root is None:
             dialog_root = os.getcwd()
 
         super().__init__(*args)
 
         self.dialog_root = dialog_root
-        self.subject = BehaviorSubject(None)
+
+        self.subject = subject
+        if self.subject is None:
+            self.subject = BehaviorSubject(None)
 
         layout = QHBoxLayout()
         self.btn = PushButton("Open")
@@ -135,16 +162,23 @@ class FileDialog(QWidget, Subjective):
 
 
 class PushButton(QPushButton, Subjective):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, subject=None, **kwargs):
         super().__init__(*args)
-        self.subject = Subject()
+
+        self.subject = subject
+        if self.subject is None:
+            self.subject = Subject()
         self.clicked.connect(lambda: self.subject.on_next(True))
 
 
 class CheckBox(QCheckBox, Subjective):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, subject=None, **kwargs):
         super().__init__(*args)
-        self.subject = BehaviorSubject(self.checkState())
+
+        self.subject = subject
+        if self.subject is None:
+            self.subject = BehaviorSubject(self.checkState())
+
         self.stateChanged.connect(self.subject.on_next)
         self.subject.subscribe(self.update_ui)
 
@@ -153,9 +187,13 @@ class CheckBox(QCheckBox, Subjective):
 
 
 class SpinBox(QSpinBox, Subjective):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, subject=None, **kwargs):
         super().__init__(*args, **kwargs)
-        self.subject = BehaviorSubject(self.value())
+
+        self.subject = subject
+        if self.subject is None:
+            self.subject = BehaviorSubject(self.value())
+
         self.valueChanged.connect(self.subject.on_next)
         self.subject.subscribe(self.update_ui)
 
@@ -164,9 +202,13 @@ class SpinBox(QSpinBox, Subjective):
 
 
 class DoubleSpinBox(QDoubleSpinBox, Subjective):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, subject=None, **kwargs):
         super().__init__(*args, **kwargs)
-        self.subject = BehaviorSubject(self.value())
+
+        self.subject = subject
+        if self.subject is None:
+            self.subject = BehaviorSubject(self.value())
+
         self.valueChanged.connect(self.subject.on_next)
         self.subject.subscribe(self.update_ui)
 

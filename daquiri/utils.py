@@ -1,3 +1,4 @@
+from contextlib import contextmanager
 import asyncio
 import contextlib
 import datetime
@@ -15,6 +16,7 @@ __all__ = (
     "find_conflict_free_matches",
     "enum_option_names",
     "enum_mapping",
+    "temporary_attrs",
     "tokenize_access_path",
     "safe_lookup",
     "AccessRecorder",
@@ -28,6 +30,19 @@ DAQUIRI_LIB_ROOT = Path(__file__).parent.absolute()
 PathFragmentType = Union[str, int]
 PathType = Union[List[PathFragmentType], Tuple[PathFragmentType]]
 PathlikeType = Union[PathFragmentType, Path]
+
+@contextmanager
+def temporary_attrs(owner, **kwargs):
+    previous_values = {k: getattr(owner, k) for k in kwargs}
+
+    for k, v in kwargs.items():
+        setattr(owner, k, v)
+
+    try:
+        yield
+    finally:
+        for k, v in previous_values.items():
+            setattr(owner, k, v)
 
 
 def default_stylesheet() -> str:

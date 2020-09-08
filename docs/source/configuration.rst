@@ -23,6 +23,8 @@ Python dictionary literal:
      # The pattern used to make the log file name
      "log_format": "{time}-{user}-{session}",
 
+     # The kind of on-disk format to use for data, should be one of ["pickle", "zarr"]
+     "save_format": "zarr",
      # Where to keep output data
      "data_directory": "out/data",
      # Format for the data filenames
