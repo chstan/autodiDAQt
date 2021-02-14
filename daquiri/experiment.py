@@ -157,7 +157,6 @@ class FSM(Actor):
                 # NEVER TRUST THE USER, this ensures we yield back to the scheduler
                 await sleep(0)
 
-
 @dataclass
 class Collation:
     independent: Dict[Tuple[Union[str, int]], str] = None
@@ -234,6 +233,8 @@ class Collation:
                 yield collected
                 collected = [daq["data"]]
                 group = current_group
+        
+        yield collected
 
     @classmethod
     def iter_grouped(cls, daq_values, group_key="point"):
@@ -265,8 +266,9 @@ class Collation:
                 index = [
                     np.searchsorted(ds.coords[d].values, iter_coords[d])
                     for d in ds[kname].dims
+                    if d in iter_coords
                 ]
-                ds[kname].values[index] = value
+                ds[kname].values[tuple(index)] = value
 
         return ds
 
