@@ -6,7 +6,8 @@
   "scripts": {
     "watch-test": "pytest -c pytest-watch.ini",
     "watch-coverage": "pytest -c pytest-coverage.ini -f",
-    "test": "pytest -c pytest.ini"
+    "test": "pytest -c pytest.ini",
+    "coverage": "pytest -c pytest-coverage.ini"
   },
   "devDependencies": {
     "husky": "^4.2.3"
