@@ -2,6 +2,7 @@ from typing import Any, Dict
 
 __all__ = (
     "AttrDict",
+    "deep_update",
     "map_tree_leaves",
     "map_treelike_nodes",
 )
@@ -48,7 +49,7 @@ class AttrDict(dict):
     __setattr__ = dict.__setitem__
 
 
-def deep_update(src: Dict[Any, Any], dest: Dict[Any, Any]):
+def deep_update(src: Dict[Any, Any], dest: Dict[Any, Any]) -> Dict[Any, Any]:
     """
     Similar to ``dict.update``, except that we also ``deep_update``
     any dictionaries we find inside of the destination. This is useful for
@@ -70,7 +71,7 @@ def deep_update(src: Dict[Any, Any], dest: Dict[Any, Any]):
             deep_update(v, dest[k])
         else:
             dest[k] = v
-
+    return dest
 
 def map_treelike_nodes(tree, transform):
     if not isinstance(transform, dict):
