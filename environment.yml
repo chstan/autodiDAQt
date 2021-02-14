@@ -9,4 +9,5 @@ dependencies:
     - pytest
     - pytest-cov
     - pytest-asyncio
+    - pytest-mock
     - pytest-qt

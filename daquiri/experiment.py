@@ -57,7 +57,8 @@ class FSM(Actor):
     def __init__(self, app):
         super().__init__(app)
         self.state = self.STARTING_STATE
-        assert self.state in self.STATE_TABLE
+        assert self.state is not None, "Initial state must be specified"
+        assert self.state in self.STATE_TABLE, f"Initial state must be among {list(self.STATE_TABLE.keys())}"
 
     async def transition_to(self, transition, trigger):
         """
@@ -77,6 +78,7 @@ class FSM(Actor):
         from_state = self.state.lower()
         logger.info(f"{transition}, {trigger}")
         to_state = transition["to"].lower()
+
         try:
             f = getattr(self, f"leave_{from_state}")
         except AttributeError:
