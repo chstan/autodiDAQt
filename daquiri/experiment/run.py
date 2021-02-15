@@ -6,7 +6,7 @@ import warnings
 from collections import defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Union, Type
+from typing import Any, Dict, List, Type, Union
 
 import numpy as np
 import xarray as xr

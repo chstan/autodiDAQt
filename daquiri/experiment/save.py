@@ -1,9 +1,10 @@
-from daquiri.utils import RichEncoder
+import json
 import pickle
 from dataclasses import dataclass
 from pathlib import Path
-import json
-from typing import Dict, Any
+from typing import Any, Dict
+
+from daquiri.utils import RichEncoder
 
 __all__ = [
     "save_cls_from_short_name",

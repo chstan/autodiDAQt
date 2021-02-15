@@ -1,16 +1,13 @@
 import contextlib
 import datetime
+import enum
 import inspect
 import itertools
-from asyncio import QueueEmpty, gather, get_running_loop, sleep
+from asyncio import gather, get_running_loop, sleep
 from collections import deque
 from copy import copy
-from dataclasses import dataclass, field
-from typing import Dict, List, Set, Tuple, Union
+from typing import List, Tuple, Union
 
-import numpy as np
-import xarray as xr
-from daquiri.actor import Actor
 from daquiri.core import registrar
 from daquiri.interlock import InterlockException
 from daquiri.panels import ExperimentPanel
@@ -42,25 +39,42 @@ def _save_on_separate_thread(run, directory, collation, extra_attrs=None, save_f
 
     run.save(directory, {"collated": collated}, extra_attrs=extra_attrs, save_format=save_format)
 
+class ExperimentStates(str, enum.Enum):
+    Startup = "STARTUP"
+    Idle = "IDLE"
+    Running = "RUNNING"
+    Paused = "PAUSED"
+    Shutdown = "SHUTDOWN"
+
+class ExperimentTransitions(str, enum.Enum):
+    Initialize = "initialize"
+    Start = "start"
+    Shutdown = "shutdown"
+    Stop = "stop"
+    Pause = "pause"
+
+ES = ExperimentStates
+T = ExperimentTransitions
+
 class Experiment(FSM):
-    STARTING_STATE = "STARTUP"
+    STARTING_STATE = ES.Startup
     STATE_TABLE = {
-        "STARTUP": [{"match": "initialize", "to": "IDLE"}],
-        "IDLE": [
-            {"match": "start", "to": "RUNNING"},
-            {"match": "shutdown", "to": "SHUTDOWN"},
+        ES.Startup: [{"match": T.Initialize, "to": ES.Idle}],
+        ES.Idle: [
+            {"match": T.Start, "to": ES.Running},
+            {"match": T.Shutdown, "to": ES.Shutdown},
         ],
-        "RUNNING": [
-            {"match": "pause", "to": "PAUSED"},
-            {"match": "stop", "to": "IDLE"},
-            {"match": "shutdown", "to": "SHUTDOWN"},
+        ES.Running: [
+            {"match": T.Pause, "to": ES.Paused},
+            {"match": T.Stop, "to": ES.Idle},
+            {"match": T.Shutdown, "to": ES.Shutdown},
         ],
-        "PAUSED": [
-            {"match": "start", "to": "RUNNING",},
-            {"match": "stop", "to": "IDLE"},
-            {"match": "shutdown", "to": "SHUTDOWN"},
+        ES.Paused: [
+            {"match": T.Start, "to": ES.Running,},
+            {"match": T.Stop, "to": ES.Idle},
+            {"match": T.Shutdown, "to": ES.Shutdown},
         ],
-        "SHUTDOWN": [],
+        ES.Shutdown: [],
     }
 
     panel_cls = ExperimentPanel
@@ -81,7 +95,7 @@ class Experiment(FSM):
         except InterlockException as e:
             interlocks_passed = False
             logger.error(f"Interlock failed: {e}")
-            self.messages.put_nowait("stop")
+            self.messages.put_nowait(T.Stop)
 
         if interlocks_passed:
             if self.run_number is None:
@@ -196,7 +210,7 @@ class Experiment(FSM):
         self.ui.running_to_idle()
         if self.autoplay:
             if self.scan_deque:
-                self.messages.put_nowait("start")
+                self.messages.put_nowait(T.Start)
             else:
                 self.autoplay = False
 
@@ -212,7 +226,7 @@ class Experiment(FSM):
             except StopIteration:
                 # We're done! Time to save your data.
                 self.ui.soft_update(force=True, render_all=True)
-                self.messages.put_nowait("stop")
+                self.messages.put_nowait(T.Stop)
         else:
             async for data in self.current_run.sequence:
                 self.current_run.steps_taken.append(
@@ -223,7 +237,7 @@ class Experiment(FSM):
                     self.record_data(tokenize_access_path(qual_name), value)
 
             self.ui.soft_update(force=True, render_all=True)
-            self.messages.put_nowait("stop")
+            self.messages.put_nowait(T.Stop)
 
     def record_data(self, qual_name: Tuple, value: any):
         self.current_run.daq_values[qual_name].append(
@@ -262,7 +276,7 @@ class Experiment(FSM):
                     await precondition(self, **all_scopes)
         except Exception as e:
             logger.error(f"Failed precondition: {e}.")
-            self.messages.put_nowait("stop")
+            self.messages.put_nowait(T.Stop)
 
         if scope is None:
             return
@@ -330,7 +344,7 @@ class Experiment(FSM):
     async def run_startup(self, *_):
         # You can do any startup here if needed
         # otherwise we immediately transition to initialized
-        await self.messages.put("initialize")
+        await self.messages.put(T.Initialize)
 
     async def run_shutdown(self, *_):
         return
@@ -430,7 +444,7 @@ class AutoExperiment(Experiment):
         self.ui.running_to_idle()
         if self.autoplay:
             if self.scan_deque:
-                self.messages.put_nowait("start")
+                self.messages.put_nowait(T.Start)
             else:
                 self.autoplay = False
                 if self.exit_after_finish:
@@ -438,7 +452,7 @@ class AutoExperiment(Experiment):
                     raise KeyboardInterrupt("Stopping.")
 
     async def startup_to_idle(self, *_):
-        self.messages.put_nowait("start")
+        self.messages.put_nowait(T.Start)
 
     async def save(self, *_):
         if self.discard_data:
