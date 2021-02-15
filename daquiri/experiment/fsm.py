@@ -102,13 +102,16 @@ class FSM(Actor):
         """
         raise Exception(message)
 
+    async def read_one_message(self):
+        message = self.messages.get_nowait()
+        await self.fsm_handle_message(message)
+        self.messages.task_done()
+        
     async def run(self):
         while True:
             try:
                 while True:
-                    message = self.messages.get_nowait()
-                    await self.fsm_handle_message(message)
-                    self.messages.task_done()
+                    await self.read_one_message()
             except QueueEmpty:
                 f = getattr(self, "run_{}".format(self.state.lower()))
                 await f()
