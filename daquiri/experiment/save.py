@@ -59,7 +59,7 @@ class RunSaver:
         raise NotImplementedError("")
 
 
-class ZarrSaver:
+class ZarrSaver(RunSaver):
     short_name = "zarr"
 
     @staticmethod
@@ -93,7 +93,7 @@ class PickleSaver(RunSaver):
         PickleSaver.save_metadata(context.save_directory, metadata)
         PickleSaver.save_pickle(context.save_directory / "raw_daq.pickle", data)
         
-class ForgetfulSaver:
+class ForgetfulSaver(RunSaver):
     """
     This one doesn't do anything. This is useful if you are just
     trying to test something and don't actually want to produce data.
