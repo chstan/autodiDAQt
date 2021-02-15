@@ -106,17 +106,25 @@ class FSM(Actor):
         message = self.messages.get_nowait()
         await self.fsm_handle_message(message)
         self.messages.task_done()
-        
+    
+    async def read_all_messages(self):
+        """
+        This is mostly a convenience hook for testing,
+        but it also reduces nesting in the run definition slightly
+        """
+        try:
+            while True:
+                await self.read_one_message()
+        except QueueEmpty:
+            pass
+
+    async def run_current_state(self):
+        f = getattr(self, "run_{}".format(self.state.lower()))
+        await f()
+        # NEVER TRUST THE USER, this ensures we yield back to the scheduler
+        await sleep(0)
+    
     async def run(self):
         while True:
-            try:
-                while True:
-                    await self.read_one_message()
-            except QueueEmpty:
-                f = getattr(self, "run_{}".format(self.state.lower()))
-                await f()
-
-                # NEVER TRUST THE USER, this ensures we yield back to the scheduler
-                await sleep(0)
-
-
+            await self.read_all_messages()
+            await self.run_current_state()
