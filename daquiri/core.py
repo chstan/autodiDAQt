@@ -38,52 +38,7 @@ from daquiri.version import VERSION
 
 __all__ = (
     "Daquiri",
-    "registrar",
 )
-
-
-@dataclass
-class Registrar:
-    metadata_sources: Dict[str, Any] = field(default_factory=dict)
-
-    def collect_metadata(self) -> Dict[str, Any]:
-        return {k: v.collect() for k, v in self.metadata_sources.items()}
-
-    def register_source(self, source_name, source):
-        if source_name in self.metadata_sources:
-            raise ValueError(
-                f"{source_name} is already registered as a metadata source."
-            )
-
-        self.metadata_sources[source_name] = source
-
-    def metadata(self, attr_name: str, clear_buffer_on_collect=True):
-        buffer = []
-
-        def decorates(fn):
-            @wraps(fn)
-            def wrapper(*args, **kwargs):
-                value = fn(*args, **kwargs)
-                buffer.append(value)
-                return value
-
-            def collect() -> List[Any]:
-                collected = list(buffer)
-
-                if clear_buffer_on_collect:
-                    buffer.clear()
-
-                return collected
-
-            wrapper.collect = collect
-            self.register_source(attr_name, wrapper)
-
-            return wrapper
-
-        return decorates
-
-
-registrar = Registrar()
 
 USE_QUAMASH = False
 

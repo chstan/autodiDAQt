@@ -8,7 +8,7 @@ from collections import deque
 from copy import copy
 from typing import List, Tuple, Union
 
-from daquiri.core import registrar
+from daquiri.registrar import registrar
 from daquiri.interlock import InterlockException
 from daquiri.panels import ExperimentPanel
 from daquiri.utils import ScanAccessRecorder, tokenize_access_path
