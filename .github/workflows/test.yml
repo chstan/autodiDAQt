@@ -26,9 +26,13 @@ jobs:
     - name: Install dependencies
       run: |
         conda env create --file environment.yml 
+
+    # This is a little tricky apparently, the shell isn't actually inited. We can use source activative
+    # but a more reliable option long term is probably to init the shell, reload the shell's profile, and finally
+    # conda activating.
     - name: Source environment
       run: |
-        conda activate daquiri
+        source activate daquiri
 
     - name: Test with pytest and generate coverage
       run: |
@@ -44,4 +48,3 @@ jobs:
         fail_ci_if_error: true
         path_to_write_report: ./coverage/codecov_report.txt
         verbose: true
-        
