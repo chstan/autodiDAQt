@@ -2,13 +2,17 @@
  DAQuiri
 =========
 
-|docs_status| 
+|test_status| |coverage| |docs_status| 
 
 |example|
 
 .. |docs_status| image:: https://readthedocs.org/projects/daquiri/badge/?version=latest&style=flat
    :target: https://daquiri.readthedocs.io/en/latest/
+.. |coverage| image:: https://codecov.io/gh/chstan/daquiri/branch/master/graph/badge.svg?token=8M5ON9HZL2
+   :target: https://codecov.io/gh/chstan/daquiri
 .. |example| image:: docs/source/_static/daquiri-example.gif
+.. |test_status| image:: https://github.com/chstan/daquiri/workflows/CI%20with%20pytest/badge.svg?branch=master
+   :target: https://github.com/chstan/daquiri/actions
 
 
 daquiri := DAQ + UI generation + Reactivity + Instruments
