@@ -21,6 +21,17 @@ __all__ = (
     "PolledWrite",
 )
 
+@dataclass
+class BackoffConfig:
+    initial_time: float = 0.03
+    maximum_time: float = 0.2
+    backoff_ratio: float = 1.5
+
+    def next_duration(self, wait_time: Optional[float] = None) -> float:
+        if wait_time is None:
+            return self.initial_time
+
+        return min(self.maximum_time, self.backoff_ratio * wait_time)
 
 @dataclass
 class PolledWrite:
@@ -263,6 +274,8 @@ class LogicalAxis(Axis):
 
 
 class ProxiedAxis(Axis):
+    backoff = BackoffConfig()
+
     def __init__(self, name, schema, driver, where, read, write, settle):
         super().__init__(name, schema)
         self.where = where
@@ -283,13 +296,6 @@ class ProxiedAxis(Axis):
 
         if isinstance(write, str) or write is None:
             write = PolledWrite(write=write, poll=None)
-
-        # Exponential backoff constants, wait 30ms initially, then 45ms (30ms x 1.5) up to 200ms maximum
-        self.backoff = (
-            0.03,
-            1.5,
-            0.2,
-        )
 
         def _bind(function_name):
             d = driver
@@ -331,48 +337,40 @@ class ProxiedAxis(Axis):
             # A proxied detector only...
             pass
 
-    async def read(self):
+    async def read_internal(self):
         if self._status == AxisStatus.Idle:
             value = self._bound_read()
 
-            if asyncio.iscoroutine(value):
-                value = await value
-
-            self.emit(value)
-            return value
+            return await value if asyncio.iscoroutine(value) else value
         elif self._status == AxisStatus.Moving:
-            sleep_time, sleep_backoff, sleep_maximum = self.backoff
+            sleep_duration = self.backoff.next_duration()
 
             while True:
-                await asyncio.sleep(sleep_time)
+                await asyncio.sleep(sleep_duration)
+                sleep_duration = self.backoff.next_duration(sleep_duration)
+
                 if self._bound_poll_read():
                     self._status = AxisStatus.Idle
-                    value = self._bound_read()
-                    self.emit(value)
-                    return value
+                    return self._bound_read()
 
-                sleep_time *= sleep_backoff
-                sleep_time = sleep_maximum if sleep_time > sleep_maximum else sleep_time
-
-    async def write(self, value):
+    async def write_internal(self, value):
         if self._status == AxisStatus.Moving:
             raise ValueError("Already moving!")
 
+        self._bound_write(value)
         if self._bound_poll_write is not None:
             self._status = AxisStatus.Moving
-            self._bound_write(value)
-
-            sleep_time, sleep_backoff, sleep_maximum = self.backoff
+            sleep_duration = self.backoff.next_duration()
 
             while True:
-                await asyncio.sleep(sleep_time)
+                await asyncio.sleep(sleep_duration)
+                sleep_duration = self.backoff.next_duration()
 
                 if self._bound_poll_write():
                     self._status = AxisStatus.Idle
-                    return
-
-                sleep_time *= sleep_backoff
-                sleep_time = sleep_maximum if sleep_time > sleep_maximum else sleep_time
+                    break
+        
+        return value
 
     async def settle(self):
         """
@@ -381,18 +379,15 @@ class ProxiedAxis(Axis):
         :return:
         """
         if self._status == AxisStatus.Moving:
-            sleep_time, sleep_backoff, sleep_maximum = self.backoff
+            sleep_duration = self.backoff.next_duration()
 
             while True:
-                await asyncio.sleep(sleep_time)
+                await asyncio.sleep(sleep_duration)
+                sleep_duration = self.backoff.next_duration(sleep_duration)
 
                 if self._bound_poll_write():
                     self._status = AxisStatus.Idle
                     return
-
-                sleep_time *= sleep_backoff
-                sleep_time = sleep_maximum if sleep_time > sleep_maximum else sleep_time
-
 
 class TestAxis(Axis):
     def __init__(self, name, schema, mock=None, readonly=True, *args, **kwargs):
