@@ -1,7 +1,14 @@
 {
   "name": "daquiri",
   "version": "0.0.0",
+  "license": "MIT",
   "dependencies": {},
+  "scripts": {
+    "watch-test": "pytest -c pytest-config/pytest-watch.ini",
+    "watch-coverage": "pytest -c pytest-config/pytest-coverage.ini -f",
+    "test": "pytest -c pytest-config/pytest.ini",
+    "coverage": "pytest -c pytest-config/pytest-coverage.ini"
+  },
   "devDependencies": {
     "husky": "^4.2.3"
   },

@@ -41,7 +41,7 @@ class ArrayType:
         if self.shape is None:
             return None
         
-        return np.zeros(dtype=schema.dtype, shape=self.shape)
+        return np.zeros(dtype=self.dtype, shape=self.shape)
 
 
 DEFAULT_VALUES = {

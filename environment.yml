@@ -1,0 +1,13 @@
+name: daquiri
+channels:
+  - defaults
+dependencies:
+  - python=3.7.9
+  - pip
+  - pip:
+    - -e .
+    - pytest
+    - pytest-cov
+    - pytest-asyncio
+    - pytest-mock
+    - pytest-qt

@@ -156,7 +156,7 @@ def find_conflict_free_matches(constraints: Dict[str, List[T]]) -> Dict[str, T]:
     As an example, if given constraints
     constraints = {
         'a': [1, 2, 3],
-        'b: [2],
+        'b': [2],
         'c': [1],
     }
 

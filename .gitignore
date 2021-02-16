@@ -1,3 +1,14 @@
+# Editor related
+*.code-workspace
+
+# Yarn and NPM Related
+# We ignore the JS ecosystem lock files
+# because we only use npm as a well known
+# and friendly way of invoking scripts
+yarn.lock
+package-lock.json
+
+# General Python stuff
 *.egg
 *.egg/
 *.egg-info/
@@ -7,6 +18,7 @@ _build/
 build
 dist/
 .coverage
+coverage.xml
 .cache
 htmlcov
 *requirement*.txt

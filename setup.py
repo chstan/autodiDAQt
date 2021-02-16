@@ -68,6 +68,7 @@ requirements = [
 
     # other numerics
     'numpy',
+    'scipy',
 
     # zarr + xarray support
     'toolz',

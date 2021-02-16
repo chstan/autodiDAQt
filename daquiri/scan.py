@@ -17,8 +17,10 @@ __all__ = (
     "randomly",
     "forwards_and_backwards",
     "backwards",
-    "staircase_product",
     "only",
+
+    "staircase_product",
+    "step_together",
 )
 
 
@@ -159,16 +161,15 @@ class StaircaseProduct(ScanDegreeOfFreedom):
 
         forwards = True
         for outer in self.scan_outer.iterate(fields, base_name=f"outer_{base_name}"):
-            yield (outer, flat_inner[0] if forwards else flat_inner[-1])
             yield from zip(
                 itertools.cycle([outer]), flat_inner if forwards else flat_inner[::-1]
             )
             forwards = not forwards
-
+    
 
 def staircase_product(
     outer: ScanDegreeOfFreedom, inner: ScanDegreeOfFreedom
-) -> ScanDegreeOfFreedom:
+) -> StaircaseProduct:
     return StaircaseProduct(scan_outer=outer, scan_inner=inner)
 
 

@@ -1,10 +1,10 @@
+import enum
 import asyncio
 import datetime
 import warnings
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional
 
-import rx
 from rx.subject import Subject
 
 from daquiri.schema import default_value_for_schema
@@ -34,6 +34,11 @@ class PolledRead:
     poll: Optional[str] = None
 
 
+class AxisStatus(int, enum.Enum):
+    Idle = 0
+    Moving = 1
+
+
 class Axis:
     """
     Representation of an axis which can read values or write values.
@@ -49,8 +54,6 @@ class Axis:
     when values will be produced.
     """
 
-    IDLE = 0
-    MOVING = 1
 
     raw_value_stream: Optional[Subject]
 
@@ -80,17 +83,30 @@ class Axis:
             self.collected_ys = []
             self.raw_value_stream.subscribe(self.append_point_to_history)
 
-    async def read(self):
-        raise NotImplementedError("")
-
-    def sync_read(self):
-        raise NotImplementedError("")
-
     async def trigger(self):
+        return
+
+    async def write_internal(self, value):
         raise NotImplementedError("")
 
-    async def write(self, value):
+    async def read_internal(self) -> Any:
         raise NotImplementedError("")
+
+    def emit(self, value):
+        if self.raw_value_stream:
+            self.raw_value_stream.on_next(
+                {"value": value, "time": datetime.datetime.now().timestamp()}
+            )
+         
+    async def write(self, value):
+        value = await self.write_internal(value)
+        self.emit(value)
+        return value
+
+    async def read(self):
+        value = await self.read_internal()
+        self.emit(value)
+        return value
 
     async def settle(self):
         raise NotImplementedError("")
@@ -105,23 +121,11 @@ class ManualAxis(Axis):
         self.axis_descriptor = axis_descriptor
         self.instrument = instrument
 
-    async def write(self, value):
-        value = await self.axis_descriptor.fwrite(self.instrument, value)
+    async def write_internal(self, value):
+        return await self.axis_descriptor.fwrite(self.instrument, value)
 
-        if self.raw_value_stream:
-            self.raw_value_stream.on_next(
-                {"value": value, "time": datetime.datetime.now().timestamp()}
-            )
-
-        return value
-
-    async def read(self):
-        value = await self.axis_descriptor.fread(self.instrument)
-        if self.raw_value_stream:
-            self.raw_value_stream.on_next(
-                {"value": value, "time": datetime.datetime.now().timestamp()}
-            )
-        return value
+    async def read_internal(self):
+        return await self.axis_descriptor.fread(self.instrument)
 
 
 class TestManualAxis(ManualAxis):
@@ -129,17 +133,11 @@ class TestManualAxis(ManualAxis):
     def readonly(self):
         return self.axis_descriptor.fmockwrite is None
 
-    async def write(self, value):
-        await self.axis_descriptor.fmockwrite(self.instrument, value)
+    async def write_internal(self, value):
+        return await self.axis_descriptor.fmockwrite(self.instrument, value)
 
-    async def read(self):
-        value = await self.axis_descriptor.fmockread(self.instrument)
-        if self.raw_value_stream:
-            self.raw_value_stream.on_next(
-                {"value": value, "time": datetime.datetime.now().timestamp()}
-            )
-        return value
-
+    async def read_internal(self):
+        return await self.axis_descriptor.fmockread(self.instrument)
 
 class LogicalSubaxis(Axis):
     def __init__(self, name, schema, parent_axis, subaxis_name, index):
@@ -269,7 +267,7 @@ class ProxiedAxis(Axis):
         super().__init__(name, schema)
         self.where = where
         self.driver = driver
-        self._status = Axis.IDLE
+        self._status = AxisStatus.Idle
         self.readonly = write is None
 
         if read is None:
@@ -334,43 +332,34 @@ class ProxiedAxis(Axis):
             pass
 
     async def read(self):
-        if self._status == Axis.IDLE:
+        if self._status == AxisStatus.Idle:
             value = self._bound_read()
 
             if asyncio.iscoroutine(value):
                 value = await value
 
-            if self.raw_value_stream:
-                self.raw_value_stream.on_next(
-                    {"value": value, "time": datetime.datetime.now().timestamp()}
-                )
+            self.emit(value)
             return value
-        elif self._status == Axis.MOVING:
+        elif self._status == AxisStatus.Moving:
             sleep_time, sleep_backoff, sleep_maximum = self.backoff
 
             while True:
                 await asyncio.sleep(sleep_time)
                 if self._bound_poll_read():
-                    self._status = Axis.IDLE
+                    self._status = AxisStatus.Idle
                     value = self._bound_read()
-                    if self.raw_value_stream:
-                        self.raw_value_stream.on_next(
-                            {
-                                "value": value,
-                                "time": datetime.datetime.now().timestamp(),
-                            }
-                        )
+                    self.emit(value)
                     return value
 
                 sleep_time *= sleep_backoff
                 sleep_time = sleep_maximum if sleep_time > sleep_maximum else sleep_time
 
     async def write(self, value):
-        if self._status == Axis.MOVING:
+        if self._status == AxisStatus.Moving:
             raise ValueError("Already moving!")
 
         if self._bound_poll_write is not None:
-            self._status = Axis.MOVING
+            self._status = AxisStatus.Moving
             self._bound_write(value)
 
             sleep_time, sleep_backoff, sleep_maximum = self.backoff
@@ -379,7 +368,7 @@ class ProxiedAxis(Axis):
                 await asyncio.sleep(sleep_time)
 
                 if self._bound_poll_write():
-                    self._status = Axis.IDLE
+                    self._status = AxisStatus.Idle
                     return
 
                 sleep_time *= sleep_backoff
@@ -391,14 +380,14 @@ class ProxiedAxis(Axis):
         of course be provided.
         :return:
         """
-        if self._status == Axis.MOVING:
+        if self._status == AxisStatus.Moving:
             sleep_time, sleep_backoff, sleep_maximum = self.backoff
 
             while True:
                 await asyncio.sleep(sleep_time)
 
                 if self._bound_poll_write():
-                    self._status = Axis.IDLE
+                    self._status = AxisStatus.Idle
                     return
 
                 sleep_time *= sleep_backoff
@@ -423,11 +412,7 @@ class TestAxis(Axis):
         else:
             value = self._value
 
-        if self.raw_value_stream:
-            self.raw_value_stream.on_next(
-                {"value": value, "time": datetime.datetime.now().timestamp()}
-            )
-
+        self.emit(value)
         return value
 
     def sync_read(self):
@@ -436,15 +421,8 @@ class TestAxis(Axis):
         else:
             value = self._value
 
-        if self.raw_value_stream:
-            self.raw_value_stream.on_next(
-                {"value": value, "time": datetime.datetime.now().timestamp()}
-            )
-
+        self.emit(value)
         return value
-
-    async def trigger(self):
-        return
 
     async def write(self, value):
         if self._mock_write:
