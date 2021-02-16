@@ -18,6 +18,7 @@ _build/
 build
 dist/
 .coverage
+coverage.xml
 .cache
 htmlcov
 *requirement*.txt
