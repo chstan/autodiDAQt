@@ -30,12 +30,9 @@ jobs:
     # This is a little tricky apparently, the shell isn't actually inited. We can use source activative
     # but a more reliable option long term is probably to init the shell, reload the shell's profile, and finally
     # conda activating.
-    - name: Source environment
+    - name: Source environment, test with pytest and generate coverage
       run: |
         source activate daquiri
-
-    - name: Test with pytest and generate coverage
-      run: |
         python -m pytest -c pytest-config/pytest-coverage-codecov.ini
 
     - name: Upload coverage to Codecov
