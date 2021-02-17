@@ -299,66 +299,79 @@ class LogicalAxis(Axis):
         await asyncio.gather(*[axis.settle() for axis in self.physical_axes.values()])
 
 
+def _bind(function_name, driver, where):
+    d = driver
+    last = None
+    for w in where + [function_name]:
+        last = d
+        if w is None:
+            raise AttributeError()
+        if isinstance(w, str):
+            d = getattr(d, w)
+        else:
+            d = d[w]
+
+    if callable(d):
+        return d
+
+    if isinstance(function_name, str):
+        def bound(value=None):
+            if value:
+                setattr(last, function_name, value)
+            else:
+                return getattr(last, function_name)
+
+    else:
+        assert isinstance(function_name, int)
+        def bound(value=None):
+            if value:
+                last[function_name] = value
+            else:
+                return last[function_name]
+
+    return bound
+
 class ProxiedAxis(Axis):
     backoff = BackoffConfig()
+
+    _bound_write: Optional[Callable] = None
+    _bound_read: Optional[Callable] = None
+    _bound_poll_write: Optional[Callable] = None
+    _bound_poll_read: Optional[Callable] = None
 
     def __init__(self, name, schema, driver, where, read, write, settle):
         super().__init__(name, schema)
         self.where = where
         self.driver = driver
         self._status = AxisStatus.Idle
-        self.readonly = write is None
 
         if read is None:
             read = where[-1]
 
-            if write is not None:
+            if write is None:
                 write = where[-1]
 
             self.where = where[:-1]
 
-        if isinstance(read, str):
+        self.readonly = write is None
+
+        if isinstance(read, (str, int,)):
             read = PolledRead(read=read, poll=None)
 
-        if isinstance(write, str) or write is None:
+        if isinstance(write, (str, int,)) or write is None:
             write = PolledWrite(write=write, poll=None)
 
-        def _bind(function_name):
-            d = driver
-            last = None
-            for w in self.where + [function_name]:
-                last = d
-                if w is None:
-                    raise AttributeError()
-                if isinstance(w, str):
-                    d = getattr(d, w)
-                else:
-                    d = d[w]
-
-            if not callable(d):
-                def bound(value=None):
-                    if value:
-                        setattr(last, function_name, value)
-                    else:
-                        return getattr(last, function_name)
-
-                return bound
-
-            return d
-
         try:
-            self._bound_poll_read = _bind(read.poll)
-            self._bound_read = _bind(read.read)
+            self._bound_poll_read = _bind(read.poll, driver, self.where)
+            self._bound_read = _bind(read.read, driver, self.where)
         except AttributeError:
-            self._bound_poll_read = None
-            self._bound_read = _bind(read.read)
+            self._bound_read = _bind(read.read, driver, self.where)
         if write.write is not None:
             try:
-                self._bound_poll_write = _bind(write.poll)
-                self._bound_write = _bind(write.write)
+                self._bound_poll_write = _bind(write.poll, driver, self.where)
+                self._bound_write = _bind(write.write, driver, self.where)
             except AttributeError:
-                self._bound_poll_write = None
-                self._bound_write = _bind(write.write)
+                self._bound_write = _bind(write.write, driver, self.where)
         else:
             # A proxied detector only...
             pass
