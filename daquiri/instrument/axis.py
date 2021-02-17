@@ -369,41 +369,32 @@ class ProxiedAxis(Axis):
 
             return await value if asyncio.iscoroutine(value) else value
         elif self._status == AxisStatus.Moving:
-            sleep_duration = self.backoff.next_duration()
-
-            while True:
-                await asyncio.sleep(sleep_duration)
-                sleep_duration = self.backoff.next_duration(sleep_duration)
-
-                if self._bound_poll_read():
-                    self._status = AxisStatus.Idle
-                    return self._bound_read()
+            await self._settle(True)
+            return self._bound_read()
 
     async def write_internal(self, value):
         if self._status == AxisStatus.Moving:
             raise ValueError("Already moving!")
 
         self._bound_write(value)
+
         if self._bound_poll_write is not None:
             self._status = AxisStatus.Moving
-            sleep_duration = self.backoff.next_duration()
-
-            while True:
-                await asyncio.sleep(sleep_duration)
-                sleep_duration = self.backoff.next_duration()
-
-                if self._bound_poll_write():
-                    self._status = AxisStatus.Idle
-                    break
+            await self._settle(False)
         
         return value
 
     async def settle(self):
+        await self._settle(False)
+
+    async def _settle(self, poll_by_read=False):
         """
         The default behavior here is that an axis is settled once the async write as finished. Other behavior can
         of course be provided.
         :return:
         """
+        poll = self._bound_poll_read if poll_by_read else self._bound_poll_write
+
         if self._status == AxisStatus.Moving:
             sleep_duration = self.backoff.next_duration()
 
@@ -411,7 +402,7 @@ class ProxiedAxis(Axis):
                 await asyncio.sleep(sleep_duration)
                 sleep_duration = self.backoff.next_duration(sleep_duration)
 
-                if self._bound_poll_write():
+                if poll():
                     self._status = AxisStatus.Idle
                     return
 
@@ -428,28 +419,20 @@ class TestAxis(Axis):
         self.readonly = readonly
 
     async def read(self):
-        if self._mock_read:
-            value = self._mock_read()
-        else:
-            value = self._value
-
-        self.emit(value)
-        return value
-
-    def sync_read(self):
-        if self._mock_read:
-            value = self._mock_read()
-        else:
-            value = self._value
-
-        self.emit(value)
-        return value
+        return self.sync_read_internal()
 
     async def write(self, value):
+        return self.sync_write_internal(value)
+
+    def sync_read_internal(self):
+        return self._value if not self._mock_read else self._mock_read()
+
+    def sync_write_internal(self, value):
         if self._mock_write:
-            self._mock_write(value)
+            return self._mock_write(value)
         else:
             self._value = value
+            return value
 
     async def settle(self):
         if self._mock_settle:
