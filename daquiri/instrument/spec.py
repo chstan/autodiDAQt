@@ -53,7 +53,7 @@ class Specification:
         return axis_cls(key_name, driver_instance, instrument)
 
     def to_scan_axis(self, over, path, rest, *args, **kwargs):
-        raise NotImplementedError()
+        raise NotImplementedError
 
 
 class AxisDescriptor(Specification):
@@ -319,7 +319,7 @@ class PropertySpecification:
         return axis_cls(key_name, driver_instance, instrument)
 
     def to_scan_axis(self, over, path, *args, **kwargs):
-        raise NotImplementedError()
+        raise NotImplementedError
 
 
 class ChoicePropertySpecification(PropertySpecification):

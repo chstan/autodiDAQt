@@ -7,3 +7,7 @@ omit =
     daquiri/examples/*
     daquiri/ui.py
     daquiri/widgets.py
+
+[report]
+exclude_lines =
+    raise NotImplementedError

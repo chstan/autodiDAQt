@@ -104,10 +104,10 @@ class AxisView:
         return isinstance(self.axis.schema, ArrayType)
 
     def attach(self, ui):
-        raise NotImplementedError()
+        raise NotImplementedError
 
     def layout(self):
-        raise NotImplementedError()
+        raise NotImplementedError
 
 
 class ProxiedAxisView(AxisView):
