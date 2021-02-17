@@ -68,7 +68,7 @@ class ScanDegreeOfFreedom:
         return [(self.devices, name,)]
 
     def to_postfixless_fields(self) -> List[FieldSetType]:
-        raise NotImplementedError()
+        raise NotImplementedError
 
     def to_fields(self, base_name: str) -> List[FieldSetType]:
         def postfix(f: FieldSetType) -> FieldSetType:
@@ -82,7 +82,7 @@ class ScanDegreeOfFreedom:
         ]
 
     def iterate(self, fields: Any, base_name: str) -> Iterator[Any]:
-        raise NotImplementedError()
+        raise NotImplementedError
 
     def step(self, *strategies):
         return SimpleStrategyScan(self, strategies)

@@ -35,7 +35,7 @@ class RunSaver:
     
     @classmethod
     def save_run(cls, metadata, data, context: SaveContext):
-        raise NotImplementedError("")
+        raise NotImplementedError
 
     @staticmethod
     def save_pickle(path: Path, data):
@@ -56,7 +56,7 @@ class RunSaver:
 
     @staticmethod
     def save_user_extras(extra_data, context: SaveContext):
-        raise NotImplementedError("")
+        raise NotImplementedError
 
 
 class ZarrSaver(RunSaver):

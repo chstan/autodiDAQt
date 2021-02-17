@@ -17,7 +17,7 @@ class Actor:
         self.messages = asyncio.Queue()
 
     async def run(self):
-        raise NotImplementedError()
+        raise NotImplementedError
 
     def collect_state(self) -> ActorState:
         return ActorState()

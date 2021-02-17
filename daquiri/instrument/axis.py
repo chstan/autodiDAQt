@@ -64,8 +64,6 @@ class Axis:
     Additionally, measurements may take finite time, and in the case of event stream axes, you may not know
     when values will be produced.
     """
-
-
     raw_value_stream: Optional[Subject]
 
     def collect_state(self):
@@ -94,21 +92,41 @@ class Axis:
             self.collected_ys = []
             self.raw_value_stream.subscribe(self.append_point_to_history)
 
-    async def trigger(self):
-        return
-
-    async def write_internal(self, value):
-        raise NotImplementedError("")
-
-    async def read_internal(self) -> Any:
-        raise NotImplementedError("")
-
     def emit(self, value):
         if self.raw_value_stream:
             self.raw_value_stream.on_next(
                 {"value": value, "time": datetime.datetime.now().timestamp()}
             )
-         
+
+    async def trigger(self):
+        return
+
+    async def settle(self):
+        raise NotImplementedError
+
+    # We use a two level API in order to make the code here
+    # more straightforward. *_internal methods are virtual
+    # and set the internal behavior for an axis
+    # the high level API provides synchronous (if available) 
+    # and asynchronous bindings which also handle emitting 
+    # values for subscribers
+    async def write_internal(self, value):
+        raise NotImplementedError
+
+    async def read_internal(self) -> Any:
+        raise NotImplementedError
+
+    async def sync_write_internal(self, value):
+        raise NotImplementedError
+
+    async def sync_read_internal(self) -> Any:
+        raise NotImplementedError
+
+    # in general, you do not need to implement
+    # the top level methods, unless you need to control how
+    # values are emitted. You should be able to implement the 
+    # low level API above and be a client to the high level API
+    # below
     async def write(self, value):
         value = await self.write_internal(value)
         self.emit(value)
@@ -119,8 +137,16 @@ class Axis:
         self.emit(value)
         return value
 
-    async def settle(self):
-        raise NotImplementedError("")
+    def sync_read(self):
+        value = self.sync_read_internal()
+        self.emit(value)
+        return value
+
+    def sync_write(self, value):
+        value = self.sync_write_internal(value)
+        self.emit(value)
+        return value
+
 
 
 class ManualAxis(Axis):

@@ -22,10 +22,10 @@ class Property:
         self.name = name
 
     def set(self, value):
-        raise NotImplementedError()
+        raise NotImplementedError
 
     def get(self):
-        raise NotImplementedError()
+        raise NotImplementedError
 
 
 class SimpleProperty(Property):
