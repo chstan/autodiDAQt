@@ -155,6 +155,20 @@ class DaquiriMainWindow(QMainWindow):
 
         self.loop = loop
 
+def make_user_data_dataclass(profile_field: Optional[Any]) -> type:
+    if profile_field:
+        profile_fields = [profile_field]
+    else:
+        profile_fields = []
+            
+    return make_dataclass(
+        "UserData",
+        [
+            *profile_fields,
+            ("user", str, "global-user"),
+            ("session_name", str, "global-session"),
+        ],
+    )
 
 class Daquiri:
     """
@@ -220,25 +234,18 @@ class Daquiri:
         self.profile_enum = Enum(
             "UserProfile", dict(zip(self.config.profiles, self.config.profiles))
         )
-        self.user_cls = make_dataclass(
-            "UserData",
-            [
-                *(
-                    []
-                    if not self.config.use_profiles
-                    else [
-                        (
-                            "profile",
-                            self.profile_enum,
-                            self.profile_enum(list(self.config.profiles)[0]),
-                        )
-                    ]
-                ),
-                ("user", str, "global-user"),
-                ("session_name", str, "global-session"),
-            ],
-        )
+
+        # generate a dataclass for storing info about the user
+        profile_field = None
+        if self.config.use_profiles:
+            profile_field = (
+                "profile", 
+                self.profile_enum, 
+                self.profile_enum(list(self.config.profiles)[0]), 
+            )
+        self.user_cls = make_user_data_dataclass(profile_field)
         self.user = self.user_cls()
+
         self.meta = MetaData()
         self.app_state = AppState()
 
