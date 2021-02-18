@@ -41,7 +41,10 @@ class SimpleScan:
     def sequence(self, experiment, mc, ccd, power_meter, **kwargs):
         experiment.collate(
             independent=[[mc.stages[0], "dx"]],
-            dependent=[[ccd.device, "spectrum"], [power_meter.device, "power"],],
+            dependent=[
+                [ccd.device, "spectrum"],
+                [power_meter.device, "power"],
+            ],
         )
 
         for loc in np.linspace(self.start, self.stop, self.n_steps):
@@ -57,14 +60,12 @@ class SimpleScan:
 
 
 class MyExperiment(Experiment):
-    scan_methods = [
-        SimpleScan,
-    ]
+    scan_methods = [SimpleScan]
 
 
 app = Daquiri(
     __name__,
-    actors={"experiment": MyExperiment,},
+    actors={"experiment": MyExperiment},
     managed_instruments={
         "mc": MockMotionController,
         "ccd": MockImageDetector,

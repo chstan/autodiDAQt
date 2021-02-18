@@ -1,8 +1,11 @@
 import numpy as np
 
 from daquiri.instrument.managed_instrument import ManagedInstrument
-from daquiri.instrument.spec import (AxisListSpecification, AxisSpecification,
-                                     MockDriver)
+from daquiri.instrument.spec import (
+    AxisListSpecification,
+    AxisSpecification,
+    MockDriver,
+)
 from daquiri.schema import ArrayType
 
 __all__ = (
@@ -28,7 +31,7 @@ class MockMotionController(ManagedInstrument):
 class MockScalarDetector(ManagedInstrument):
     driver_cls = MockDriver
     device = AxisSpecification(
-        float, where=["device"], mock=dict(read=lambda: np.random.normal() + 5),
+        float, where=["device"], mock=dict(read=lambda: np.random.normal() + 5)
     )
 
 

@@ -1,13 +1,13 @@
 from dataclasses import dataclass
 
 import numpy as np
-from pymeasure.instruments.signalrecovery.dsp7265 import DSP7265
 
 from daquiri import Daquiri, Experiment
 from daquiri.instrument import AxisSpecification, ManagedInstrument
 from daquiri.instrument.spec import ChoicePropertySpecification
 from daquiri.mock import MockMotionController
 from daquiri.scan import scan
+from pymeasure.instruments.signalrecovery.dsp7265 import DSP7265
 
 
 class ManagedDSP7265(ManagedInstrument):
@@ -93,7 +93,7 @@ app = Daquiri(
     __name__,
     {},
     {"experiment": MyExperiment},
-    {"mc": MockMotionController, "lockin": ManagedDSP7265,},
+    {"mc": MockMotionController, "lockin": ManagedDSP7265},
 )
 
 if __name__ == "__main__":

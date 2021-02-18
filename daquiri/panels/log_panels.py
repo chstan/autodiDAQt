@@ -1,8 +1,8 @@
-from loguru import logger
 from PyQt5.QtWidgets import QPlainTextEdit
 
 from daquiri.panel import Panel
 from daquiri.ui import grid
+from loguru import logger
 
 __all__ = ("LogPanel",)
 
@@ -41,5 +41,7 @@ class LogPanel(Panel):
         self._log_handler = logger.add(self.on_log)
 
         grid(
-            self.log_table, self.close_button, widget=self,
+            self.log_table,
+            self.close_button,
+            widget=self,
         )

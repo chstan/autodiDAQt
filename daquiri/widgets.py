@@ -1,8 +1,20 @@
 import os
 
 from PyQt5.QtWidgets import (
-    QCheckBox, QComboBox, QDoubleSpinBox, QFileDialog, QHBoxLayout, QLineEdit,
-    QPushButton, QRadioButton, QSlider, QSpinBox, QTextEdit, QWidget)
+    QCheckBox,
+    QComboBox,
+    QDoubleSpinBox,
+    QFileDialog,
+    QHBoxLayout,
+    QLineEdit,
+    QPushButton,
+    QRadioButton,
+    QSlider,
+    QSpinBox,
+    QTextEdit,
+    QWidget,
+)
+
 from rx.subject import BehaviorSubject, Subject
 
 __all__ = (
@@ -37,9 +49,7 @@ class ComboBox(QComboBox, Subjective):
         if self.subject is None:
             self.subject = BehaviorSubject(self.currentData())
 
-        self.currentIndexChanged.connect(
-            lambda: self.subject.on_next(self.currentText())
-        )
+        self.currentIndexChanged.connect(lambda: self.subject.on_next(self.currentText()))
         self.subject.subscribe(self.update_ui)
 
     def update_ui(self, value):

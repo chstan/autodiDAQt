@@ -31,7 +31,7 @@ class Custom(Panel):
         bind_dataclass(self.value, prefix="value", ui=ui)
 
 
-app = Daquiri(__name__, {"Custom": Custom,})
+app = Daquiri(__name__, dict(Custom=Custom))
 
 if __name__ == "__main__":
     app.start()

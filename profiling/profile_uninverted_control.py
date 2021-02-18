@@ -26,8 +26,8 @@ class TwoAxisScan:
 
     async def sequence(self, experiment, mc, power_meter, **kwargs):
         experiment.collate(
-            independent=[['mc.stages[0]', 'dx'], ['mc.stages[1]', 'dy']],
-            dependent=[['power_meter.device', 'power']]
+            independent=[["mc.stages[0]", "dx"], ["mc.stages[1]", "dy"]],
+            dependent=[["power_meter.device", "power"]],
         )
 
         for x in np.linspace(self.start_x, self.stop_x, self.n_steps_x):
@@ -38,9 +38,11 @@ class TwoAxisScan:
                         mc.stages[1].write(y),
                     )
                     value = await power_meter.device.read()
-                    yield {'mc.stages[0]': x,
-                           'mc.stages[1]': y,
-                           'power_meter.device': value}
+                    yield {
+                        "mc.stages[0]": x,
+                        "mc.stages[1]": y,
+                        "power_meter.device": value,
+                    }
 
 
 class MyExperiment(AutoExperiment):
@@ -51,10 +53,15 @@ class MyExperiment(AutoExperiment):
     discard_data = True
 
 
-app = Daquiri(__name__, {}, {'experiment': MyExperiment}, {
-    'mc': MockMotionController,
-    'power_meter': MockScalarDetector,
-})
+app = Daquiri(
+    __name__,
+    {},
+    {"experiment": MyExperiment},
+    {
+        "mc": MockMotionController,
+        "power_meter": MockScalarDetector,
+    },
+)
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     app.start()

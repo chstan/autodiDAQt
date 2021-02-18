@@ -20,18 +20,14 @@ class SimpleScan:
     def sequence(self, experiment, mc, power_meter, **kwargs):
         experiment.collate(
             independent=[[mc.stages[0], "dx"]],
-            dependent=[[power_meter.device, "power"],],
+            dependent=[[power_meter.device, "power"]],
         )
 
         for i, x in enumerate(np.linspace(self.start, self.stop, self.n_steps)):
             with experiment.point():
                 experiment.comment(f"Starting point at step {i}")
-                yield [
-                    mc.stages[0].write(x),
-                ]
-                yield [
-                    power_meter.device.read(),
-                ]
+                yield [mc.stages[0].write(x)]
+                yield [power_meter.device.read()]
 
 
 @dataclass
@@ -70,11 +66,11 @@ class MyExperiment(Experiment):
 
 app = Daquiri(
     __name__,
-    actors={"experiment": MyExperiment,},
-    managed_instruments={
-        "mc": MockMotionController,
-        "power_meter": MockScalarDetector,
-    },
+    actors=dict(experiment=MyExperiment),
+    managed_instruments=dict(
+        mc=MockMotionController,
+        power_meter=MockScalarDetector,
+    ),
 )
 
 if __name__ == "__main__":

@@ -22,9 +22,7 @@ class MockImageDetector(ManagedInstrument):
     By mocking, we can coarsely test our DAQ programs even if we have none or only some of the physical hardware.
     """
 
-    driver_cls = (
-        MockDriver  # <- specifies that we should always be mocking this instrument
-    )
+    driver_cls = MockDriver  # <- specifies that we should always be mocking this instrument
     device = AxisSpecification(
         ArrayType([250, 250], float),
         where=["device"],
@@ -99,9 +97,7 @@ class SimpleScan:
                 experiment.comment(f"Starting point at step {step_i}")
 
                 # move the stages
-                next_location = (
-                    self.start + (self.stop - self.start) * step_i / self.n_steps
-                )
+                next_location = self.start + (self.stop - self.start) * step_i / self.n_steps
                 motions = [mc.stages[0].write(next_location)]
                 daq = [
                     ccd.device.read(),
@@ -143,7 +139,10 @@ class TwoAxisScan:
                 next_y = self.interp(self.start_y, self.stop_y, self.n_steps_y, step_y)
 
                 with experiment.point():
-                    yield [mc.stages[0].write(next_x), mc.stages[1].write(next_y)]
+                    yield [
+                        mc.stages[0].write(next_x),
+                        mc.stages[1].write(next_y),
+                    ]
                     yield [power_meter.device.read()]
 
 
@@ -153,7 +152,7 @@ class MyExperiment(Experiment):
 
 app = Daquiri(
     __name__,
-    actors={"experiment": MyExperiment,},
+    actors={"experiment": MyExperiment},
     managed_instruments={
         "mc": MockMotionController,
         "ccd": MockImageDetector,

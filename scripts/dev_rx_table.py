@@ -13,17 +13,19 @@ class TestPanel(Panel):
 
         with CollectUI(ui):
             vertical(
-                label('Test'),
+                label("Test"),
                 table_view(id="table"),
-                button('Add Row', id='submit'),
+                button("Add Row", id="submit"),
                 widget=self,
             )
 
-        tx_add = ui['submit'].subject.pipe(ops.map(lambda x: Transaction.add(new_value=pr.v(1, 2, 3))))
-        table_pattern = RxTablePattern(columns=['A', 'B', 'C'], add_row=tx_add)
+        tx_add = ui["submit"].subject.pipe(
+            ops.map(lambda x: Transaction.add(new_value=pr.v(1, 2, 3)))
+        )
+        table_pattern = RxTablePattern(columns=["A", "B", "C"], add_row=tx_add)
         table_pattern.values_with_history.subscribe(print)
         model = table_pattern.bind_to_model()
-        model.bind_to_ui(ui['table'])
+        model.bind_to_ui(ui["table"])
 
 
 def main():

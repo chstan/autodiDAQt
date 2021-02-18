@@ -1,9 +1,9 @@
-from loguru import logger
 from PyQt5 import QtCore
-from pyqt_led import Led
 
 from daquiri.panel import Panel
 from daquiri.ui import CollectUI, button, grid, horizontal, led, vertical
+from loguru import logger
+from pyqt_led import Led
 
 __all__ = ("InstrumentManager",)
 
@@ -28,9 +28,7 @@ class InstrumentManager(Panel):
                 id=name,
                 app=self.app,
                 instrument_actor=self.app.managed_instruments[name],
-                instrument_description=self.app.managed_instruments[
-                    name
-                ].ui_specification,
+                instrument_description=self.app.managed_instruments[name].ui_specification,
             )
             self.app.managed_instruments[name].panel = w
             self._panels[name]["panel"] = w
@@ -56,7 +54,12 @@ class InstrumentManager(Panel):
         super().__init__(*args, defer_layout=True, **kwargs)
 
         self._panels = {
-            k: {"panel": None, "running": False, "indicator": None, "restart": None,}
+            k: {
+                "panel": None,
+                "running": False,
+                "indicator": None,
+                "restart": None,
+            }
             for k, C in self.app.managed_instrument_classes.items()
         }
         self.panel_order = sorted(list(self._panels.keys()))

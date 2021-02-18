@@ -1,14 +1,21 @@
 from pathlib import Path
 from typing import Optional, Tuple, Type
 
-from matplotlib.backends.backend_qt5agg import \
-    FigureCanvasQTAgg as FigureCanvas
-from matplotlib.backends.backend_qt5agg import \
-    NavigationToolbar2QT as NavigationToolbar
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.backends.backend_qt5agg import (
+    NavigationToolbar2QT as NavigationToolbar,
+)
 from matplotlib.figure import Figure
 from PyQt5.QtGui import QFontDatabase
-from PyQt5.QtWidgets import (QApplication, QGridLayout, QLabel, QMainWindow,
-                             QPushButton, QVBoxLayout, QWidget)
+from PyQt5.QtWidgets import (
+    QApplication,
+    QGridLayout,
+    QLabel,
+    QMainWindow,
+    QPushButton,
+    QVBoxLayout,
+    QWidget,
+)
 
 from daquiri.state import PanelState
 from daquiri.utils import default_stylesheet
@@ -111,8 +118,9 @@ class Panel(QWidget):
         self.setLayout(layout)
 
 
-def open_appless_panel(panel_cls: Type[Panel]): # pragma: no cover
+def open_appless_panel(panel_cls: Type[Panel]):  # pragma: no cover
     import asyncio
+
     app = QApplication([])
     font_db = QFontDatabase()
 

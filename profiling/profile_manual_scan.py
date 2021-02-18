@@ -12,10 +12,15 @@ class MyExperiment(AutoExperiment):
     discard_data = True
 
 
-app = Daquiri(__name__, {}, {'experiment': MyExperiment}, {
-    'mc': MockMotionController,
-    'power_meter': MockScalarDetector,
-})
+app = Daquiri(
+    __name__,
+    {},
+    {"experiment": MyExperiment},
+    {
+        "mc": MockMotionController,
+        "power_meter": MockScalarDetector,
+    },
+)
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     app.start()

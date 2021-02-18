@@ -8,9 +8,9 @@ from collections import deque
 from copy import copy
 from typing import List, Tuple, Union
 
-from daquiri.registrar import registrar
 from daquiri.interlock import InterlockException
 from daquiri.panels import ExperimentPanel
+from daquiri.registrar import registrar
 from daquiri.utils import ScanAccessRecorder, tokenize_access_path
 from loguru import logger
 
@@ -37,7 +37,13 @@ def _save_on_separate_thread(run, directory, collation, extra_attrs=None, save_f
         except:
             collated = None
 
-    run.save(directory, {"collated": collated}, extra_attrs=extra_attrs, save_format=save_format)
+    run.save(
+        directory,
+        {"collated": collated},
+        extra_attrs=extra_attrs,
+        save_format=save_format,
+    )
+
 
 class ExperimentStates(str, enum.Enum):
     Startup = "STARTUP"
@@ -46,6 +52,7 @@ class ExperimentStates(str, enum.Enum):
     Paused = "PAUSED"
     Shutdown = "SHUTDOWN"
 
+
 class ExperimentTransitions(str, enum.Enum):
     Initialize = "initialize"
     Start = "start"
@@ -53,8 +60,10 @@ class ExperimentTransitions(str, enum.Enum):
     Stop = "stop"
     Pause = "pause"
 
+
 ES = ExperimentStates
 T = ExperimentTransitions
+
 
 class Experiment(FSM):
     STARTING_STATE = ES.Startup
@@ -70,7 +79,7 @@ class Experiment(FSM):
             {"match": T.Shutdown, "to": ES.Shutdown},
         ],
         ES.Paused: [
-            {"match": T.Start, "to": ES.Running,},
+            {"match": T.Start, "to": ES.Running},
             {"match": T.Stop, "to": ES.Idle},
             {"match": T.Shutdown, "to": ES.Shutdown},
         ],
@@ -93,11 +102,7 @@ class Experiment(FSM):
             # TODO fix this to be safer
             sequence = config.sequence(
                 self,
-                **{
-                    s: ScopedAccessRecorder(s)
-                    for s in all_scopes
-                    if s != "experiment"
-                },
+                **{s: ScopedAccessRecorder(s) for s in all_scopes if s != "experiment"},
             )
         else:
             is_inverted = False
@@ -176,7 +181,7 @@ class Experiment(FSM):
             dependent = []
 
         def unwrap(c):
-            if isinstance(c, (list, tuple,)):
+            if isinstance(c, (list, tuple)):
                 return tuple(c)
 
             if isinstance(c, str):
@@ -205,7 +210,11 @@ class Experiment(FSM):
 
     def comment(self, message):
         self.current_run.metadata.append(
-            {"type": "comment", "content": message, "time": datetime.datetime.now()}
+            {
+                "type": "comment",
+                "content": message,
+                "time": datetime.datetime.now(),
+            }
         )
 
     async def running_to_idle(self, *_):
@@ -233,7 +242,10 @@ class Experiment(FSM):
         else:
             async for data in self.current_run.sequence:
                 self.current_run.steps_taken.append(
-                    {"step": self.current_run.step, "time": datetime.datetime.now()}
+                    {
+                        "step": self.current_run.step,
+                        "time": datetime.datetime.now(),
+                    }
                 )
                 self.current_run.step += 1
                 for qual_name, value in data.items():
@@ -271,7 +283,8 @@ class Experiment(FSM):
                 all_scopes = {
                     k: v
                     for k, v in itertools.chain(
-                        self.app.actors.items(), self.app.managed_instruments.items()
+                        self.app.actors.items(),
+                        self.app.managed_instruments.items(),
                     )
                     if k != "experiment"
                 }
@@ -311,9 +324,7 @@ class Experiment(FSM):
             self.record_data(qual_name, write if set is None else set)
 
     async def take_step(self, step):
-        self.current_run.steps_taken.append(
-            {"step": step, "time": datetime.datetime.now()}
-        )
+        self.current_run.steps_taken.append({"step": step, "time": datetime.datetime.now()})
 
         if isinstance(step, dict):
             step = [step]

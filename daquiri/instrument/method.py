@@ -40,9 +40,7 @@ class Method:
             if not parameter.default == self.signature.empty:
                 self.last_kwargs[parameter.name] = parameter.default
             else:
-                self.last_kwargs[parameter.name] = DEFAULT_VALUES.get(
-                    parameter.annotation
-                )
+                self.last_kwargs[parameter.name] = DEFAULT_VALUES.get(parameter.annotation)
 
     def find_method(self):
         return safe_lookup(self.driver, self.where)

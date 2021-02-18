@@ -1,4 +1,3 @@
-
 from daquiri.experiment import AutoExperiment, Experiment
 from daquiri.scan import scan
 
@@ -14,6 +13,7 @@ class Sink:
     but but now we can get around it by pretending to mount the UI using this sink
     which implements the Ruby "method missing" pattern.
     """
+
     def __call__(self, *args, **kwargs):
         pass
 
@@ -28,6 +28,7 @@ class UILessExperiment(Experiment):
     def __init__(self, app):
         super().__init__(app)
         self.ui = Sink()
+
 
 class UILessAutoExperiment(AutoExperiment):
     save_on_main = True
@@ -46,5 +47,3 @@ class BasicExperiment(UILessExperiment):
 
 class UninvertedExperiment(UILessExperiment):
     scan_methods = [UninvertedScan]
-
-

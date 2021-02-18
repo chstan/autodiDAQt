@@ -42,18 +42,30 @@ from enum import Enum
 from inspect import Parameter, Signature
 from typing import Any, Dict, Hashable, List, Optional, Type, Union
 
-import rx
-import rx.operators as ops
 from PyQt5 import QtGui
 from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import (QGridLayout, QGroupBox, QHBoxLayout, QLabel,
-                             QListView, QScrollArea, QSizePolicy, QSplitter,
-                             QTableWidget, QTabWidget, QVBoxLayout, QWidget, QTableView)
-from pyqt_led import Led
+from PyQt5.QtWidgets import (
+    QGridLayout,
+    QGroupBox,
+    QHBoxLayout,
+    QLabel,
+    QListView,
+    QScrollArea,
+    QSizePolicy,
+    QSplitter,
+    QTableView,
+    QTableWidget,
+    QTabWidget,
+    QVBoxLayout,
+    QWidget,
+)
 
-from daquiri.utils import enum_mapping, enum_option_names
+import rx
+import rx.operators as ops
 from daquiri.ui.lens import Lens
+from daquiri.utils import enum_mapping, enum_option_names
 from daquiri.widgets import *
+from pyqt_led import Led
 
 __all__ = (
     "CollectUI",
@@ -100,9 +112,9 @@ def ui_builder(f):
     def wrapped_ui_builder(*args, id=None, class_name=None, **kwargs):
         global ACTIVE_UI
         if id is not None:
-            # we allow passing tuples as an 
+            # we allow passing tuples as an
             # ID because they are hashable and
-            # simple to composite. 
+            # simple to composite.
             if isinstance(id, str):
                 ui = ACTIVE_UI
             else:
@@ -181,7 +193,7 @@ def layout(
         internal_layout.setMargin(margin)
 
     if layout_cls not in {}:
-        if isinstance(content_margin, (int, float, str,)):
+        if isinstance(content_margin, (int, float, str)):
             content_margin = [content_margin] * 4
 
         internal_layout.setContentsMargins(*content_margin)
@@ -210,14 +222,23 @@ horizontal = functools.partial(layout, layout_cls=QHBoxLayout)
 for fn in [grid, vertical, horizontal]:
     functools.update_wrapper(fn, layout)
 
+
 @ui_builder
-def sized_grid(children, column_stretch=None, row_stretch=None, margin=0, content_margin=0, spacing=0, widget=None):
+def sized_grid(
+    children,
+    column_stretch=None,
+    row_stretch=None,
+    margin=0,
+    content_margin=0,
+    spacing=0,
+    widget=None,
+):
     if row_stretch:
         n_rows = len(row_stretch)
     else:
         n_rows = max(*[k[0] for k in children.keys()]) + 1
         row_stretch = [1] * n_rows
-    
+
     if column_stretch:
         n_columns = len(column_stretch)
     else:
@@ -228,7 +249,7 @@ def sized_grid(children, column_stretch=None, row_stretch=None, margin=0, conten
     layout.setMargin(margin)
     if isinstance(content_margin, (int, float, str)):
         content_margin = [content_margin] * 4
-    
+
     layout.setContentsMargins(*content_margin)
 
     for row_i, stretch in enumerate(row_stretch):
@@ -240,12 +261,12 @@ def sized_grid(children, column_stretch=None, row_stretch=None, margin=0, conten
     for (row, column), child in children.items():
         layout.addWidget(child, row, column)
 
-
     if widget is None:
         widget = QWidget()
-    
+
     widget.setLayout(layout)
     return widget
+
 
 @ui_builder
 def list_view():
@@ -438,14 +459,21 @@ def led(*args, **kwargs):
 
 
 @ui_builder
-def numeric_input(value=0, input_type: type = float, *args, subject=None, validator_settings=None, **kwargs):
+def numeric_input(
+    value=0,
+    input_type: type = float,
+    *args,
+    subject=None,
+    validator_settings=None,
+    **kwargs,
+):
     validators = {
         int: QtGui.QIntValidator,
         float: QtGui.QDoubleValidator,
     }
     default_settings = {
-        int: {"bottom": -1e6, "top": 1e6,},
-        float: {"bottom": -1e6, "top": 1e6, "decimals": 3,},
+        int: {"bottom": -1e6, "top": 1e6},
+        float: {"bottom": -1e6, "top": 1e6, "decimals": 3},
     }
 
     if validator_settings is None:
@@ -456,9 +484,7 @@ def numeric_input(value=0, input_type: type = float, *args, subject=None, valida
         value = subject.value
 
     widget = LineEdit(str(value), *args, subject=subject, process_on_next=str, **kwargs)
-    widget.setValidator(
-        validators.get(input_type, QtGui.QIntValidator)(**validator_settings)
-    )
+    widget.setValidator(validators.get(input_type, QtGui.QIntValidator)(**validator_settings))
 
     return widget
 
@@ -474,9 +500,7 @@ def _unwrap_subject(subject_or_widget):
         return subject_or_widget
 
 
-def submit(
-    gate: Hashable, keys: List[Hashable], ui: Dict[Hashable, QWidget]
-) -> rx.Observable:
+def submit(gate: Hashable, keys: List[Hashable], ui: Dict[Hashable, QWidget]) -> rx.Observable:
     try:
         gate = ui[gate]
     except (ValueError, TypeError):
@@ -490,7 +514,9 @@ def submit(
     )
 
     return gate.pipe(
-        ops.filter(lambda x: x), ops.with_latest_from(combined), ops.map(lambda x: x[1])
+        ops.filter(lambda x: x),
+        ops.with_latest_from(combined),
+        ops.map(lambda x: x[1]),
     )
 
 
@@ -504,9 +530,7 @@ def _layout_dataclass_field(
 
     allowable_range = annotation.get("range", (-1e5, 1e5))
     label = annotation.get("label", field_name)
-    label_transform = annotation.get(
-        "label_transform", lambda x: x.replace("_", " ").title()
-    )
+    label_transform = annotation.get("label_transform", lambda x: x.replace("_", " ").title())
     label = label_transform(label)
 
     if field.type in [
@@ -539,7 +563,7 @@ def _layout_dataclass_field(
     else:
         raise Exception("Could not render field: {}".format(field))
 
-    return group(label, field_input,)
+    return group(label, field_input)
 
 
 def _layout_function_parameter(parameter: Parameter, prefix: str):
@@ -602,12 +626,15 @@ def bind_function_call(
     if values is None:
         values = {}
 
-    translations = {
-        k: translate(signature.parameters[k]) for k in signature.parameters.keys()
-    }
+    translations = {k: translate(signature.parameters[k]) for k in signature.parameters.keys()}
 
     for k, v in values.items():
-        ui[(prefix, k,)].subject.on_next(translations[k][0](v))
+        ui[
+            (
+                prefix,
+                k,
+            )
+        ].subject.on_next(translations[k][0](v))
 
     def perform_call(call_kwargs):
         call_kwargs = {k[1]: v for k, v in call_kwargs.items()}
@@ -615,11 +642,15 @@ def bind_function_call(
         function(**safe_call_kwargs)
 
     submit(
-        (prefix, "submit"), [(prefix, k,) for k in signature.parameters.keys()], ui
+        (prefix, "submit"),
+        [(prefix, k) for k in signature.parameters.keys()],
+        ui,
     ).subscribe(perform_call)
 
 
-def layout_dataclass(dataclass_cls, prefix: Optional[str] = None, submit: Optional[str] = None) -> QWidget:
+def layout_dataclass(
+    dataclass_cls, prefix: Optional[str] = None, submit: Optional[str] = None
+) -> QWidget:
     """
     Renders a dataclass instance to QtWidgets. See also `bind_dataclass` below
     to get one way data binding to the instance
@@ -639,9 +670,7 @@ def layout_dataclass(dataclass_cls, prefix: Optional[str] = None, submit: Option
     contents = []
     for field_name, field in dataclass_cls.__dataclass_fields__.items():
         contents.append(
-            _layout_dataclass_field(
-                field, field_name, prefix, annotations.get(field_name, {})
-            )
+            _layout_dataclass_field(field, field_name, prefix, annotations.get(field_name, {}))
         )
 
     if submit:
@@ -729,9 +758,7 @@ def transforms_for_field(field):
         float: (lambda x: str(x), lambda x: float(x)),
     }
 
-    translate_from_field, translate_to_field = MAP_TYPES.get(
-        field.type, (lambda x: x, lambda x: x)
-    )
+    translate_from_field, translate_to_field = MAP_TYPES.get(field.type, (lambda x: x, lambda x: x))
 
     if issubclass(field.type, Enum):
         enum_type = type(list(field.type.__members__.values())[0].value)

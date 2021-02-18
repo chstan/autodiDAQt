@@ -6,7 +6,7 @@ from .utils import LogicalMockMotionController
 
 @pytest.mark.asyncio
 async def test_logical_axis(app):
-    app.init_with(managed_instruments={'mc': LogicalMockMotionController})
+    app.init_with(managed_instruments={"mc": LogicalMockMotionController})
 
     # check that logical writes actually proxy
     await app.instruments.mc.offset_x_y_z.x.write(5)

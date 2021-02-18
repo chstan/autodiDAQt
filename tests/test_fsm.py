@@ -5,11 +5,13 @@ import enum
 from daquiri.experiment import FSM
 from tests.conftest import MockDaquiri
 
+
 class States(str, enum.Enum):
     A = "A"
     B = "B"
     C = "C"
     D = "D"
+
 
 class Transitions(str, enum.Enum):
     EnterB = "enter-b"
@@ -17,6 +19,7 @@ class Transitions(str, enum.Enum):
     Dec = "decrement"
     SwapBC = "swap-bc"
     EnterD = "enter-d"
+
 
 class ExampleFSM(FSM):
     STARTING_STATE = States.A
@@ -61,11 +64,14 @@ class MisconfiguredFSM(FSM):
         # missing the D state
     }
 
+
 class MissingStartingStateFSM(MisconfiguredFSM):
     STARTING_STATE = None
 
+
 class InvalidStartingStateFSM(MisconfiguredFSM):
     STARTING_STATE = States.B
+
 
 @pytest.mark.asyncio
 async def test_fsm_missing_starting_state(app: MockDaquiri):
@@ -74,12 +80,14 @@ async def test_fsm_missing_starting_state(app: MockDaquiri):
 
     assert "must be specified" in str(assert_exc)
 
+
 @pytest.mark.asyncio
 async def test_fsm_bad_initial_state(app: MockDaquiri):
     with pytest.raises(AssertionError) as assert_exc:
         _ = InvalidStartingStateFSM(app)
 
     assert "must be among" in str(assert_exc)
+
 
 @pytest.mark.asyncio
 async def test_bad_fsm_transition(app: MockDaquiri):
@@ -96,13 +104,14 @@ async def test_bad_fsm_transition(app: MockDaquiri):
 
     assert "Dec" in str(exc.value)
 
+
 @pytest.mark.asyncio
 async def test_fsm_transitions_called(app: MockDaquiri, mocker):
     fsm = ExampleFSM(app)
 
     spy_leave_a = mocker.spy(fsm, "leave_a")
     spy_enter_c = mocker.spy(fsm, "enter_c")
-    spy_c_to_d  = mocker.spy(fsm, "c_to_d")
+    spy_c_to_d = mocker.spy(fsm, "c_to_d")
 
     await fsm.fsm_handle_message(Transitions.Dec)
 
@@ -111,4 +120,3 @@ async def test_fsm_transitions_called(app: MockDaquiri, mocker):
 
     await fsm.fsm_handle_message(Transitions.EnterD)
     assert spy_c_to_d.call_count == 1
-    

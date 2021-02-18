@@ -14,9 +14,7 @@ class BasicPlot(Panel):
     def layout(self):
         fig = self.register_figure("plot", toolbar=True)
 
-        vertical(
-            self.toolbars["plot"], self.canvases["plot"], widget=self,
-        )
+        vertical(self.toolbars["plot"], self.canvases["plot"], widget=self)
 
         ax = fig.subplots()
         ReactivePlot.link_scatter(ax, self.app.actors["pub"].data_stream, x="time")
@@ -44,7 +42,11 @@ class PublishData(Actor):
             )
 
 
-app = Daquiri(__name__, {"Plot": BasicPlot,}, {"pub": PublishData,})
+app = Daquiri(
+    __name__,
+    {"Plot": BasicPlot},
+    {"pub": PublishData},
+)
 
 if __name__ == "__main__":
     app.start()

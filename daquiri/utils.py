@@ -1,10 +1,10 @@
-from contextlib import contextmanager
 import asyncio
 import contextlib
 import datetime
 import enum
 import functools
 import os
+from contextlib import contextmanager
 from json import JSONEncoder
 from pathlib import Path
 from typing import Any, Dict, List, Tuple, Type, TypeVar, Union
@@ -31,6 +31,7 @@ PathFragmentType = Union[str, int]
 PathType = Union[List[PathFragmentType], Tuple[PathFragmentType]]
 PathlikeType = Union[PathFragmentType, Path]
 
+
 @contextmanager
 def temporary_attrs(owner, **kwargs):
     previous_values = {k: getattr(owner, k) for k in kwargs}
@@ -53,9 +54,7 @@ def default_stylesheet() -> str:
         with contextlib.redirect_stdout(devnull):
             import qtsass  # <- why is this printing on import?
 
-            compiled = qtsass.compile(
-                styles, include_paths=[str(DAQUIRI_LIB_ROOT / "resources")]
-            )
+            compiled = qtsass.compile(styles, include_paths=[str(DAQUIRI_LIB_ROOT / "resources")])
 
     return compiled
 
@@ -83,9 +82,7 @@ def tokenize_string_path(s: str):
         except ValueError:
             return str(value)
 
-    return tuple(
-        safe_unwrap_int(x) for x in s.replace("[", ".").replace("]", "").split(".") if x
-    )
+    return tuple(safe_unwrap_int(x) for x in s.replace("[", ".").replace("]", "").split(".") if x)
 
 
 def tokenize_access_path(str_or_list) -> Tuple[Union[str, int]]:
@@ -184,9 +181,7 @@ def find_conflict_free_matches(constraints: Dict[str, List[T]]) -> Dict[str, T]:
         else:
             results[found_key] = options[0]
             current = {
-                k: [v for v in vs if v != options[0]]
-                for k, vs in current.items()
-                if k != found_key
+                k: [v for v in vs if v != options[0]] for k, vs in current.items() if k != found_key
             }
 
     return results

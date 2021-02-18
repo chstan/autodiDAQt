@@ -15,30 +15,41 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Type
 
 import appdirs
-from asyncqt import QEventLoop
-from dotenv import load_dotenv
-from loguru import logger
 from PyQt5 import QtCore
 from PyQt5.QtGui import QFontDatabase
 from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget
-from pyqt_led import Led
-from rx.subject import Subject
 
+from asyncqt import QEventLoop
 from daquiri.actor import Actor
 from daquiri.config import Config, MetaData, default_config_for_platform
 from daquiri.instrument import ManagedInstrument
 from daquiri.panel import Panel
 from daquiri.panels import InstrumentManager
-from daquiri.state import (AppState, DaquiriStateAtRest, SerializationSchema,
-                           find_newest_state_filename, generate_state_filename)
-from daquiri.ui import (CollectUI, bind_dataclass, button, horizontal,
-                        layout_dataclass, led, update_dataclass, vertical)
+from daquiri.state import (
+    AppState,
+    DaquiriStateAtRest,
+    SerializationSchema,
+    find_newest_state_filename,
+    generate_state_filename,
+)
+from daquiri.ui import (
+    CollectUI,
+    bind_dataclass,
+    button,
+    horizontal,
+    layout_dataclass,
+    led,
+    update_dataclass,
+    vertical,
+)
 from daquiri.utils import default_stylesheet
 from daquiri.version import VERSION
+from dotenv import load_dotenv
+from loguru import logger
+from pyqt_led import Led
+from rx.subject import Subject
 
-__all__ = (
-    "Daquiri",
-)
+__all__ = ("Daquiri",)
 
 USE_QUAMASH = False
 
@@ -88,7 +99,7 @@ class DaquiriMainWindow(QMainWindow):
         self.app = app
 
         self._panels = {
-            k: {"panel": None, "running": False, "indicator": None, "restart": None,}
+            k: {"panel": None, "running": False, "indicator": None, "restart": None}
             for k in self.app.panel_definitions.keys()
         }
 
@@ -96,9 +107,7 @@ class DaquiriMainWindow(QMainWindow):
 
         # set layout
         self.win = QWidget()
-        self.win.resize(
-            50, 50
-        )  # smaller than minimum size, so will resize appropriately
+        self.win.resize(50, 50)  # smaller than minimum size, so will resize appropriately
 
         self.ui = {}
         with CollectUI(self.ui):
@@ -107,9 +116,7 @@ class DaquiriMainWindow(QMainWindow):
                     vertical(
                         *[
                             button(
-                                "Restart {}".format(
-                                    self.app.panel_definitions[panel_name].TITLE
-                                ),
+                                "Restart {}".format(self.app.panel_definitions[panel_name].TITLE),
                                 id=f"restart-{panel_name}",
                             )
                             for panel_name in self.panel_order
@@ -155,12 +162,13 @@ class DaquiriMainWindow(QMainWindow):
 
         self.loop = loop
 
+
 def make_user_data_dataclass(profile_field: Optional[Any]) -> type:
     if profile_field:
         profile_fields = [profile_field]
     else:
         profile_fields = []
-            
+
     return make_dataclass(
         "UserData",
         [
@@ -169,6 +177,7 @@ def make_user_data_dataclass(profile_field: Optional[Any]) -> type:
             ("session_name", str, "global-session"),
         ],
     )
+
 
 class Daquiri:
     """
@@ -214,8 +223,7 @@ class Daquiri:
 
         if managed_instruments:
             if not any(
-                issubclass(panel_def, InstrumentManager)
-                for panel_def in panel_definitions.values()
+                issubclass(panel_def, InstrumentManager) for panel_def in panel_definitions.values()
             ):
                 panel_definitions["_instrument_manager"] = InstrumentManager
 
@@ -239,9 +247,9 @@ class Daquiri:
         profile_field = None
         if self.config.use_profiles:
             profile_field = (
-                "profile", 
-                self.profile_enum, 
-                self.profile_enum(list(self.config.profiles)[0]), 
+                "profile",
+                self.profile_enum,
+                self.profile_enum(list(self.config.profiles)[0]),
             )
         self.user_cls = make_user_data_dataclass(profile_field)
         self.user = self.user_cls()
@@ -282,9 +290,7 @@ class Daquiri:
         self.managed_instrument_classes = managed_instruments
 
         if DEBUG is not None and self.config.DEBUG != DEBUG:
-            warnings.warn(
-                f"Overwriting the value of DEBUG from configuration, using {DEBUG}"
-            )
+            warnings.warn(f"Overwriting the value of DEBUG from configuration, using {DEBUG}")
             self.config.DEBUG = DEBUG
 
     def handle_exception(self, loop, context):
@@ -332,9 +338,7 @@ class Daquiri:
         self.save_state()
 
         tasks = [
-            t
-            for t in asyncio.all_tasks(loop=loop)
-            if t is not asyncio.current_task(loop=loop)
+            t for t in asyncio.all_tasks(loop=loop) if t is not asyncio.current_task(loop=loop)
         ]
         for task in tasks:
             task.cancel()
@@ -370,9 +374,7 @@ class Daquiri:
 
     @property
     def file(self):
-        return getattr(
-            sys.modules[self.import_name], "__file__", appdirs.user_config_dir()
-        )
+        return getattr(sys.modules[self.import_name], "__file__", appdirs.user_config_dir())
 
     @property
     def search_paths(self):
@@ -384,9 +386,7 @@ class Daquiri:
         ]
 
     def extract_from_dotenv(self):
-        dotenv_files = list(
-            itertools.chain(*[p.glob(".env") for p in self.search_paths])
-        )
+        dotenv_files = list(itertools.chain(*[p.glob(".env") for p in self.search_paths]))
         if dotenv_files:
             load_dotenv(str(dotenv_files[0]))
 
@@ -449,14 +449,10 @@ class Daquiri:
                     profile=profile,
                 ),
                 schema=ser_schema,
-                panels={
-                    k: p.collect_state()
-                    for k, p in self.main_window.open_panels.items()
-                },
+                panels={k: p.collect_state() for k, p in self.main_window.open_panels.items()},
                 actors={k: a.collect_state() for k, a in self.actors.items()},
                 managed_instruments={
-                    k: ins.collect_state()
-                    for k, ins in self.managed_instruments.items()
+                    k: ins.collect_state() for k, ins in self.managed_instruments.items()
                 },
             )
         )
@@ -484,7 +480,7 @@ class Daquiri:
             if k in state.managed_instruments:
                 ins.receive_state(state.managed_instruments[k])
 
-    def load_state(self): # pragma: no cover
+    def load_state(self):  # pragma: no cover
         logger.info("Loading application state.")
         state_filename = find_newest_state_filename(self)
         if not state_filename:
@@ -498,7 +494,7 @@ class Daquiri:
         self.receive_state(state)
         update_dataclass(self.user, prefix="app_user", ui=self.main_window.ui)
 
-    def save_state(self): # pragma: no cover
+    def save_state(self):  # pragma: no cover
         logger.info("Saving application state.")
         state_filename = generate_state_filename(self)
         state_filename.parent.mkdir(parents=True, exist_ok=True)
@@ -507,7 +503,7 @@ class Daquiri:
         with open(str(state_filename), "wb") as state_f:
             pickle.dump(state, state_f)
 
-    def start(self): # pragma: no cover
+    def start(self):  # pragma: no cover
         logger.info("Application in startup.")
         self.qt_app = QApplication(sys.argv)
         self.qt_app.setEffectEnabled(QtCore.Qt.UI_AnimateCombo, False)
@@ -531,9 +527,7 @@ class Daquiri:
             "win32": lambda: (),  # windows has no signals, but will raise exceptions
         }.get(sys.platform, lambda: (signal.SIGHUP, signal.SIGTERM, signal.SIGINT))()
         for s in signal_set:
-            loop.add_signal_handler(
-                s, lambda s=s: loop.create_task(self.shutdown(loop, s))
-            )
+            loop.add_signal_handler(s, lambda s=s: loop.create_task(self.shutdown(loop, s)))
 
         self.main_window = DaquiriMainWindow(loop=loop, app=self)
         main_task = asyncio.ensure_future(self.master())

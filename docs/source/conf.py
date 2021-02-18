@@ -13,30 +13,31 @@
 import sphinx_rtd_theme
 import os
 import sys
-sys.path.insert(0, os.path.abspath('..'))
+
+sys.path.insert(0, os.path.abspath(".."))
 
 # -- Project information -----------------------------------------------------
 
-project = 'DAQuiri'
-copyright = '2019, Conrad Stansbury'
-author = 'Conrad Stansbury'
+project = "DAQuiri"
+copyright = "2019, Conrad Stansbury"
+author = "Conrad Stansbury"
 
 # The full version, including alpha/beta/rc tags
-release = '0.0.3'
+release = "0.0.3"
 
 
 # -- General configuration ---------------------------------------------------
 
-master_doc = 'index'
+master_doc = "index"
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    'sphinx.ext.autodoc',
-    'sphinx.ext.coverage',
-    'sphinx.ext.napoleon',
-    'sphinx_rtd_theme',
+    "sphinx.ext.autodoc",
+    "sphinx.ext.coverage",
+    "sphinx.ext.napoleon",
+    "sphinx_rtd_theme",
 ]
 
 # Napoleon settings
@@ -53,7 +54,7 @@ napoleon_use_param = True
 napoleon_use_rtype = True
 
 # Add any paths that contain templates here, relative to this directory.
-templates_path = ['_templates']
+templates_path = ["_templates"]
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
@@ -63,8 +64,8 @@ exclude_patterns = []
 
 # -- Options for HTML output -------------------------------------------------
 
-html_theme = 'sphinx_rtd_theme'
+html_theme = "sphinx_rtd_theme"
 
 # Paths containing static files (such as style sheets) relative to this directory.
 # They overwrite builtin static files.
-html_static_path = ['_static']
+html_static_path = ["_static"]

@@ -45,13 +45,13 @@ class ManualMotionController(ManagedInstrument):
 
 
 class MyExperiment(AutoExperiment):
-    dx = ManualMotionController.scan('mc').s0(limits=[-10, 10])
-    dy = ManualMotionController.scan('mc').s1(limits=[-30, 30])
+    dx = ManualMotionController.scan("mc").s0(limits=[-10, 10])
+    dy = ManualMotionController.scan("mc").s1(limits=[-30, 30])
 
-    read_power = {'power': 'power_meter.device', }
+    read_power = {"power": "power_meter.device"}
 
-    DxScan = scan(x=dx, name='dx Scan', read=read_power)
-    DxDyScan = scan(x=dx, y=dy, name='dx-dy Scan', read=read_power)
+    DxScan = scan(x=dx, name="dx Scan", read=read_power)
+    DxDyScan = scan(x=dx, y=dy, name="dx-dy Scan", read=read_power)
 
     scan_methods = [DxScan, DxDyScan]
     run_with = [DxScan(n_x=2500)] * 10
@@ -60,10 +60,15 @@ class MyExperiment(AutoExperiment):
     discard_data = True
 
 
-app = Daquiri(__name__, {}, {'experiment': MyExperiment}, {
-    'mc': ManualMotionController,
-    'power_meter': MockScalarDetector,
-})
+app = Daquiri(
+    __name__,
+    {},
+    {"experiment": MyExperiment},
+    {
+        "mc": ManualMotionController,
+        "power_meter": MockScalarDetector,
+    },
+)
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     app.start()

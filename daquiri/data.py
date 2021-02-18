@@ -1,6 +1,7 @@
 from typing import Dict, Optional, Tuple
 
 import pandas as pd
+
 import rx
 import rx.operators as ops
 from rx.subject import Subject
@@ -57,7 +58,13 @@ class ReactivePlot:
     """
 
     def __init__(
-        self, ax, source: rx.Observable, method: str, x=None, y=None, strategy="call"
+        self,
+        ax,
+        source: rx.Observable,
+        method: str,
+        x=None,
+        y=None,
+        strategy="call",
     ):
         self.source = source
         self.method = method

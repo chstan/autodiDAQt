@@ -24,8 +24,8 @@ class SimpleScan:
         power_meter: MockScalarDetector,
     ):
         experiment.collate(
-            independent=[("mc.stages[0]", "dx",)],
-            dependent=[("power_meter.device", "power",),],
+            independent=[["mc.stages[0]", "dx"]],
+            dependent=[["power_meter.device", "power"]],
         )
 
         for i, x in enumerate(np.linspace(self.start, self.stop, self.n_steps)):
@@ -44,7 +44,7 @@ class MyExperiment(Experiment):
 
 app = Daquiri(
     __name__,
-    actors={"experiment": MyExperiment,},
+    actors={"experiment": MyExperiment},
     managed_instruments={
         "mc": MockMotionController,
         "power_meter": MockScalarDetector,

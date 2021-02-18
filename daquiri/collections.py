@@ -73,6 +73,7 @@ def deep_update(src: Dict[Any, Any], dest: Dict[Any, Any]) -> Dict[Any, Any]:
             dest[k] = v
     return dest
 
+
 def map_treelike_nodes(tree, transform):
     if not isinstance(transform, dict):
         transform = {
@@ -82,11 +83,11 @@ def map_treelike_nodes(tree, transform):
 
     if isinstance(tree, dict):
         for k, v in tree.items():
-            if isinstance(v, (dict, list,)):
+            if isinstance(v, (dict, list)):
                 tree[k] = map_treelike_nodes(v, transform)
     if isinstance(tree, list):
         for i, item in enumerate(tree):
-            if isinstance(item, (dict, list,)):
+            if isinstance(item, (dict, list)):
                 tree[i] = map_treelike_nodes(item, transform)
 
     return transform[type(tree)](tree)

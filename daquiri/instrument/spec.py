@@ -3,11 +3,21 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 
 import numpy as np
 
-from daquiri.instrument.axis import (Axis, LogicalAxis, ManualAxis,
-                                     ProxiedAxis, TestAxis, TestManualAxis)
+from daquiri.instrument.axis import (
+    Axis,
+    LogicalAxis,
+    ManualAxis,
+    ProxiedAxis,
+    TestAxis,
+    TestManualAxis,
+)
 from daquiri.instrument.method import Method, TestMethod
-from daquiri.instrument.property import (ChoiceProperty, Property,
-                                         SimpleProperty, TestProperty)
+from daquiri.instrument.property import (
+    ChoiceProperty,
+    Property,
+    SimpleProperty,
+    TestProperty,
+)
 from daquiri.utils import tokenize_access_path
 
 __all__ = (
@@ -93,19 +103,13 @@ class AxisDescriptor(Specification):
 
     # "property" syntax
     def write(self, fwrite):
-        return type(self)(
-            self.fread, fwrite, self.fmockread, self.fmockwrite, self.__doc__
-        )
+        return type(self)(self.fread, fwrite, self.fmockread, self.fmockwrite, self.__doc__)
 
     def mock_read(self, fmockread):
-        return type(self)(
-            self.fread, self.fwrite, fmockread, self.fmockwrite, self.__doc__
-        )
+        return type(self)(self.fread, self.fwrite, fmockread, self.fmockwrite, self.__doc__)
 
     def mock_write(self, fmockwrite):
-        return type(self)(
-            self.fread, self.fwrite, self.fmockread, fmockwrite, self.__doc__
-        )
+        return type(self)(self.fread, self.fwrite, self.fmockread, fmockwrite, self.__doc__)
 
 
 def axis(with_schema):
@@ -128,9 +132,7 @@ class AxisListSpecification(Specification):
     a motion controller.
     """
 
-    def __init__(
-        self, schema, where=None, read=None, write=None, mock=None, settle=None
-    ):
+    def __init__(self, schema, where=None, read=None, write=None, mock=None, settle=None):
         if mock is None:
             mock = {"n": 5}
 
@@ -266,9 +268,7 @@ class LogicalAxisSpecification(Specification):
     TODO fix schema here
     """
 
-    def __init__(
-        self, forward_transforms, inverse_transforms, initial_coords, state=None
-    ):
+    def __init__(self, forward_transforms, inverse_transforms, initial_coords, state=None):
         self.forward_transforms = forward_transforms
         self.inverse_transforms = inverse_transforms
         self.initial_coords = initial_coords
