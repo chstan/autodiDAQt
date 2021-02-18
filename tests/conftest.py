@@ -1,5 +1,4 @@
 # need to monkeypatch pyqt_led because it does not work on the CI server
-from daquiri.core import make_user_data_dataclass
 import sys
 from PyQt5.QtWidgets import QWidget
 
@@ -11,6 +10,8 @@ class Led(QWidget):
     def __init__(self, *args, **kwargs):
         super().__init__()
         
+    def turn_on(self):
+        pass
 
 module = type(sys)('pyqt_led')
 module.Led = Led
@@ -25,6 +26,7 @@ from loguru import logger
 from typing import Dict
 from pathlib import Path
 
+from daquiri.core import make_user_data_dataclass
 from daquiri.experiment.save import ZarrSaver
 from daquiri import Daquiri, Actor
 from daquiri.collections import AttrDict

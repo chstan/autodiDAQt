@@ -11,3 +11,5 @@ dependencies:
     - pytest-asyncio
     - pytest-mock
     - pytest-qt
+    - pytest-env
+    - pytest-xvfb
