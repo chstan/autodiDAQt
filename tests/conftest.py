@@ -30,10 +30,9 @@ class MockDaquiri(Daquiri):
         self.config = Config(default_config_for_platform())
         self.meta = MetaData()
         self.app_state = AppState()
-        self.user = AttrDict({
-            'user': 'test_user',
-            'session_name': 'test_session'
-        })
+
+        self.user_cls = make_user_data_dataclass(profile_field=None)
+        self.user = self.user_cls(user="test_user", session_name="test_session")
 
         self.main_window = AttrDict({
             'open_panels': {}
