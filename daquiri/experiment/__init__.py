@@ -82,6 +82,40 @@ class Experiment(FSM):
     interlocks = []
     save_on_main: bool = False
 
+    def build_run_from_config(self, config) -> Run:
+        if not inspect.isasyncgenfunction(config.sequence):
+            is_inverted = True
+            # run the experiment in inverted control as is standard
+            all_scopes = itertools.chain(
+                self.app.actors.keys(), self.app.managed_instruments.keys()
+            )
+
+            # TODO fix this to be safer
+            sequence = config.sequence(
+                self,
+                **{
+                    s: ScopedAccessRecorder(s)
+                    for s in all_scopes
+                    if s != "experiment"
+                },
+            )
+        else:
+            is_inverted = False
+            all_scopes = {}
+            all_scopes.update(self.app.actors)
+            all_scopes.update(self.app.managed_instruments)
+            all_scopes.pop("experiment", None)
+            sequence = config.sequence(self, **all_scopes)
+
+        return Run(
+            number=self.run_number,
+            user=self.app.user.user,
+            session=self.app.user.session_name,
+            config=config,
+            sequence=sequence,
+            is_inverted=is_inverted,
+        )
+
     async def idle_to_running(self, *_):
         """
         Experiment is starting
@@ -111,39 +145,8 @@ class Experiment(FSM):
             else:
                 config = copy(self.scan_configuration)
 
-            if not inspect.isasyncgenfunction(config.sequence):
-                is_inverted = True
-                # run the experiment in inverted control as is standard
-                all_scopes = itertools.chain(
-                    self.app.actors.keys(), self.app.managed_instruments.keys()
-                )
-
-                # TODO fix this to be safer
-                sequence = config.sequence(
-                    self,
-                    **{
-                        s: ScopedAccessRecorder(s)
-                        for s in all_scopes
-                        if s != "experiment"
-                    },
-                )
-            else:
-                is_inverted = False
-                all_scopes = {}
-                all_scopes.update(self.app.actors)
-                all_scopes.update(self.app.managed_instruments)
-                del all_scopes["experiment"]
-                sequence = config.sequence(self, **all_scopes)
-
             self.collation = None
-            self.current_run = Run(
-                number=self.run_number,
-                user=self.app.user.user,
-                session=self.app.user.session_name,
-                config=config,
-                sequence=sequence,
-                is_inverted=is_inverted,
-            )
+            self.current_run = self.build_run_from_config(config)
 
     async def enter_running(self, *_):
         self.ui.enter_running()
