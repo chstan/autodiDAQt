@@ -1,4 +1,4 @@
 #!/bin/sh
 . "$(dirname "$0")/_/husky.sh"
 
-black daquiri && isort -rc daquiri
+black daquiri -c pyproject.toml
