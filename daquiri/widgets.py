@@ -94,10 +94,11 @@ class Slider(QSlider, Subjective):
 
 
 class LineEdit(QLineEdit, Subjective):
-    def __init__(self, *args, subject=None):
+    def __init__(self, *args, subject=None, process_on_next=None):
         super().__init__(*args)
 
         self.subject = subject
+        self.process_on_next = process_on_next
         if self.subject is None:
             self.subject = BehaviorSubject(self.text())
 
@@ -105,6 +106,9 @@ class LineEdit(QLineEdit, Subjective):
         self.subject.subscribe(self.update_ui)
 
     def update_ui(self, value):
+        if self.process_on_next:
+            value = self.process_on_next(value)
+
         if value != self.text():
             self.setText(value)
 
