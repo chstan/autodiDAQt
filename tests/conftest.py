@@ -1,11 +1,16 @@
 # need to monkeypatch pyqt_led because it does not work on the CI server
 from daquiri.core import make_user_data_dataclass
 import sys
+from PyQt5.QtWidgets import QWidget
 
+class Led(QWidget):
+    capsule = 1
+    circle = 2
+    rectangle = 3
 
-class Led:
-    pass
-
+    def __init__(self, *args, **kwargs):
+        super().__init__()
+        
 
 module = type(sys)('pyqt_led')
 module.Led = Led
