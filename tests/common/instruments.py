@@ -6,21 +6,10 @@ from daquiri import ManagedInstrument
 from daquiri.instrument import AxisSpecification
 from daquiri.instrument.spec import ChoicePropertySpecification
 
+__all__ = ["PropertyInstrument"]
 
 class Driver(DSP7265):
     category = 'A'
-
-
-class MockExperiment():
-    @contextlib.contextmanager
-    def point(self):
-        yield
-
-    def collate(self, *args, **kwargs):
-        pass
-
-    def comment(self, *args, **kwargs):
-        pass
 
 
 class PropertyInstrument(ManagedInstrument):
