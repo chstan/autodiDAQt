@@ -212,13 +212,13 @@ def sized_grid(children, column_stretch=None, row_stretch=None, margin=0, conten
     if row_stretch:
         n_rows = len(row_stretch)
     else:
-        n_rows = max(*[k[0] for k in children.keys()])
+        n_rows = max(*[k[0] for k in children.keys()]) + 1
         row_stretch = [1] * n_rows
     
     if column_stretch:
         n_columns = len(column_stretch)
     else:
-        n_columns = max(*[k[1] for k in children.keys()])
+        n_columns = max(*[k[1] for k in children.keys()]) + 1
         column_stretch = [1 / n_columns] * n_columns
 
     layout = QGridLayout()
