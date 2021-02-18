@@ -21,9 +21,7 @@ async def high_voltage_is_off(*_):
 
 class MyExperiment(Experiment):
     dx = MockMotionController.scan("mc").stages[0]()
-    read_power = {
-        "power": "power_meter.device",
-    }
+    read_power = dict(power="power_meter.device")
 
     scan_methods = [
         scan(
@@ -44,7 +42,7 @@ app = Daquiri(
     __name__,
     {},
     {"experiment": MyExperiment},
-    {"mc": MockMotionController, "power_meter": MockScalarDetector,},
+    {"mc": MockMotionController, "power_meter": MockScalarDetector},
 )
 
 if __name__ == "__main__":

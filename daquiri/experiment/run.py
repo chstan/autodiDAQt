@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Type, Union
 
 import numpy as np
+
 import xarray as xr
 
 from .save import RunSaver, SaveContext, save_cls_from_short_name
@@ -16,6 +17,7 @@ from .save import RunSaver, SaveContext, save_cls_from_short_name
 __all__ = ["Run"]
 
 SaveFormat = Union[str, Type[RunSaver]]
+
 
 def daq_to_timesequence_xarray(stream_name: str, data_stream) -> xr.Dataset:
     """
@@ -31,24 +33,23 @@ def daq_to_timesequence_xarray(stream_name: str, data_stream) -> xr.Dataset:
         with dims and appropriate coords for the DAQ session.
     """
     step, points, data, time = [
-        [p[name] for p in data_stream]
-        for name in ["step", "point", "data", "time"]
+        [p[name] for p in data_stream] for name in ["step", "point", "data", "time"]
     ]
     time = np.vectorize(np.datetime64)(np.asarray(time))
     time_dim = f"{stream_name}-time"
 
     peeked = data[0]
-    
+
     # if the data consists of numpy arrays and they are the same shape, then we can
     # create dimensions and axes for them. It would probably be better to specify this
     # more directly. A few possible mechanisms exist:
     #   - Allow data schemas to specify how they collate data/multiple observations
     #   - Look at the schema value and special case ArrayType from ObjectType
-    if isinstance(peeked, np.ndarray) and functools.reduce(operator.eq, [arr.shape for arr in data]):
+    if isinstance(peeked, np.ndarray) and functools.reduce(
+        operator.eq, [arr.shape for arr in data]
+    ):
         data = np.stack(data, axis=-1)
-        data_coords = {
-            f"dim_{i}": np.arange(s) for i, s in enumerate(peeked.shape)
-        }
+        data_coords = {f"dim_{i}": np.arange(s) for i, s in enumerate(peeked.shape)}
         data_coords[time_dim] = time
         data_dims = [f"dim_{i}" for i in range(len(peeked.shape))] + [time_dim]
     else:
@@ -60,14 +61,12 @@ def daq_to_timesequence_xarray(stream_name: str, data_stream) -> xr.Dataset:
     ds = xr.Dataset(
         {
             f"{stream_name}-step": xr.DataArray(
-                np.asarray(step), coords=time_coords, dims=[time_dim],
+                np.asarray(step), coords=time_coords, dims=[time_dim]
             ),
             f"{stream_name}-point": xr.DataArray(
-                np.asarray(points), coords=time_coords, dims=[time_dim],
+                np.asarray(points), coords=time_coords, dims=[time_dim]
             ),
-            f"{stream_name}-data": xr.DataArray(
-                data, coords=data_coords, dims=data_dims,
-            ),
+            f"{stream_name}-data": xr.DataArray(data, coords=data_coords, dims=data_dims),
         }
     )
     return ds
@@ -108,46 +107,40 @@ class Run:
 
     def save_directory(self, app):
         directory = Path(
-            str(
-                app.app_root / app.config.data_directory / app.config.data_format
-            ).format(
+            str(app.app_root / app.config.data_directory / app.config.data_format).format(
                 user=self.user,
                 session=self.session,
                 run=self.number,
-                time=datetime.datetime.now()
-                .time()
-                .isoformat()
-                .split(".")[0]
-                .replace(":", "-"),
+                time=datetime.datetime.now().time().isoformat().split(".")[0].replace(":", "-"),
                 date=datetime.date.today().isoformat(),
             )
         )
 
         if directory.exists():
-            warnings.warn(
-                "Save directory already exists. Postfixing with the current time."
-            )
+            warnings.warn("Save directory already exists. Postfixing with the current time.")
             directory = (
                 str(directory)
                 + "_"
-                + datetime.datetime.now()
-                .time()
-                .isoformat()
-                .replace(".", "-")
-                .replace(":", "-")
+                + datetime.datetime.now().time().isoformat().replace(".", "-").replace(":", "-")
             )
             directory = Path(directory)
 
         directory.mkdir(parents=True, exist_ok=True)
         return directory
 
-    def save(self, save_directory: Path, extra=None, extra_attrs=None, save_format=Union[SaveFormat, List[SaveFormat]]):
+    def save(
+        self,
+        save_directory: Path,
+        extra=None,
+        extra_attrs=None,
+        save_format=Union[SaveFormat, List[SaveFormat]],
+    ):
         # first, normalize all the formats to the respective classes
         if not isinstance(save_format, (list, tuple)):
             save_format = [save_format]
 
         save_format = [
-            save_cls_from_short_name(format) if isinstance(format, str) else format 
+            save_cls_from_short_name(format) if isinstance(format, str) else format
             for format in save_format
         ]
 
@@ -172,4 +165,3 @@ class Run:
             save_context = SaveContext(save_directory / format.short_name)
             format.save_run(all_metadata, daq, save_context)
             format.save_user_extras(extra or {}, save_context)
-

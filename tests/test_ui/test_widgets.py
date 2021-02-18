@@ -20,6 +20,7 @@ def test_ui_collection(qtbot: QtBot):
 
     assert set(ui.keys()) == {"b1", "l1"}
 
+
 def test_nested_ui_collection(qtbot: QtBot):
     ui_parent = {}
     ui_child = {}
@@ -30,20 +31,22 @@ def test_nested_ui_collection(qtbot: QtBot):
 
         with CollectUI(ui_child):
             child_layout = scroll_area(
-                sized_grid({
-                    (0, 0): button("Button-Child", id="bc"),
-                    (1, 0): label("Child label"),
-                })
+                sized_grid(
+                    {
+                        (0, 0): button("Button-Child", id="bc"),
+                        (1, 0): label("Child label"),
+                    }
+                )
             )
-        
+
         horizontal(
             b,
             child_layout,
             button("Another parent button", id="bp2"),
         )
 
-    assert set(ui_parent.keys()) == {"bp", "bp2",}
-    assert set(ui_child.keys()) == {"bc",}
+    assert set(ui_parent.keys()) == {"bp", "bp2"}
+    assert set(ui_child.keys()) == {"bc"}
 
 
 def test_reactive_button(qtbot: QtBot):
@@ -58,6 +61,7 @@ def test_reactive_button(qtbot: QtBot):
 
     qtbot.mouseClick(b, QtCore.Qt.LeftButton)
     assert events == [True, True, True]
+
 
 def test_reactive_check_box(qtbot: QtBot):
     cb = check_box("Checkbox")
@@ -75,6 +79,7 @@ def test_reactive_check_box(qtbot: QtBot):
 
     assert events == [0, 1, 0, 1]
 
+
 def test_reactive_combo_box(qtbot: QtBot):
     combo = combo_box(["A", "B", "C"])
     qtbot.add_widget(combo)
@@ -90,6 +95,7 @@ def test_reactive_combo_box(qtbot: QtBot):
 
     assert events == ["A", "B", "C", "A"]
 
+
 def test_reactive_line_edit(qtbot: QtBot):
     start_text = "Start."
     edit = line_edit(start_text)
@@ -101,10 +107,8 @@ def test_reactive_line_edit(qtbot: QtBot):
     will_type = "Test."
     qtbot.keyClicks(edit, will_type)
 
-    assert events == [
-        start_text + will_type[:i] 
-        for i in range(len(will_type) + 1)
-    ]
+    assert events == [start_text + will_type[:i] for i in range(len(will_type) + 1)]
+
 
 def test_reactive_slider(qtbot: QtBot):
     w = slider()
@@ -114,11 +118,12 @@ def test_reactive_slider(qtbot: QtBot):
     w.subscribe(events.append)
 
     w.setValue(5)
-    w.setValue(-1) # below minimum
-    w.setValue(11) # above maximum
-    w.setValue(6.6) # should be coerced to int and rounded down
+    w.setValue(-1)  # below minimum
+    w.setValue(11)  # above maximum
+    w.setValue(6.6)  # should be coerced to int and rounded down
 
     assert events == [0, 5, 0, 10, 6]
+
 
 def test_reactive_spinbox(qtbot: QtBot):
     sb = spin_box()
@@ -144,20 +149,15 @@ def test_reactive_spinbox(qtbot: QtBot):
 
     assert events == [0, 3, 3.5, 4, 9, 10]
 
+
 def test_group_label_assignment(qtbot):
     label_text = "This is actually the label"
-    g = group(
-        label_text,
-        button("A button")
-    )
+    g = group(label_text, button("A button"))
 
     qtbot.add_widget(g)
     assert g.title() == label_text
 
-    g2 = group(
-        button("Another button"),
-        label=label_text
-    )
+    g2 = group(button("Another button"), label=label_text)
     qtbot.add_widget(g2)
     assert g2.title() == label_text
 
@@ -194,21 +194,20 @@ def test_submit_gating(qtbot: QtBot):
     qtbot.keyClicks(ui["edit"], "B")
 
     qtbot.mouseClick(ui["submit"], QtCore.Qt.LeftButton)
-    
+
     assert edit_events == [f"!{'TextB'[:i]}" for i in range(len("TextB") + 1)]
     assert radio_events == [False, True, False, True]
 
-    assert form_events == [{
-        "edit": "!Text",
-        "radio": False,
-    }, {
-        "edit": "!TextB",
-        "radio": True,
-    }]
+    assert form_events == [
+        {"edit": "!Text", "radio": False},
+        {"edit": "!TextB", "radio": True},
+    ]
+
 
 class AorB(str, enum.Enum):
     A = "A"
     B = "B"
+
 
 @dataclass
 class Data:
@@ -216,6 +215,7 @@ class Data:
     y: int = 5
     z: str = "abc"
     choice: AorB = AorB.A
+
 
 def test_dataclass_bindings(qtbot: QtBot):
     data = Data()
@@ -230,7 +230,7 @@ def test_dataclass_bindings(qtbot: QtBot):
         )
 
         bind_dataclass(data, prefix="data", ui=ui)
-        bind_dataclass(gated, prefix="gated", ui=ui) 
+        bind_dataclass(gated, prefix="gated", ui=ui)
 
     qtbot.add_widget(g)
 
@@ -273,6 +273,7 @@ def test_dataclass_bindings(qtbot: QtBot):
     for partial_id, cls in zip(["x", "y", "z", "choice"], expected_classes):
         assert isinstance(ui[("data", partial_id)], cls)
 
+
 def test_update_ui_from_dataclass_instance(qtbot):
     data = Data()
     ui = {}
@@ -289,9 +290,10 @@ def test_update_ui_from_dataclass_instance(qtbot):
 
     assert data == other
 
+
 def test_class_name_assignment(qtbot):
     """
-    CSS in Qt is pretty much garbage because, for one, it isn't 
+    CSS in Qt is pretty much garbage because, for one, it isn't
     actually CSS. There's also not much we can actually test here,
     but we can verify it doesn't explode.
     """
@@ -299,6 +301,7 @@ def test_class_name_assignment(qtbot):
     qtbot.add_widget(b)
 
     assert True
+
 
 def test_numeric_input(qtbot):
     float_input = numeric_input(0, input_type=float)
@@ -322,17 +325,18 @@ def test_numeric_input(qtbot):
     int_input.setText("382")
     assert int_events == ["0", "2", "8", "382"]
 
+
 def test_bind_function_call(qtbot, mocker):
     def adds_two_numbers(x: int, y: int) -> int:
         return x + y
-        
+
     signature = inspect.signature(adds_two_numbers)
     ui = {}
     prefix = ""
 
     with CollectUI(ui):
         l = layout_function_call(signature, prefix=prefix)
-    
+
     qtbot.add_widget(l)
 
     stub = mocker.stub("adds_two_numbers")

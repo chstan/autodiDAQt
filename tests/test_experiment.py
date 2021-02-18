@@ -2,14 +2,24 @@ from daquiri.scan import scan
 from tests.common.experiments import UninvertedExperiment
 import pytest
 import inspect
-from daquiri.experiment import AutoExperiment, Experiment, ExperimentTransitions, ExperimentStates
+from daquiri.experiment import (
+    AutoExperiment,
+    Experiment,
+    ExperimentTransitions,
+    ExperimentStates,
+)
 from daquiri.interlock import InterlockException
 from daquiri.experiment.save import ZarrSaver
 from typing import Callable, Union
 
-from .common.experiments import BasicExperiment, UILessAutoExperiment, UILessExperiment
+from .common.experiments import (
+    BasicExperiment,
+    UILessAutoExperiment,
+    UILessExperiment,
+)
 
 RunUntilCondition = Union[Callable[[Experiment], bool], ExperimentStates]
+
 
 async def run_until(exp, condition: RunUntilCondition, max_steps: int = 100):
     if not callable(condition):
@@ -26,18 +36,21 @@ async def run_until(exp, condition: RunUntilCondition, max_steps: int = 100):
 async def failing_interlock(*_):
     raise InterlockException("This is a failing interlock.")
 
+
 async def succeeding_interlock(*_):
     return
 
+
 class WithInterlocks(UILessExperiment):
     interlocks = [succeeding_interlock]
+
 
 class WithFailingInterlocks(UILessExperiment):
     interlocks = [failing_interlock]
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize('experiment_cls', [WithInterlocks])
+@pytest.mark.parametrize("experiment_cls", [WithInterlocks])
 async def test_experiment_interlocks(experiment: Experiment):
     await experiment.fsm_handle_message(ExperimentTransitions.Initialize)
     assert experiment.state == ExperimentStates.Idle
@@ -47,11 +60,11 @@ async def test_experiment_interlocks(experiment: Experiment):
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize('experiment_cls', [WithFailingInterlocks])
+@pytest.mark.parametrize("experiment_cls", [WithFailingInterlocks])
 async def test_experiment_failing_interlocks(experiment: Experiment):
     await experiment.fsm_handle_message(ExperimentTransitions.Initialize)
     assert experiment.state == ExperimentStates.Idle
-    
+
     # flush the internal transition message
     await experiment.fsm_handle_message(ExperimentTransitions.Start)
     await experiment.read_one_message()
@@ -61,7 +74,7 @@ async def test_experiment_failing_interlocks(experiment: Experiment):
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize('experiment_cls', [None])
+@pytest.mark.parametrize("experiment_cls", [None])
 async def test_experiment_collates_data(experiment: Experiment):
     await run_until(experiment, ExperimentStates.Idle)
     await experiment.messages.put(ExperimentTransitions.Start)
@@ -70,8 +83,8 @@ async def test_experiment_collates_data(experiment: Experiment):
     ZarrSaver.save_run.assert_called_once()
 
 
-@pytest.mark.asyncio        
-@pytest.mark.parametrize('experiment_cls', [None])
+@pytest.mark.asyncio
+@pytest.mark.parametrize("experiment_cls", [None])
 async def test_experiment_queues_basic(experiment: Experiment, mocker):
     await run_until(experiment, ExperimentStates.Idle)
 
@@ -81,7 +94,7 @@ async def test_experiment_queues_basic(experiment: Experiment, mocker):
     experiment.enqueue()
 
     assert len(experiment.scan_deque) == 2
-    
+
     await experiment.messages.put(ExperimentTransitions.Start)
     await run_until(experiment, ExperimentStates.Idle)
 
@@ -97,7 +110,7 @@ async def test_experiment_queues_basic(experiment: Experiment, mocker):
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize('experiment_cls', [UninvertedExperiment])
+@pytest.mark.parametrize("experiment_cls", [UninvertedExperiment])
 async def test_uninverted_experiment(experiment: Experiment):
     await run_until(experiment, ExperimentStates.Idle)
     assert inspect.isasyncgenfunction(experiment.scan_configuration.sequence)
@@ -109,7 +122,7 @@ async def test_uninverted_experiment(experiment: Experiment):
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize('experiment_cls', [BasicExperiment])
+@pytest.mark.parametrize("experiment_cls", [BasicExperiment])
 async def test_can_pause_experiment(experiment: Experiment):
     await run_until(experiment, ExperimentStates.Idle)
     await experiment.messages.put(ExperimentTransitions.Start)
@@ -130,7 +143,7 @@ async def test_can_pause_experiment(experiment: Experiment):
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize('experiment_cls', [BasicExperiment])
+@pytest.mark.parametrize("experiment_cls", [BasicExperiment])
 async def test_experiment_progress(experiment: Experiment):
     await run_until(experiment, ExperimentStates.Idle)
 
@@ -157,16 +170,18 @@ async def test_experiment_progress(experiment: Experiment):
 def precondition(*args, **kwargs):
     raise ValueError("xyz")
 
+
 class PreconditionFailExperiment(UILessExperiment):
     scan_methods = [
         scan(
             name="Precondition Scan",
-            preconditions=[precondition,],
+            preconditions=[precondition],
         )
     ]
 
+
 @pytest.mark.asyncio
-@pytest.mark.parametrize('experiment_cls', [PreconditionFailExperiment])
+@pytest.mark.parametrize("experiment_cls", [PreconditionFailExperiment])
 async def test_experiment_precondition(experiment: Experiment, caplog):
     await run_until(experiment, ExperimentStates.Idle)
 
@@ -177,7 +192,7 @@ async def test_experiment_precondition(experiment: Experiment, caplog):
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize('experiment_cls', [UILessAutoExperiment])
+@pytest.mark.parametrize("experiment_cls", [UILessAutoExperiment])
 async def test_autoexperiment(experiment: AutoExperiment, mocker):
     run_running_spy = mocker.spy(Experiment, "run_running")
     await run_until(experiment, ExperimentStates.Idle)
@@ -189,4 +204,3 @@ async def test_autoexperiment(experiment: AutoExperiment, mocker):
     await experiment.messages.put(ExperimentTransitions.Start)
     await run_until(experiment, ExperimentStates.Idle)
     assert ZarrSaver.save_run.call_count == 0
-

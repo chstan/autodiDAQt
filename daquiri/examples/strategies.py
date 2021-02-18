@@ -1,8 +1,14 @@
 from daquiri import Daquiri, Experiment
 from daquiri.mock import MockMotionController, MockScalarDetector
-from daquiri.scan import forwards_and_backwards  # Strategies
-from daquiri.scan import (backwards, only, randomly, scan, staircase_product,
-                          step_together)
+from daquiri.scan import (
+    backwards,
+    only,
+    forwards_and_backwards,
+    randomly,
+    scan,
+    staircase_product,
+    step_together,
+)
 
 
 class MyExperiment(Experiment):
@@ -16,8 +22,8 @@ class MyExperiment(Experiment):
     scan_methods = [
         scan(x=dx.step(randomly), name="Random Scan", read=read_power),
         scan(
-            x=dx.step(forwards_and_backwards),
             name="Forwards and Backwards",
+            x=dx.step(forwards_and_backwards),
             read=read_power,
         ),
         scan(x=dx.step(backwards), name="Backwards", read=read_power),
@@ -31,7 +37,10 @@ app = Daquiri(
     __name__,
     {},
     {"experiment": MyExperiment},
-    {"mc": MockMotionController, "power_meter": MockScalarDetector,},
+    {
+        "mc": MockMotionController,
+        "power_meter": MockScalarDetector,
+    },
 )
 
 if __name__ == "__main__":

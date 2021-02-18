@@ -2,6 +2,7 @@ from PyQt5.QtCore import QTimer
 
 __all__ = ("debounce",)
 
+
 class Debouncer:
     timer = None
     callback = None
@@ -9,12 +10,12 @@ class Debouncer:
 
     cached_args = None
     cached_kwargs = None
-    
+
     def __init__(self, callback, duration=0.15):
         self.timer = None
         self.callback = callback
         self.duration = duration
-    
+
     def fire(self):
         self.callback(*self.cached_args, **self.cached_kwargs)
 
@@ -23,13 +24,12 @@ class Debouncer:
         self.cached_kwargs = None
 
         self.dispose_timer()
-    
+
     def dispose_timer(self):
         if self.timer:
             self.timer.stop()
             self.timer.deleteLater()
             self.timer = None
-
 
     def __call__(self, *args, **kwargs):
         self.cached_args = args
@@ -41,7 +41,7 @@ class Debouncer:
         self.timer.setInterval(self.duration * 1000)
         self.timer.timeout.connect(self.fire)
         self.timer.start()
-        
+
 
 def debounce(duration=0.15):
     def wrap(f):
@@ -53,6 +53,5 @@ def debounce(duration=0.15):
             debouncer(*args, **kwargs)
 
         return internal
-    
-    return wrap
 
+    return wrap

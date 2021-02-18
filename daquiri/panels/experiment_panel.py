@@ -5,13 +5,23 @@ from copy import copy
 from typing import Tuple
 
 import numpy as np
-import pyqtgraph as pg
 from PyQt5.QtWidgets import QTabWidget
 
+import pyqtgraph as pg
 from daquiri.panel import Panel
-from daquiri.ui import (CollectUI, bind_dataclass, button, combo_box, group,
-                        horizontal, label, layout_dataclass, splitter, tabs,
-                        vertical)
+from daquiri.ui import (
+    CollectUI,
+    bind_dataclass,
+    button,
+    combo_box,
+    group,
+    horizontal,
+    label,
+    layout_dataclass,
+    splitter,
+    tabs,
+    vertical,
+)
 
 __all__ = ("ExperimentPanel",)
 
@@ -231,9 +241,13 @@ class ExperimentPanel(Panel):
             rest = label(str(item))
 
         return horizontal(
-            group(label(type(item).__name__), rest, label=f"Queue Item {index + 1}",),
-            vertical(remove_button, copy_button,),
-            vertical(up_button, down_button,),
+            group(
+                label(type(item).__name__),
+                rest,
+                label=f"Queue Item {index + 1}",
+            ),
+            vertical(remove_button, copy_button),
+            vertical(up_button, down_button),
         )
 
     def update_queue_ui(self):
@@ -288,9 +302,7 @@ class ExperimentPanel(Panel):
 
             self.plot_type = {
                 k: "image"
-                if isinstance(
-                    self.experiment.current_run.streaming_daq_ys[k][0], np.ndarray
-                )
+                if isinstance(self.experiment.current_run.streaming_daq_ys[k][0], np.ndarray)
                 else "line"
                 for k in display_names
             }
@@ -298,15 +310,10 @@ class ExperimentPanel(Panel):
 
             for additional_plot in self.additional_plots:
                 dependent_is_image_like = isinstance(
-                    self.experiment.current_run.streaming_daq_ys[
-                        additional_plot["dependent"]
-                    ][0],
+                    self.experiment.current_run.streaming_daq_ys[additional_plot["dependent"]][0],
                     np.ndarray,
                 )
-                assert (
-                    not dependent_is_image_like
-                    and "Cannot plot 1D/2D vs 2D data currently"
-                )
+                assert not dependent_is_image_like and "Cannot plot 1D/2D vs 2D data currently"
                 independent_is_image_like = len(additional_plot["independent"]) >= 2
 
                 if dependent_is_image_like:
@@ -336,23 +343,19 @@ class ExperimentPanel(Panel):
             tab_widgets = []
 
             for additional_plot in self.additional_plots:
-                name, ind, dep = [
-                    additional_plot[k] for k in ["name", "independent", "dependent"]
-                ]
+                name, ind, dep = [additional_plot[k] for k in ["name", "independent", "dependent"]]
                 widget, pg_widget, pg_plt = build_widget_for(name, self.plot_type[name])
                 self.built_widgets[name] = widget
                 self.user_pg_widgets[name] = pg_widget
                 self.user_pg_plots[name] = pg_plt
-                tab_widgets.append((name, widget,))
+                tab_widgets.append((name, widget))
 
             for k, display_name in display_names.items():
-                widget, pg_widget, pg_plt = build_widget_for(
-                    display_name, self.plot_type[k]
-                )
+                widget, pg_widget, pg_plt = build_widget_for(display_name, self.plot_type[k])
                 self.built_widgets[k] = widget
                 self.pg_widgets[k] = pg_widget
                 self.pg_plots[k] = pg_plt
-                tab_widgets.append((display_name, widget,))
+                tab_widgets.append((display_name, widget))
 
             data_stream_views = tabs(*tab_widgets)
             self.data_stream_views = data_stream_views
@@ -386,9 +389,7 @@ class ExperimentPanel(Panel):
                 )
 
     def update_user_stream_plot(self, user_plot_key):
-        name, ind, dep = [
-            user_plot_key[k] for k in ["name", "independent", "dependent"]
-        ]
+        name, ind, dep = [user_plot_key[k] for k in ["name", "independent", "dependent"]]
         pg_plot = self.user_pg_plots[name]
         if len(ind) > 1:
             last_index = user_plot_key.get("last_index", 0)
@@ -396,10 +397,7 @@ class ExperimentPanel(Panel):
             size = user_plot_key.get("size", np.abs)
 
             xss = np.stack(
-                [
-                    self.experiment.current_run.streaming_daq_ys[indi][last_index:]
-                    for indi in ind
-                ]
+                [self.experiment.current_run.streaming_daq_ys[indi][last_index:] for indi in ind]
             )
             ys = self.experiment.current_run.streaming_daq_ys[dep][last_index:]
 
@@ -441,9 +439,12 @@ class ExperimentPanel(Panel):
                 vertical(
                     button("Clear Queue", id="clear-queue", class_name="warning"),
                 ),
-                vertical(id="queue-layout",),
+                vertical(id="queue-layout"),
                 direction=splitter.Horizontal,
-                size=[self.LEFT_PANEL_SIZE, self.SIZE[0] - self.LEFT_PANEL_SIZE],
+                size=[
+                    self.LEFT_PANEL_SIZE,
+                    self.SIZE[0] - self.LEFT_PANEL_SIZE,
+                ],
             )
 
         self.queue_ui["clear-queue"].subject.subscribe(self.clear_queue)
@@ -453,9 +454,7 @@ class ExperimentPanel(Panel):
         self.timing_ui = {}
 
         with CollectUI(self.timing_ui):
-            timing_group = group(
-                label("N Points: {}".format(0), id="timing-label"), label="Timing",
-            )
+            timing_group = group(label("N Points: {}".format(0), id="timing-label"), label="Timing")
 
         return timing_group
 
@@ -505,7 +504,7 @@ class ExperimentPanel(Panel):
                                     ),
                                     class_name="scans",
                                 ),
-                                vertical("[Data Streams]", id="dynamic-layout",),
+                                vertical("[Data Streams]", id="dynamic-layout"),
                                 direction=splitter.Horizontal,
                                 size=[
                                     self.LEFT_PANEL_SIZE,

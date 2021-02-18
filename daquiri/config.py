@@ -50,20 +50,12 @@ class MetaData:
         time_started = datetime_started.time()
 
         self.__dict__["_internal"] = {
-            "date": lambda: MetaData.safe_time_string(
-                datetime.date.today().isoformat()
-            ),
-            "time": lambda: MetaData.safe_time_string(
-                datetime.datetime.now().time().isoformat()
-            ),
-            "datetime": lambda: MetaData.safe_time_string(
-                datetime.datetime.now().isoformat()
-            ),
+            "date": lambda: MetaData.safe_time_string(datetime.date.today().isoformat()),
+            "time": lambda: MetaData.safe_time_string(datetime.datetime.now().time().isoformat()),
+            "datetime": lambda: MetaData.safe_time_string(datetime.datetime.now().isoformat()),
             "date_started": lambda: MetaData.safe_time_string(date_started.isoformat()),
             "time_started": lambda: MetaData.safe_time_string(time_started.isoformat()),
-            "datetime_started": lambda: MetaData.safe_time_string(
-                datetime_started.isoformat()
-            ),
+            "datetime_started": lambda: MetaData.safe_time_string(datetime_started.isoformat()),
         }
 
     @staticmethod

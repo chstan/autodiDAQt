@@ -1,14 +1,16 @@
 import asyncio
 from random import random
 
+from daquiri import Actor, Daquiri
+from daquiri.instrument import (
+    AxisListSpecification,
+    AxisSpecification,
+    ManagedInstrument,
+)
+from daquiri.instrument.axis import PolledRead, PolledWrite
 from instruments.newport.newportesp301 import NewportESP301
 from pymeasure.instruments.lakeshore import LakeShore331
 from pymeasure.instruments.signalrecovery import dsp7265
-
-from daquiri import Actor, Daquiri
-from daquiri.instrument import (AxisListSpecification, AxisSpecification,
-                                ManagedInstrument)
-from daquiri.instrument.axis import PolledRead, PolledWrite
 
 
 class ManagedDSP7265(ManagedInstrument):
@@ -50,7 +52,7 @@ class RandomlyMove(Actor):
                     .stages[i]
                     .write(100 * random())
                     for i in range(3)
-                ]
+                ],
             )
             await asyncio.gather(
                 *[
@@ -68,7 +70,7 @@ class RandomlyMove(Actor):
 app = Daquiri(
     __name__,
     {},
-    {"randomly_move": RandomlyMove,},
+    {"randomly_move": RandomlyMove},
     managed_instruments={
         "motion_controller": ManagedNewportESP301,
         "temp_controller": ManagedTemperatureController,

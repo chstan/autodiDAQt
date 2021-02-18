@@ -3,18 +3,23 @@ import pytest
 import asyncio
 import time
 
-from daquiri.instrument.spec import AxisDescriptor, AxisListSpecification, MockDriver
+from daquiri.instrument.spec import (
+    AxisDescriptor,
+    AxisListSpecification,
+    MockDriver,
+)
 from daquiri.instrument import ManagedInstrument, AxisSpecification
 from daquiri.instrument.axis import Axis, PolledRead, PolledWrite, ProxiedAxis
 
 from .conftest import MockDaquiri
+
 
 class A:
     _value: int = 0
 
     def get_value(self) -> float:
         return self._value
-    
+
     def set_value(self, value: float) -> None:
         self._value = value
 
@@ -29,7 +34,6 @@ async def test_manual_axis():
     async def write(driver, v):
         driver.set_value(v)
 
-
     desc = AxisDescriptor(read, write)
     axis = desc.realize("b", a, a)
 
@@ -39,6 +43,7 @@ async def test_manual_axis():
     await axis.write(5)
     assert a.get_value() == 5
 
+
 @pytest.mark.asyncio
 async def test_manual_axis_mocked():
     async def mock_read(_):
@@ -46,7 +51,7 @@ async def test_manual_axis_mocked():
 
     async def mock_write(_, value):
         return
-    
+
     desc = AxisDescriptor(None, None, mock_read, mock_write)
     axis = desc.realize("b", MockDriver(), None)
 
@@ -56,9 +61,10 @@ async def test_manual_axis_mocked():
     v = await axis.read()
     assert v == 8
 
+
 @dataclass
 class PolledFloat:
-    value: float = 0.
+    value: float = 0.0
     last_moved: float = field(default_factory=time.time)
     sleep_for: float = 0.5
 
@@ -96,22 +102,26 @@ class PseudoDriver:
     ]
     xyz = [1, 2, 3]
 
+
 class PseudoInstrument(ManagedInstrument):
     driver_cls = PseudoDriver
 
-    x = AxisSpecification(float, where=["x"], 
-        read=PolledRead("read", "is_readable"), 
-        write=PolledWrite("write", "is_readable")
+    x = AxisSpecification(
+        float,
+        where=["x"],
+        read=PolledRead("read", "is_readable"),
+        write=PolledWrite("write", "is_readable"),
     )
 
     xyz = AxisListSpecification(
-        float, 
+        float,
         where=lambda i: ["xyz", i],
     )
 
     simple_value = AxisSpecification(float, where=["simple_value"])
     arr_a = AxisSpecification(str, where=["array_of_simple_values", 0])
     arr_b = AxisSpecification(str, where=["array_of_simple_values", 1])
+
 
 @pytest.mark.asyncio
 async def test_proxied_axis_simple_values(app: MockDaquiri):
@@ -143,6 +153,7 @@ async def test_proxied_axis_simple_values(app: MockDaquiri):
     assert await axis.read() == "b"
     await axis.write("goodbye") == "goodbye"
     await axis.read() == "goodbye"
+
 
 @pytest.mark.asyncio
 async def test_proxied_axis_list(app: MockDaquiri):
@@ -180,7 +191,7 @@ async def test_proxied_axis_polling(app: MockDaquiri, mocker):
 
     assert await x_axis.write(5) == 5
     assert ins.driver.x.last_moved is not None
-    
+
     # that write should have been slow
     elapsed = time.time() - start
     assert elapsed > ins.driver.x.sleep_for
@@ -191,10 +202,9 @@ async def test_proxied_axis_polling(app: MockDaquiri, mocker):
     elapsed2 = time.time() - start
     assert elapsed + 0.5 > elapsed2
 
-    # the exact call count may vary a little but it should be 
+    # the exact call count may vary a little but it should be
     # at least five calls based on the standard backoff settings
     assert poll_spy.call_count > 5
-
 
     # check that if we fire a write just before a read
     # then the read is coordinated so that the write will flush
@@ -207,7 +217,7 @@ async def test_proxied_axis_polling(app: MockDaquiri, mocker):
         start = time.time()
         assert await x_axis.read() == 4
         assert time.time() - start > 0.2
-    
+
     await asyncio.gather(race_read(), race_write())
 
     # check that a double write will cause an exception to be raised
@@ -219,8 +229,7 @@ async def test_proxied_axis_polling(app: MockDaquiri, mocker):
 
         with pytest.raises(ValueError) as exc:
             await x_axis.write(6)
-        
-        assert "Already moving" in str(exc.value)
-    
-    await asyncio.gather(fast_write(), slow_write())
 
+        assert "Already moving" in str(exc.value)
+
+    await asyncio.gather(fast_write(), slow_write())

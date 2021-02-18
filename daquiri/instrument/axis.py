@@ -1,14 +1,13 @@
-import enum
 import asyncio
 import datetime
+import enum
 import warnings
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional
 
-from rx.subject import Subject
-
 from daquiri.schema import default_value_for_schema
 from daquiri.state import LogicalAxisState
+from rx.subject import Subject
 
 __all__ = (
     "Axis",
@@ -21,6 +20,7 @@ __all__ = (
     "PolledWrite",
 )
 
+
 @dataclass
 class BackoffConfig:
     initial_time: float = 0.03
@@ -32,6 +32,7 @@ class BackoffConfig:
             return self.initial_time
 
         return min(self.maximum_time, self.backoff_ratio * wait_time)
+
 
 @dataclass
 class PolledWrite:
@@ -64,6 +65,7 @@ class Axis:
     Additionally, measurements may take finite time, and in the case of event stream axes, you may not know
     when values will be produced.
     """
+
     raw_value_stream: Optional[Subject]
 
     def collect_state(self):
@@ -87,7 +89,7 @@ class Axis:
         self.raw_value_stream = Subject()
 
         # for scalar schemas we can provide a stream of values
-        if schema in (float, int,):
+        if schema in (float, int):
             self.collected_xs = []
             self.collected_ys = []
             self.raw_value_stream.subscribe(self.append_point_to_history)
@@ -107,8 +109,8 @@ class Axis:
     # We use a two level API in order to make the code here
     # more straightforward. *_internal methods are virtual
     # and set the internal behavior for an axis
-    # the high level API provides synchronous (if available) 
-    # and asynchronous bindings which also handle emitting 
+    # the high level API provides synchronous (if available)
+    # and asynchronous bindings which also handle emitting
     # values for subscribers
     async def write_internal(self, value):
         raise NotImplementedError
@@ -124,7 +126,7 @@ class Axis:
 
     # in general, you do not need to implement
     # the top level methods, unless you need to control how
-    # values are emitted. You should be able to implement the 
+    # values are emitted. You should be able to implement the
     # low level API above and be a client to the high level API
     # below
     async def write(self, value):
@@ -146,7 +148,6 @@ class Axis:
         value = self.sync_write_internal(value)
         self.emit(value)
         return value
-
 
 
 class ManualAxis(Axis):
@@ -175,6 +176,7 @@ class TestManualAxis(ManualAxis):
 
     async def read_internal(self):
         return await self.axis_descriptor.fmockread(self.instrument)
+
 
 class LogicalSubaxis(Axis):
     def __init__(self, name, schema, parent_axis, subaxis_name, index):
@@ -248,7 +250,11 @@ class LogicalAxis(Axis):
 
         for index, subaxis_name in enumerate(self.logical_coordinate_names):
             subaxis = LogicalSubaxis(
-                f"{self.name}.{subaxis_name}", self.schema, self, subaxis_name, index
+                f"{self.name}.{subaxis_name}",
+                self.schema,
+                self,
+                subaxis_name,
+                index,
             )
             setattr(self, subaxis_name, subaxis)
 
@@ -315,6 +321,7 @@ def _bind(function_name, driver, where):
         return d
 
     if isinstance(function_name, str):
+
         def bound(value=None):
             if value:
                 setattr(last, function_name, value)
@@ -323,6 +330,7 @@ def _bind(function_name, driver, where):
 
     else:
         assert isinstance(function_name, int)
+
         def bound(value=None):
             if value:
                 last[function_name] = value
@@ -330,6 +338,7 @@ def _bind(function_name, driver, where):
                 return last[function_name]
 
     return bound
+
 
 class ProxiedAxis(Axis):
     backoff = BackoffConfig()
@@ -355,10 +364,10 @@ class ProxiedAxis(Axis):
 
         self.readonly = write is None
 
-        if isinstance(read, (str, int,)):
+        if isinstance(read, (str, int)):
             read = PolledRead(read=read, poll=None)
 
-        if isinstance(write, (str, int,)) or write is None:
+        if isinstance(write, (str, int)) or write is None:
             write = PolledWrite(write=write, poll=None)
 
         try:
@@ -394,7 +403,7 @@ class ProxiedAxis(Axis):
         if self._bound_poll_write is not None:
             self._status = AxisStatus.Moving
             await self._settle(False)
-        
+
         return value
 
     async def settle(self):
@@ -418,6 +427,7 @@ class ProxiedAxis(Axis):
                 if poll():
                     self._status = AxisStatus.Idle
                     return
+
 
 class TestAxis(Axis):
     def __init__(self, name, schema, mock=None, readonly=True, *args, **kwargs):

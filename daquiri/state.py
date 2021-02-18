@@ -89,9 +89,7 @@ def _base_state_path(app) -> Path:
 
 def find_newest_state_filename(app) -> Optional[Path]:
     base = _base_state_path(app)
-    state_files = sorted(
-        base.glob("*.state.pickle"), key=lambda p: p.stat().st_mtime, reverse=True
-    )
+    state_files = sorted(base.glob("*.state.pickle"), key=lambda p: p.stat().st_mtime, reverse=True)
     return state_files[0] if state_files else None
 
 

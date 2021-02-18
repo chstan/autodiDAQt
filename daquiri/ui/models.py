@@ -1,10 +1,20 @@
 import contextlib
 from typing import Any, List, Tuple
 
-from PyQt5.QtCore import QModelIndex, Qt, QAbstractListModel, QAbstractTableModel
+from PyQt5.QtCore import (
+    QAbstractListModel,
+    QAbstractTableModel,
+    QModelIndex,
+    Qt,
+)
 from PyQt5.QtWidgets import QAbstractItemView
 
-from daquiri.reactive_utils import RxListPattern, Transaction, TransactionKind, RxTablePattern
+from daquiri.reactive_utils import (
+    RxListPattern,
+    RxTablePattern,
+    Transaction,
+    TransactionKind,
+)
 
 
 class DeferredAttachmentModel:

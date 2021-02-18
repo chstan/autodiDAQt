@@ -6,6 +6,7 @@ from daquiri.mock import MockScalarDetector, MockMotionController
 
 __all__ = ["BasicScan", "UninvertedScan"]
 
+
 class BasicScan:
     @property
     def n_points(self) -> int:
@@ -21,6 +22,7 @@ class BasicScan:
             with experiment.point():
                 yield [mc.stages[0].write(i)]
                 yield [power_meter.device.read()]
+
 
 @dataclass
 class UninvertedScan:
@@ -39,8 +41,8 @@ class UninvertedScan:
         power_meter: MockScalarDetector,
     ):
         experiment.collate(
-            independent=[("mc.stages[0]", "dx",)],
-            dependent=[("power_meter.device", "power",),],
+            independent=[["mc.stages[0]", "dx"]],
+            dependent=[["power_meter.device", "power"]],
         )
 
         for i, x in enumerate(np.linspace(self.start, self.stop, self.n_steps)):
@@ -49,5 +51,3 @@ class UninvertedScan:
                 await mc.stages[0].write(x)
                 read_value = await power_meter.device.read()
                 yield {"mc.stages[0]": x, "power_meter.device": read_value}
-
-

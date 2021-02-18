@@ -21,7 +21,7 @@ app = Daquiri(
     __name__,
     {},
     {"experiment": MyExperiment},
-    {"mc": MockMotionController, "power_meter": MockScalarDetector,},
+    {"mc": MockMotionController, "power_meter": MockScalarDetector},
 )
 
 if __name__ == "__main__":

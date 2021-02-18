@@ -8,6 +8,7 @@ import random
 
 from daquiri.experiment import Collation
 
+
 @dataclass
 class DAQHelper:
     step: int = 0
@@ -20,6 +21,7 @@ class DAQHelper:
             "step": self.step,
             "point": self.point,
         }
+
 
 def test_collation_end_to_end():
     coll = Collation(
@@ -51,15 +53,16 @@ def test_collation_end_to_end():
 
     dset = coll.to_xarray(daq_values)
     assert set(dset.data_vars.keys()) == {"X-values", "Y-values", "Z"}
-    assert set(dset["Z"].dims) == {"X", "Y",}
-    assert dset["Z"].values.shape == (n_per_axis, n_per_axis,)
-    assert dset["Z"].values.astype(int).ravel().tolist() == zs 
+    assert set(dset["Z"].dims) == {"X", "Y"}
+    assert dset["Z"].values.shape == (n_per_axis, n_per_axis)
+    assert dset["Z"].values.astype(int).ravel().tolist() == zs
+
 
 def test_collation_array_values():
     """
     We also allow producing an array as a single scalar value, for instance
     when we are dealing with a camera which produces an image as a single measurement
-    """    
+    """
 
     coll = Collation(
         independent={("x",): "X"},
@@ -70,7 +73,7 @@ def test_collation_array_values():
     helper = DAQHelper()
     for x in range(10):
         daq_values[("x",)].append(helper.daq_point(x))
-        daq_values[("z",)].append(helper.daq_point(np.random.randn(5,5)))
+        daq_values[("z",)].append(helper.daq_point(np.random.randn(5, 5)))
         coll.receive(("x",), x)
         helper.step += 1
         helper.point += 1
@@ -78,6 +81,7 @@ def test_collation_array_values():
     arr = coll.to_xarray(daq_values)
     assert set(arr.data_vars.keys()) == {"X-values", "Z"}
     assert arr.Z.shape == (10, 5, 5)
+
 
 def test_collation_axes():
     coll = Collation(
@@ -96,7 +100,7 @@ def test_collation_axes():
     random.shuffle(ys)
     for y in ys:
         coll.receive(("y",), y)
-    
+
     # check that we build axes correctly
     coords, dims = coll.internal_axes()
     assert dims == ["X", "Y"]

@@ -3,7 +3,12 @@ from typing import List, Optional
 
 import numpy as np
 
-__all__ = ("ObjectType", "ArrayType", "default_value_for_schema",)
+__all__ = (
+    "ObjectType",
+    "ArrayType",
+    "default_value_for_schema",
+)
+
 
 @dataclass
 class ObjectType:
@@ -26,7 +31,7 @@ class ArrayType:
     If the shape is provided, then this will be the shape of the arrays produced.
     A `None` value here indicates that we don't know ahead of time how big they
     will be.
-    
+
     The `dtype` member indicates the type of the array values
     """
 
@@ -36,11 +41,11 @@ class ArrayType:
     @classmethod
     def of(cls, dtype):
         return ArrayType(None, dtype)
-    
+
     def default_value(self):
         if self.shape is None:
             return None
-        
+
         return np.zeros(dtype=self.dtype, shape=self.shape)
 
 

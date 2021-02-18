@@ -38,8 +38,8 @@ class MyExperiment(Experiment):
 app = Daquiri(
     __name__,
     {},
-    {"experiment": MyExperiment},
-    {"mc": MockMotionController, "power_meter": MockScalarDetector,},
+    dict(experiment=MyExperiment),
+    dict(mc=MockMotionController, power_meter=MockScalarDetector),
 )
 
 if __name__ == "__main__":

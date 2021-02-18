@@ -2,9 +2,11 @@ from dataclasses import dataclass, field
 from typing import Dict, Set, Tuple, Union
 
 import numpy as np
+
 import xarray as xr
 
 __all__ = ["Collation"]
+
 
 @dataclass
 class Collation:
@@ -82,15 +84,13 @@ class Collation:
                 yield collected
                 collected = [daq["data"]]
                 group = current_group
-        
+
         yield collected
 
     @classmethod
     def iter_grouped(cls, daq_values, group_key="point"):
         names = list(daq_values.keys())
-        single_streams = [
-            cls.iter_single_group(daq_values[n], group_key=group_key) for n in names
-        ]
+        single_streams = [cls.iter_single_group(daq_values[n], group_key=group_key) for n in names]
 
         for point in zip(*single_streams):
             point = [x[0] if len(x) == 1 else x for x in point]
@@ -120,4 +120,3 @@ class Collation:
                 ds[kname].values[tuple(index)] = value
 
         return ds
-

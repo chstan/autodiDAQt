@@ -8,7 +8,7 @@ from tests.conftest import MockDaquiri
 
 @pytest.mark.asyncio
 async def test_mock_motion_controller(app: MockDaquiri):
-    app.init_with(managed_instruments={'mc': MockMotionController})
+    app.init_with(managed_instruments={"mc": MockMotionController})
 
     # test writing
     await app.instruments.mc.stages[0].write(5.6)
@@ -23,7 +23,7 @@ async def test_mock_motion_controller(app: MockDaquiri):
 
 @pytest.mark.asyncio
 async def test_mock_detector(app: MockDaquiri):
-    app.init_with(managed_instruments={'det': MockScalarDetector})
+    app.init_with(managed_instruments={"det": MockScalarDetector})
     det = app.instruments.det
 
     x, y = await asyncio.gather(det.device.read(), det.device.read())

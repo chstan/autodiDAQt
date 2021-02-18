@@ -2,6 +2,7 @@
 import sys
 from PyQt5.QtWidgets import QWidget
 
+
 class Led(QWidget):
     capsule = 1
     circle = 2
@@ -9,13 +10,14 @@ class Led(QWidget):
 
     def __init__(self, *args, **kwargs):
         super().__init__()
-        
+
     def turn_on(self):
         pass
 
-module = type(sys)('pyqt_led')
+
+module = type(sys)("pyqt_led")
 module.Led = Led
-sys.modules['pyqt_led'] = module
+sys.modules["pyqt_led"] = module
 
 import pytest
 
@@ -37,12 +39,14 @@ from daquiri.state import AppState
 
 from .common.experiments import BasicExperiment
 
+
 @pytest.fixture
 def caplog(_caplog):
     """
     Forwards loguru log messages to the pytest logger according to the advice in
     https://loguru.readthedocs.io/en/stable/resources/migration.html
     """
+
     class PropogateHandler(logging.Handler):
         def emit(self, record):
             logging.getLogger(record.name).handle(record)
@@ -69,13 +73,11 @@ class MockDaquiri(Daquiri):
         self.user_cls = make_user_data_dataclass(profile_field=None)
         self.user = self.user_cls(user="test_user", session_name="test_session")
 
-        self.main_window = AttrDict({
-            'open_panels': {}
-        })
+        self.main_window = AttrDict({"open_panels": {}})
 
     @property
     def file(self):
-        return '[pytest]'
+        return "[pytest]"
 
     def init_with(self, managed_instruments=None, panels=None):
         if managed_instruments is None:
@@ -92,7 +94,7 @@ class MockDaquiri(Daquiri):
         self.panel_definitions.update(panels)
 
     def cleanup(self):
-        print('Cleanup')
+        print("Cleanup")
 
     @property
     def instruments(self):
@@ -107,7 +109,7 @@ class MockDaquiri(Daquiri):
         return self._instruments
 
 
-@pytest.fixture(scope='function')
+@pytest.fixture(scope="function")
 def app():
     """
     Generates a ``daquiri.core.Daquiri`` like instance to act in place of an app.
@@ -119,13 +121,16 @@ def app():
     yield app
     app.cleanup()
 
+
 @pytest.fixture(scope="function")
 def experiment_cls():
     return None
 
+
 @pytest.fixture(scope="function")
 def instrument_classes():
     return None
+
 
 @pytest.fixture(scope="function")
 async def experiment(app, mocker, caplog, experiment_cls, instrument_classes):
@@ -134,8 +139,8 @@ async def experiment(app, mocker, caplog, experiment_cls, instrument_classes):
 
     if instrument_classes is None:
         instrument_classes = {
-            'mc': MockMotionController,
-            'power_meter': MockScalarDetector,
+            "mc": MockMotionController,
+            "power_meter": MockScalarDetector,
         }
 
     app.init_with(instrument_classes)
@@ -150,4 +155,3 @@ async def experiment(app, mocker, caplog, experiment_cls, instrument_classes):
     await exp.prepare()
 
     yield exp
-

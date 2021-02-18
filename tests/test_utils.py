@@ -3,14 +3,19 @@ import json
 import pytest
 import datetime
 from daquiri.collections import AttrDict
-from daquiri.utils import AccessRecorder, RichEncoder, ScanAccessRecorder, enum_mapping, enum_option_names, find_conflict_free_matches, temporary_attrs
+from daquiri.utils import (
+    AccessRecorder,
+    RichEncoder,
+    ScanAccessRecorder,
+    enum_mapping,
+    enum_option_names,
+    find_conflict_free_matches,
+    temporary_attrs,
+)
+
 
 def test_temporary_attrs():
-    a = AttrDict({
-        "a": 3,
-        "b": 4,
-        "c": 5
-    })
+    a = AttrDict({"a": 3, "b": 4, "c": 5})
 
     with temporary_attrs(a, b=-2, c=None):
         assert a.b == -2
@@ -28,6 +33,7 @@ class E1(str, enum.Enum):
 def test_enum_option_names():
     assert enum_option_names(E1) == ["First", "Second"]
 
+
 def test_enum_mapping():
     # names to values
     assert enum_mapping(E1) == {
@@ -41,18 +47,16 @@ def test_enum_mapping():
         "second": "Second",
     }
 
+
 def test_find_conflict_free_matches():
     constraints = {
-        'a': [1, 2, 3],
-        'b': [2],
-        'c': [1],
+        "a": [1, 2, 3],
+        "b": [2],
+        "c": [1],
     }
 
-    assert find_conflict_free_matches(constraints) == {
-        'a': 3,
-        'b': 2,
-        'c': 1
-    }
+    assert find_conflict_free_matches(constraints) == {"a": 3, "b": 2, "c": 1}
+
 
 def test_rich_json_encoding():
     def my_fn():
@@ -74,11 +78,13 @@ def test_rich_json_encoding():
         "standard": "standard",
     }
 
+
 def test_access_recorder():
     recorder = AccessRecorder()
     x = recorder.x.y.z[0].w
 
     assert recorder.path == ["x", "y", "z", 0, "w"]
+
 
 def test_scan_access_recorder():
     recorder = ScanAccessRecorder()

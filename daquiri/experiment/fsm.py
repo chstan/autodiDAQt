@@ -5,11 +5,12 @@ from loguru import logger
 
 __all__ = ["FSM"]
 
+
 class FSM(Actor):
     STATE_TABLE = {
         "IDLE": [{"match": "start", "to": "RUNNING"}],
-        "RUNNING": [{"match": "pause", "to": "PAUSED",}],
-        "PAUSED": [{"match": "start", "to": "RUNNING",}],
+        "RUNNING": [{"match": "pause", "to": "PAUSED"}],
+        "PAUSED": [{"match": "start", "to": "RUNNING"}],
     }
     STARTING_STATE = "IDLE"
 
@@ -17,7 +18,9 @@ class FSM(Actor):
         super().__init__(app)
         self.state = self.STARTING_STATE
         assert self.state is not None, "Initial state must be specified"
-        assert self.state in self.STATE_TABLE, f"Initial state must be among {list(self.STATE_TABLE.keys())}"
+        assert (
+            self.state in self.STATE_TABLE
+        ), f"Initial state must be among {list(self.STATE_TABLE.keys())}"
 
     async def transition_to(self, transition, trigger):
         """
@@ -106,7 +109,7 @@ class FSM(Actor):
         message = self.messages.get_nowait()
         await self.fsm_handle_message(message)
         self.messages.task_done()
-    
+
     async def read_all_messages(self):
         """
         This is mostly a convenience hook for testing,
@@ -123,7 +126,7 @@ class FSM(Actor):
         await f()
         # NEVER TRUST THE USER, this ensures we yield back to the scheduler
         await sleep(0)
-    
+
     async def run(self):
         while True:
             await self.read_all_messages()

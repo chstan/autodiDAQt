@@ -4,12 +4,13 @@ import random
 from daquiri.data import ReactivePlot, reactive_frame
 from .common.experiments import Sink
 
+
 def test_reactive_frame():
     subj, frame = reactive_frame()
 
     class Box:
         value = None
-        
+
         def set(self, value):
             self.value = value
 
@@ -23,10 +24,11 @@ def test_reactive_frame():
     assert b.value.x.values.tolist() == [0, 5, 3]
     assert b.value.y.values.tolist() == [1, 2, 8]
 
+
 class MockAx:
     figure = Sink()
 
-    # lets 
+    # lets
     xlim = None
 
     def __init__(self) -> None:
@@ -44,7 +46,7 @@ class MockAx:
     def scatter(self, x, y, **kwargs):
         self.x.extend(x)
         self.y.extend(y)
-    
+
 
 def test_link_plot_to_reactive_frame():
     ax = MockAx()

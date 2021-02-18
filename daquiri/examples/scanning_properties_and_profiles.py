@@ -1,11 +1,12 @@
-from pymeasure.instruments.signalrecovery.dsp7265 import DSP7265
-
 from daquiri import Daquiri, Experiment
 from daquiri.instrument import AxisSpecification, ManagedInstrument
-from daquiri.instrument.spec import (ChoicePropertySpecification,
-                                     MethodSpecification)
+from daquiri.instrument.spec import (
+    ChoicePropertySpecification,
+    MethodSpecification,
+)
 from daquiri.mock import MockMotionController, MockScalarDetector
 from daquiri.scan import scan
+from pymeasure.instruments.signalrecovery.dsp7265 import DSP7265
 
 
 class ManagedDSP7265(ManagedInstrument):
@@ -52,10 +53,25 @@ read_power = {
 
 class MyExperiment(Experiment):
     scan_methods = [
-        scan(sensitivity=dsensitivity, x=dx, name="Sensitivity Scan", read=read_power),
+        scan(
+            name="Sensitivity Scan",
+            sensitivity=dsensitivity,
+            x=dx,
+            read=read_power,
+        ),
         scan(x=dx, tc=dtime_constant, name="Time Constant Scan", read=read_power),
-        scan(x=dx, name="Fast Scan", read=read_power, profiles=dict(lockin="Fast")),
-        scan(x=dx, name="Slow Scan", read=read_power, profiles=dict(lockin="Slow")),
+        scan(
+            name="Fast Scan",
+            x=dx,
+            read=read_power,
+            profiles=dict(lockin="Fast"),
+        ),
+        scan(
+            name="Slow Scan",
+            x=dx,
+            read=read_power,
+            profiles=dict(lockin="Slow"),
+        ),
     ]
 
 

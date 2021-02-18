@@ -8,8 +8,9 @@ from daquiri.instrument.spec import ChoicePropertySpecification
 
 __all__ = ["PropertyInstrument"]
 
+
 class Driver(DSP7265):
-    category = 'A'
+    category = "A"
 
 
 class PropertyInstrument(ManagedInstrument):
@@ -22,21 +23,29 @@ class PropertyInstrument(ManagedInstrument):
     mag = AxisSpecification(float)
 
     sensitivity = ChoicePropertySpecification(
-        where=['sensitivity'], choices=DSP7265.SENSITIVITIES, labels=lambda _, k: f'{k} V')
+        where=["sensitivity"],
+        choices=DSP7265.SENSITIVITIES,
+        labels=lambda _, k: f"{k} V",
+    )
 
-    _categories = ['A', 'B', 'C', 'D', 'E']
-    categorical = ChoicePropertySpecification(where=['category'], choices=dict(zip(_categories, _categories)))
+    _categories = ["A", "B", "C", "D", "E"]
+    categorical = ChoicePropertySpecification(
+        where=["category"], choices=dict(zip(_categories, _categories))
+    )
 
     time_constant = ChoicePropertySpecification(
-        where=['time_constant'], choices=DSP7265.TIME_CONSTANTS, labels=lambda _, k: f'{k} s')
+        where=["time_constant"],
+        choices=DSP7265.TIME_CONSTANTS,
+        labels=lambda _, k: f"{k} s",
+    )
 
     profiles = {
-        'Fast': {
-            'sensitivity': DSP7265.SENSITIVITIES[8],
-            'time_constant': DSP7265.TIME_CONSTANTS[9],
+        "Fast": {
+            "sensitivity": DSP7265.SENSITIVITIES[8],
+            "time_constant": DSP7265.TIME_CONSTANTS[9],
         },
-        'Slow': {
-            'sensitivity': DSP7265.SENSITIVITIES[8],
-            'time_constant': DSP7265.TIME_CONSTANTS[13],
-        }
+        "Slow": {
+            "sensitivity": DSP7265.SENSITIVITIES[8],
+            "time_constant": DSP7265.TIME_CONSTANTS[13],
+        },
     }

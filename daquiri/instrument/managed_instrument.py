@@ -2,9 +2,13 @@ import asyncio
 import warnings
 
 from daquiri.actor import Actor
-from daquiri.instrument.spec import (LogicalAxisSpecification,
-                                     MethodSpecification, MockDriver,
-                                     PropertySpecification, Specification)
+from daquiri.instrument.spec import (
+    LogicalAxisSpecification,
+    MethodSpecification,
+    MockDriver,
+    PropertySpecification,
+    Specification,
+)
 from daquiri.panels import BasicInstrumentPanel
 from daquiri.state import InstrumentState
 from daquiri.utils import AccessRecorder, safe_lookup, tokenize_access_path
@@ -25,7 +29,7 @@ class ScanRecorder(AccessRecorder):
             left += [first]
             current = safe_lookup(current, first)
 
-            if isinstance(current, (Specification, PropertySpecification,)):
+            if isinstance(current, (Specification, PropertySpecification)):
                 break
 
         return current.to_scan_axis(self.scope, left, rest, *args, **kwargs)
@@ -52,9 +56,7 @@ class ManagedInstrument(Actor):
             panel_state = None
         return InstrumentState(
             axes={
-                k: [vs.collect_state() for vs in v]
-                if isinstance(v, list)
-                else v.collect_state()
+                k: [vs.collect_state() for vs in v] if isinstance(v, list) else v.collect_state()
                 for k, v in self.axes.items()
             },
             properties={},
@@ -105,9 +107,7 @@ class ManagedInstrument(Actor):
         self.driver = (
             MockDriver()
             if simulate
-            else self.driver_cls(
-                *driver_init.get("args", []), **driver_init.get("kwargs", {})
-            )
+            else self.driver_cls(*driver_init.get("args", []), **driver_init.get("kwargs", {}))
         )
 
         def is_spec(s, kind: type = Specification):
@@ -118,16 +118,10 @@ class ManagedInstrument(Actor):
 
         # AXES
         spec_names = [s for s in dir(self) if is_spec(s, kind=Specification)]
-        property_spec_names = [
-            s for s in dir(self) if is_spec(s, kind=PropertySpecification)
-        ]
-        method_spec_names = [
-            s for s in dir(self) if is_spec(s, kind=MethodSpecification)
-        ]
+        property_spec_names = [s for s in dir(self) if is_spec(s, kind=PropertySpecification)]
+        method_spec_names = [s for s in dir(self) if is_spec(s, kind=MethodSpecification)]
 
-        self.specification_ = {
-            spec_name: getattr(self, spec_name) for spec_name in spec_names
-        }
+        self.specification_ = {spec_name: getattr(self, spec_name) for spec_name in spec_names}
         for spec_name in spec_names:
             spec = getattr(self, spec_name)
             if not isinstance(spec, LogicalAxisSpecification):
@@ -148,9 +142,7 @@ class ManagedInstrument(Actor):
             setattr(self, spec_name, spec.realize(spec_name, self.driver, self))
 
         # METHODS
-        self.methods_ = {
-            spec_name: getattr(self, spec_name) for spec_name in method_spec_names
-        }
+        self.methods_ = {spec_name: getattr(self, spec_name) for spec_name in method_spec_names}
         for spec_name in method_spec_names:
             spec = getattr(self, spec_name)
             setattr(self, spec_name, spec.realize(spec_name, self.driver, self))

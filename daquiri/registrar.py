@@ -22,6 +22,7 @@ from typing import Any, Dict, List
 
 __all__ = ["registrar"]
 
+
 @dataclass
 class Registrar:
     metadata_sources: Dict[str, Any] = field(default_factory=dict)
@@ -31,9 +32,7 @@ class Registrar:
 
     def register_source(self, source_name, source):
         if source_name in self.metadata_sources:
-            raise ValueError(
-                f"{source_name} is already registered as a metadata source."
-            )
+            raise ValueError(f"{source_name} is already registered as a metadata source.")
 
         self.metadata_sources[source_name] = source
 
@@ -64,4 +63,3 @@ class Registrar:
 
 
 registrar = Registrar()
-

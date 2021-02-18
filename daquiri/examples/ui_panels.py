@@ -2,8 +2,15 @@
 A simple, reactive two panel (window) application.
 """
 from daquiri import Daquiri, Panel
-from daquiri.ui import (CollectUI, button, line_edit, radio_button, submit,
-                        text_edit, vertical)
+from daquiri.ui import (
+    CollectUI,
+    button,
+    line_edit,
+    radio_button,
+    submit,
+    text_edit,
+    vertical,
+)
 
 
 class Monitor(Panel):
@@ -37,11 +44,16 @@ class Log(Panel):
 
     def layout(self):
         vertical(
-            "Some logging information", text_edit("Initial log text."), widget=self,
+            "Some logging information",
+            text_edit("Initial log text."),
+            widget=self,
         )
 
 
-app = Daquiri(__name__, {"Monitor": Monitor, "Log": Log,})
+app = Daquiri(
+    __name__,
+    {"Monitor": Monitor, "Log": Log},
+)
 
 if __name__ == "__main__":
     app.start()

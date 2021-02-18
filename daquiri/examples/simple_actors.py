@@ -3,9 +3,8 @@ The absolute, bare minimum. Open an application with no panels.
 """
 from asyncio import sleep
 
-from loguru import logger
-
 from daquiri import Actor, Daquiri
+from loguru import logger
 
 
 class Speaker(Actor):
@@ -24,7 +23,11 @@ class Listener(Actor):
             logger.info(message)
 
 
-app = Daquiri(__name__, {}, {"speaks": Speaker, "listens": Listener,})
+app = Daquiri(
+    __name__,
+    {},
+    {"speaks": Speaker, "listens": Listener},
+)
 
 if __name__ == "__main__":
     app.start()

@@ -2,19 +2,16 @@
   "name": "daquiri",
   "version": "0.0.0",
   "license": "MIT",
+  "private": true,
   "dependencies": {},
   "scripts": {
     "watch-test": "pytest -c pytest-config/pytest-watch.ini",
     "watch-coverage": "pytest -c pytest-config/pytest-coverage.ini -f",
     "test": "pytest -c pytest-config/pytest.ini",
-    "coverage": "pytest -c pytest-config/pytest-coverage.ini"
+    "coverage": "pytest -c pytest-config/pytest-coverage.ini",
+    "postinstall": "husky install"
   },
   "devDependencies": {
-    "husky": "^4.2.3"
-  },
-  "husky": {
-    "hooks": {
-      "pre-comment": "black daquiri && isort -rc daquiri"
-    }
+    "husky": "^5.0.9"
   }
 }

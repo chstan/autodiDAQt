@@ -3,11 +3,13 @@ import pytest
 
 
 def test_lenses_basic():
-    subj = LensSubject({
-        "a": {"b": {"d": 5}, "c": [4]},
-        "f": -1,
-        "g": [0, 1, 2],
-    })
+    subj = LensSubject(
+        {
+            "a": {"b": {"d": 5}, "c": [4]},
+            "f": -1,
+            "g": [0, 1, 2],
+        }
+    )
 
     l1 = Lens(subj, lambda x: x["a"], lambda fv, sv: {**fv, "a": sv})
     l2 = l1.view(lambda x: x["b"], lambda fv, sv: {**fv, "b": sv})

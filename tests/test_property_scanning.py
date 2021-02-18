@@ -6,29 +6,32 @@ from daquiri.experiment import Experiment, ScopedAccessRecorder
 from daquiri.scan import scan
 from .common.instruments import PropertyInstrument
 
-dsensitivity = PropertyInstrument.scan('ins').sensitivity()
-dtime_constant = PropertyInstrument.scan('ins').time_constant()
-dcat = PropertyInstrument.scan('ins').categorical()
+dsensitivity = PropertyInstrument.scan("ins").sensitivity()
+dtime_constant = PropertyInstrument.scan("ins").time_constant()
+dcat = PropertyInstrument.scan("ins").categorical()
 
 
 def test_scan_property_elements():
-    fields = dsensitivity.to_fields(base_name='test')
-    assert [x[0] for x in fields] == ['start_test', 'stop_test']
+    fields = dsensitivity.to_fields(base_name="test")
+    assert [x[0] for x in fields] == ["start_test", "stop_test"]
     assert [v.value for v in fields[0][1].__members__.values()] == list(range(1, 29))
-    assert [v for v in fields[0][1].__members__.keys()][:5] == ['0 V', '1 V', '2 V', '3 V', '4 V', ]
+    assert [v for v in fields[0][1].__members__.keys()][:5] == ["0 V", "1 V", "2 V", "3 V", "4 V"]
 
-    fields = dcat.to_fields(base_name='test2')
-    assert [x[0] for x in fields] == ['start_test2', 'stop_test2']
+    fields = dcat.to_fields(base_name="test2")
+    assert [x[0] for x in fields] == ["start_test2", "stop_test2"]
     assert [v.value for v in fields[0][1].__members__.values()] == [1, 2, 3, 4, 5]
-    assert [v for v in fields[0][1].__members__.keys()] == ['A', 'B', 'C', 'D', 'E']
+    assert [v for v in fields[0][1].__members__.keys()] == ["A", "B", "C", "D", "E"]
+
 
 class ScanPropertyExperiment(UILessExperiment):
-    scan_methods = [
-        scan(sensitivity=dsensitivity, categorical=dcat, name='Test Scan')
-    ]
+    scan_methods = [scan(sensitivity=dsensitivity, categorical=dcat, name="Test Scan")]
+
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize(('experiment_cls', 'instrument_classes'), [(ScanPropertyExperiment, {"ins": PropertyInstrument},)])
+@pytest.mark.parametrize(
+    ("experiment_cls", "instrument_classes"),
+    [(ScanPropertyExperiment, {"ins": PropertyInstrument})],
+)
 async def test_scan_property(experiment: Experiment):
     scan_instance = experiment.scan_configuration
 
@@ -41,7 +44,7 @@ async def test_scan_property(experiment: Experiment):
     config = copy(experiment.scan_configuration)
     run = experiment.build_run_from_config(config)
     experiment.current_run = run
-    
+
     seq = list(run.sequence)
     assert len(seq) == 4
 
@@ -50,20 +53,26 @@ async def test_scan_property(experiment: Experiment):
         for daq_item in daq_sequence:
             item = []
             for element in daq_item:
-                item.append(element['set'])
+                item.append(element["set"])
 
             processed_items.append(item)
 
         return processed_items
 
-    assert extract(seq) == extract([
-        [{'set': 0.0, 'path': ['sensitivity'], 'scope': 'ins'},
-         {'set': 'B', 'path': ['categorical'], 'scope': 'ins'}],
-        [], # no reads
-        [{'set': 0.0, 'path': ['sensitivity'], 'scope': 'ins'},
-         {'set': 'C', 'path': ['categorical'], 'scope': 'ins'}],
-        [],
-    ])
+    assert extract(seq) == extract(
+        [
+            [
+                {"set": 0.0, "path": ["sensitivity"], "scope": "ins"},
+                {"set": "B", "path": ["categorical"], "scope": "ins"},
+            ],
+            [],  # no reads
+            [
+                {"set": 0.0, "path": ["sensitivity"], "scope": "ins"},
+                {"set": "C", "path": ["categorical"], "scope": "ins"},
+            ],
+            [],
+        ]
+    )
 
     scan_instance = experiment.scan_configuration
     scan_instance.start_sensitivity = 1
@@ -75,6 +84,6 @@ async def test_scan_property(experiment: Experiment):
     config = copy(experiment.scan_configuration)
     run = experiment.build_run_from_config(config)
     experiment.current_run = run
-    
+
     seq = list(run.sequence)
     assert len(seq) == (5 * 4) * 2
