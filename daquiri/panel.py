@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Type
+from typing import Optional, Tuple, Type
 
 from matplotlib.backends.backend_qt5agg import \
     FigureCanvasQTAgg as FigureCanvas
@@ -19,7 +19,7 @@ __all__ = (
 )
 
 
-def figure(figsize=None, toolbar=None):
+def figure(figsize=None, toolbar=None) -> Tuple[FigureCanvas, Figure, Optional[NavigationToolbar]]:
     built_figure = Figure(figsize=figsize)
     canvas = FigureCanvas(built_figure)
 
@@ -111,7 +111,7 @@ class Panel(QWidget):
         self.setLayout(layout)
 
 
-def open_appless_panel(panel_cls: Type[Panel]):
+def open_appless_panel(panel_cls: Type[Panel]): # pragma: no cover
     import asyncio
     app = QApplication([])
     font_db = QFontDatabase()
