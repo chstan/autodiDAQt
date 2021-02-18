@@ -1,6 +1,10 @@
-from daquiri.experiment import ScopedAccessRecorder
+from tests.common.experiments import UILessExperiment
+import pytest
+from copy import copy
+
+from daquiri.experiment import Experiment, ScopedAccessRecorder
 from daquiri.scan import scan
-from .common import PropertyInstrument, MockExperiment
+from .common.instruments import PropertyInstrument
 
 dsensitivity = PropertyInstrument.scan('ins').sensitivity()
 dtime_constant = PropertyInstrument.scan('ins').time_constant()
@@ -18,10 +22,15 @@ def test_scan_property_elements():
     assert [v.value for v in fields[0][1].__members__.values()] == [1, 2, 3, 4, 5]
     assert [v for v in fields[0][1].__members__.keys()] == ['A', 'B', 'C', 'D', 'E']
 
+class ScanPropertyExperiment(UILessExperiment):
+    scan_methods = [
+        scan(sensitivity=dsensitivity, categorical=dcat, name='Test Scan')
+    ]
 
-def test_scan_property(app):
-    test_scan = scan(sensitivity=dsensitivity, categorical=dcat, name='Test Scan')
-    scan_instance = test_scan()
+@pytest.mark.asyncio
+@pytest.mark.parametrize(('experiment_cls', 'instrument_classes'), [(ScanPropertyExperiment, {"ins": PropertyInstrument},)])
+async def test_scan_property(experiment: Experiment):
+    scan_instance = experiment.scan_configuration
 
     scan_instance.start_sensitivity = 1
     scan_instance.stop_sensitivity = 1
@@ -29,8 +38,11 @@ def test_scan_property(app):
     scan_instance.start_categorical = 2
     scan_instance.stop_categorical = 3
 
-    seq = list(scan_instance.sequence(
-        experiment=MockExperiment(), ins=ScopedAccessRecorder('ins')))
+    config = copy(experiment.scan_configuration)
+    run = experiment.build_run_from_config(config)
+    experiment.current_run = run
+    
+    seq = list(run.sequence)
     assert len(seq) == 4
 
     def extract(daq_sequence):
@@ -53,12 +65,16 @@ def test_scan_property(app):
         [],
     ])
 
+    scan_instance = experiment.scan_configuration
     scan_instance.start_sensitivity = 1
     scan_instance.stop_sensitivity = 5
 
     scan_instance.start_categorical = 2
     scan_instance.stop_categorical = 5
 
-    seq = list(scan_instance.sequence(
-        experiment=MockExperiment(), ins=ScopedAccessRecorder('ins')))
+    config = copy(experiment.scan_configuration)
+    run = experiment.build_run_from_config(config)
+    experiment.current_run = run
+    
+    seq = list(run.sequence)
     assert len(seq) == (5 * 4) * 2
