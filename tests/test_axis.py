@@ -3,7 +3,7 @@ import pytest
 import asyncio
 import time
 
-from daquiri.instrument.spec import AxisDescriptor, MockDriver
+from daquiri.instrument.spec import AxisDescriptor, AxisListSpecification, MockDriver
 from daquiri.instrument import ManagedInstrument, AxisSpecification
 from daquiri.instrument.axis import Axis, PolledRead, PolledWrite, ProxiedAxis
 
@@ -94,6 +94,7 @@ class PseudoDriver:
         "a",
         "b",
     ]
+    xyz = [1, 2, 3]
 
 class PseudoInstrument(ManagedInstrument):
     driver_cls = PseudoDriver
@@ -101,6 +102,11 @@ class PseudoInstrument(ManagedInstrument):
     x = AxisSpecification(float, where=["x"], 
         read=PolledRead("read", "is_readable"), 
         write=PolledWrite("write", "is_readable")
+    )
+
+    xyz = AxisListSpecification(
+        float, 
+        where=lambda i: ["xyz", i],
     )
 
     simple_value = AxisSpecification(float, where=["simple_value"])
@@ -137,6 +143,20 @@ async def test_proxied_axis_simple_values(app: MockDaquiri):
     assert await axis.read() == "b"
     await axis.write("goodbye") == "goodbye"
     await axis.read() == "goodbye"
+
+@pytest.mark.asyncio
+async def test_proxied_axis_list(app: MockDaquiri):
+    app.config._cached_settings["instruments"]["simulate_instruments"] = False
+    app.init_with(managed_instruments=dict(p=PseudoInstrument))
+
+    axis: Axis
+    axis = app.instruments["p"].xyz[0]
+    await axis.write(5)
+
+    assert app.instruments["p"].driver.xyz == [5, 2, 3]
+
+    axis = app.instruments["p"].xyz[2]
+    assert await axis.read() == 3
 
 
 @pytest.mark.asyncio
