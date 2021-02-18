@@ -86,6 +86,9 @@ __all__ = (
     "layout_dataclass",
     "bind_dataclass",
     "update_dataclass",
+    # Functions and methods
+    "layout_function_call",
+    "bind_function_call",
 )
 
 ACTIVE_UI_STACK = []
@@ -452,8 +455,7 @@ def numeric_input(value=0, input_type: type = float, *args, subject=None, valida
         subject = value
         value = subject.value
 
-
-    widget = LineEdit(str(value), *args, subject=subject, **kwargs)
+    widget = LineEdit(str(value), *args, subject=subject, process_on_next=str, **kwargs)
     widget.setValidator(
         validators.get(input_type, QtGui.QIntValidator)(**validator_settings)
     )
@@ -494,7 +496,7 @@ def submit(
 
 def _layout_dataclass_field(
     field, field_name: str, prefix: str, annotation: Dict[str, Any]
-):
+) -> QWidget:
     id_for_field = (
         prefix,
         field_name,
@@ -617,7 +619,7 @@ def bind_function_call(
     ).subscribe(perform_call)
 
 
-def layout_dataclass(dataclass_cls, prefix: Optional[str] = None, submit=None):
+def layout_dataclass(dataclass_cls, prefix: Optional[str] = None, submit: Optional[str] = None) -> QWidget:
     """
     Renders a dataclass instance to QtWidgets. See also `bind_dataclass` below
     to get one way data binding to the instance
