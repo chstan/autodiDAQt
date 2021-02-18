@@ -97,13 +97,16 @@ def ui_builder(f):
     def wrapped_ui_builder(*args, id=None, class_name=None, **kwargs):
         global ACTIVE_UI
         if id is not None:
-            try:
-                id, ui = id
-                if isinstance(ui, str):
-                    id = (id, ui)
+            # we allow passing tuples as an 
+            # ID because they are hashable and
+            # simple to composite. 
+            if isinstance(id, str):
+                ui = ACTIVE_UI
+            else:
+                if isinstance(id[-1], dict):
+                    id, ui = id
+                else:
                     ui = ACTIVE_UI
-            except ValueError:
-                id, ui = id, ACTIVE_UI
 
         ui_element = f(*args, **kwargs)
 
@@ -201,6 +204,8 @@ def layout(
 grid = functools.partial(layout, layout_cls=QGridLayout)
 vertical = functools.partial(layout, layout_cls=QVBoxLayout)
 horizontal = functools.partial(layout, layout_cls=QHBoxLayout)
+for fn in [grid, vertical, horizontal]:
+    functools.update_wrapper(fn, layout)
 
 @ui_builder
 def sized_grid(children, column_stretch=None, row_stretch=None, margin=0, content_margin=0, spacing=0, widget=None):
@@ -239,16 +244,9 @@ def sized_grid(children, column_stretch=None, row_stretch=None, margin=0, conten
     widget.setLayout(layout)
     return widget
 
-
-
-    
-
-    raise NotImplementedError
-
 @ui_builder
 def list_view():
     lv = QListView()
-
     return lv
 
 
@@ -336,7 +334,7 @@ def check_box(text, *args, **kwargs):
 
 
 @ui_builder
-def combo_box(items, content_margin=8, *args, **kwargs):
+def combo_box(items: List[str], content_margin=8, *args, **kwargs):
     widget = ComboBox(*args, **kwargs)
     widget.addItems(items)
 
