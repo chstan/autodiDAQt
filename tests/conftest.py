@@ -16,6 +16,12 @@ module = type(sys)('pyqt_led')
 module.Led = Led
 sys.modules['pyqt_led'] = module
 
+import pytest
+
+import logging
+from _pytest.logging import caplog as _caplog
+from loguru import logger
+
 from typing import Dict
 from pathlib import Path
 
@@ -26,6 +32,22 @@ from daquiri.mock import MockMotionController, MockScalarDetector
 from daquiri.config import Config, default_config_for_platform, MetaData
 from daquiri.instrument import ManagedInstrument
 from daquiri.state import AppState
+
+from .common.experiments import BasicExperiment
+
+@pytest.fixture
+def caplog(_caplog):
+    """
+    Forwards loguru log messages to the pytest logger according to the advice in
+    https://loguru.readthedocs.io/en/stable/resources/migration.html
+    """
+    class PropogateHandler(logging.Handler):
+        def emit(self, record):
+            logging.getLogger(record.name).handle(record)
+
+    handler_id = logger.add(PropogateHandler(), format="{message} {extra}")
+    yield _caplog
+    logger.remove(handler_id)
 
 
 class MockDaquiri(Daquiri):
