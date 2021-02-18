@@ -484,7 +484,7 @@ class Daquiri:
             if k in state.managed_instruments:
                 ins.receive_state(state.managed_instruments[k])
 
-    def load_state(self):
+    def load_state(self): # pragma: no cover
         logger.info("Loading application state.")
         state_filename = find_newest_state_filename(self)
         if not state_filename:
@@ -498,7 +498,7 @@ class Daquiri:
         self.receive_state(state)
         update_dataclass(self.user, prefix="app_user", ui=self.main_window.ui)
 
-    def save_state(self):
+    def save_state(self): # pragma: no cover
         logger.info("Saving application state.")
         state_filename = generate_state_filename(self)
         state_filename.parent.mkdir(parents=True, exist_ok=True)
@@ -507,7 +507,7 @@ class Daquiri:
         with open(str(state_filename), "wb") as state_f:
             pickle.dump(state, state_f)
 
-    def start(self):
+    def start(self): # pragma: no cover
         logger.info("Application in startup.")
         self.qt_app = QApplication(sys.argv)
         self.qt_app.setEffectEnabled(QtCore.Qt.UI_AnimateCombo, False)
