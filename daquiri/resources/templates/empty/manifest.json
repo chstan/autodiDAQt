@@ -1,0 +1,18 @@
+{
+    "win32": {
+        "delete": [
+            "config.unix-like.json"
+        ],
+        "rename": {
+            "config.win32.json": "config.json"
+        }
+    },
+    "unix-like": {
+        "delete": [
+            "config.win32.json"
+        ],
+        "rename": {
+            "config.unix-like.json": "config.json"
+        }
+    }
+}
