@@ -1,5 +1,7 @@
 import asyncio
+from daquiri.remote import RemoteConfiguration
 import itertools
+import argparse
 import multiprocessing
 import pickle
 import signal
@@ -8,11 +10,10 @@ import traceback
 import warnings
 from concurrent.futures import ProcessPoolExecutor
 from copy import deepcopy
-from dataclasses import dataclass, field, make_dataclass
+from dataclasses import dataclass, make_dataclass
 from enum import Enum
-from functools import wraps
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Type
+from typing import Any, Dict, Optional, Type
 
 import appdirs
 from PyQt5 import QtCore
@@ -52,6 +53,27 @@ from rx.subject import Subject
 __all__ = ("Daquiri",)
 
 USE_QUAMASH = False
+
+
+@dataclass
+class CommandLineConfig:
+    headless: bool = False
+    remote_config: Optional[RemoteConfiguration] = None
+
+
+def parse_args() -> CommandLineConfig:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--nanomsg-uri", type=str, required=False)
+    parser.add_argument("--headless", action="store_true")
+    parser.set_defaults(headless=False)
+    parser.parse_args(sys.argv[1:])
+
+    config = CommandLineConfig(headless=parser.headless)
+
+    if parser.nanomsg_uri is not None:
+        config.remote_config = RemoteConfiguration(ui_address=parser.nanomsg_uri)
+
+    return config
 
 
 class DaquiriMainWindow(QMainWindow):
@@ -221,6 +243,8 @@ class Daquiri:
         if managed_instruments is None:
             managed_instruments = {}
 
+        command_line_config = parse_args()
+        zzzz
         if managed_instruments:
             if not any(
                 issubclass(panel_def, InstrumentManager) for panel_def in panel_definitions.values()
