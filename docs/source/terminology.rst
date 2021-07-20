@@ -29,7 +29,7 @@ read from properties as well. Like an axis, a property can be scanned.
 ----
 
 **scan**: Informally, a sequence of motions and data collection steps that
-defines a dat acquisition routine. A scan fully specifies a data collection
+defines a data acquisition routine. A scan fully specifies a data collection
 procedure. By analogy, a loop together with its contents fully describes a
 computation while neither the method of looping (in DAQuiri, a **strategy**)
 nor the loop contents and range (in DAQuiri, the configuration-space or axes)

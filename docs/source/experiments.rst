@@ -4,8 +4,8 @@ Experiments
 Experiments are a way to organize a bunch of scan modes together along with
 some utility features like UI generation, queueing, and automated data IO.
 
-You can think of an experiment as the ``Actor`` that actual reads through your
-desired sequence of action performs the motions and data acquisition for you.
+You can think of an experiment as the ``Actor`` that actually reads through your
+desired sequence of action and performs the motions and data acquisition for you.
 
 This logic is inverted compared to a few other scientific data acquisition libraries:
 usually you as the user perform all the motions and DAQ and it's just data collation

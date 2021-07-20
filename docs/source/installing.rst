@@ -22,7 +22,7 @@ Instructions
 ------------
 
 DAQuiri is just a Python package, published under the name ``daquiri``. It is listed
-on PyPI and conda, so you can install it like any other package
+on PyPI (outdated) and conda (eventually), so you can install it like any other package
 
 .. code-block::bash
    $ conda install daquiri
@@ -33,4 +33,6 @@ on PyPI and conda, so you can install it like any other package
 If you opt not to use conda, you will need to make sure you have installed the
 dependencies requiring conda first. Installing ``pyqtgraph`` and ``dask`` should
 be enough to ensure that a subsequent ``pip install`` will work.
+
+The best way to install right now is by cloning the updated repository on GitHub.
 

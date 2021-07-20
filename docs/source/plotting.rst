@@ -10,7 +10,7 @@ Adding plots for interim data to scan methods
 ---------------------------------------------
 
 In the ``sequence`` method of a scan, we have access to the experiment object.
-Using this, we can additional plots to be displayed using
+Using this, we can add additional plots to be displayed using
 python:meth:`Daquiri.experiment.Experiment.plot`. This function expects a few arguments:
 ``name=`` which specifies the name or title to attach to the plot in the interface, the
 ``independent=`` axes as the axis URLs, and the ``dependent=`` axes as axis URLs.
