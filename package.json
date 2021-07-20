@@ -9,7 +9,10 @@
     "watch-coverage": "pytest -c pytest-config/pytest-coverage.ini -f",
     "test": "pytest -c pytest-config/pytest.ini",
     "coverage": "pytest -c pytest-config/pytest-coverage.ini",
-    "postinstall": "husky install"
+    "postinstall": "husky install",
+    "docs-windows": "./docs/make.bat html",
+    "docs": "make ./docs/Makefile html",
+    "serve-docs": "python -m http.server --directory ./docs/build/html"
   },
   "devDependencies": {
     "husky": "^5.0.9"
