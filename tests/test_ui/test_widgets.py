@@ -1,13 +1,13 @@
 import enum
 import inspect
-import pytest
 from dataclasses import dataclass
 
+import pytest
 from PyQt5 import QtCore
 from pytestqt.qtbot import QtBot
 
-from daquiri.ui import *
-from daquiri.widgets import ComboBox, DoubleSpinBox, LineEdit, SpinBox
+from autodidaqt.ui import *
+from autodidaqt.widgets import ComboBox, DoubleSpinBox, LineEdit, SpinBox
 
 
 def test_ui_collection(qtbot: QtBot):

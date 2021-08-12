@@ -1,12 +1,12 @@
 [run]
 include =
-    daquiri/*
+    autodidaqt/*
 omit =
     tests/*
-    daquiri/panels/*
-    daquiri/examples/*
-    daquiri/ui.py
-    daquiri/widgets.py
+    autodidaqt/panels/*
+    autodidaqt/examples/*
+    autodidaqt/ui.py
+    autodidaqt/widgets.py
 
 [report]
 exclude_lines =

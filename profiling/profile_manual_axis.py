@@ -1,8 +1,8 @@
-from daquiri import Daquiri, ManagedInstrument
-from daquiri.experiment import AutoExperiment
-from daquiri.instrument.spec import MockDriver, axis
-from daquiri.mock import MockScalarDetector
-from daquiri.scan import scan
+from autodidaqt import AutodiDAQt, ManagedInstrument
+from autodidaqt.experiment import AutoExperiment
+from autodidaqt.instrument.spec import MockDriver, axis
+from autodidaqt.mock import MockScalarDetector
+from autodidaqt.scan import scan
 
 
 class ManualMotionController(ManagedInstrument):
@@ -60,7 +60,7 @@ class MyExperiment(AutoExperiment):
     discard_data = True
 
 
-app = Daquiri(
+app = AutodiDAQt(
     __name__,
     {},
     {"experiment": MyExperiment},

@@ -1,6 +1,6 @@
-from daquiri.registrar import Registrar
-
 import pytest
+
+from autodidaqt.registrar import Registrar
 
 
 def test_registrar_collects_values():

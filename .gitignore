@@ -1,5 +1,11 @@
+poetry.lock
+
 # Editor related
 *.code-workspace
+.vscode/
+
+# Generated stuff
+example_messages/*.json
 
 # Yarn and NPM Related
 # We ignore the JS ecosystem lock files
@@ -35,6 +41,6 @@ out/
 logs/
 
 *.webm
-daquiri/examples/config.json
+autodidaqt/examples/config.json
 
 node_modules/

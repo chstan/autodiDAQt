@@ -1,8 +1,9 @@
-from daquiri.panel import open_appless_panel, Panel
-from daquiri.reactive_utils import Transaction, RxTablePattern
-from daquiri.ui import vertical, label, CollectUI, button, table_view
-import rx.operators as ops
 import pyrsistent as pr
+import rx.operators as ops
+
+from autodidaqt.panel import Panel, open_appless_panel
+from autodidaqt.reactive_utils import RxTablePattern, Transaction
+from autodidaqt.ui import CollectUI, button, label, table_view, vertical
 
 
 class TestPanel(Panel):

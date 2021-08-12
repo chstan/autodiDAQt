@@ -1,15 +1,15 @@
-name: daquiri
+name: autodidaqt
 channels:
   - defaults
 dependencies:
-  - python=3.7.9
+  - python=3.8
   - pip
   - pip:
-    - -e .
-    - pytest
-    - pytest-cov
-    - pytest-asyncio
-    - pytest-mock
-    - pytest-qt
-    - pytest-env
-    - pytest-xvfb
+      - -e .
+      - pytest
+      - pytest-cov
+      - pytest-asyncio
+      - pytest-mock
+      - pytest-qt
+      - pytest-env
+      - pytest-xvfb

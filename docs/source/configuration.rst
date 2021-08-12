@@ -1,7 +1,7 @@
 Configuring Applications
 ========================
 
-DAQuiri allows external (outside of the code) configuration via a configuration
+autodidaqt allows external (outside of the code) configuration via a configuration
 file: "config.json". An annotated copy of the defaults used is included here as a
 Python dictionary literal:
 

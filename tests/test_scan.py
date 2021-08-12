@@ -1,12 +1,7 @@
-from daquiri.scan import (
-    forwards_and_backwards,
-    randomly,
-    only,
-    staircase_product,
-    step_together,
-)
-from daquiri.mock import MockMotionController
 import pytest
+
+from autodidaqt.mock import MockMotionController
+from autodidaqt.scan import forwards_and_backwards, only, randomly, staircase_product, step_together
 
 
 def test_randomly():

@@ -1,5 +1,6 @@
 # need to monkeypatch pyqt_led because it does not work on the CI server
 import sys
+
 from PyQt5.QtWidgets import QWidget
 
 
@@ -19,23 +20,23 @@ module = type(sys)("pyqt_led")
 module.Led = Led
 sys.modules["pyqt_led"] = module
 
-import pytest
+from typing import Dict
 
 import logging
+from pathlib import Path
+
+import pytest
 from _pytest.logging import caplog as _caplog
 from loguru import logger
 
-from typing import Dict
-from pathlib import Path
-
-from daquiri.core import make_user_data_dataclass
-from daquiri.experiment.save import ZarrSaver
-from daquiri import Daquiri, Actor
-from daquiri.collections import AttrDict
-from daquiri.mock import MockMotionController, MockScalarDetector
-from daquiri.config import Config, default_config_for_platform, MetaData
-from daquiri.instrument import ManagedInstrument
-from daquiri.state import AppState
+from autodidaqt import Actor, AutodiDAQt
+from autodidaqt.collections import AttrDict
+from autodidaqt.config import Config, MetaData, default_config_for_platform
+from autodidaqt.core import make_user_data_dataclass
+from autodidaqt.experiment.save import ZarrSaver
+from autodidaqt.instrument import ManagedInstrument
+from autodidaqt.mock import MockMotionController, MockScalarDetector
+from autodidaqt.state import AppState
 
 from .common.experiments import BasicExperiment
 
@@ -56,7 +57,7 @@ def caplog(_caplog):
     logger.remove(handler_id)
 
 
-class MockDaquiri(Daquiri):
+class Mockautodidaqt(AutodiDAQt):
     _instruments: Dict[str, ManagedInstrument]
     _actors: Dict[str, Actor]
 
@@ -112,12 +113,12 @@ class MockDaquiri(Daquiri):
 @pytest.fixture(scope="function")
 def app():
     """
-    Generates a ``daquiri.core.Daquiri`` like instance to act in place of an app.
+    Generates a ``autodidaqt.core.autodidaqt`` like instance to act in place of an app.
 
-    Returns: A ``TestDaquiri`` instance.
+    Returns: A ``Testautodidaqt`` instance.
     """
 
-    app = MockDaquiri()
+    app = Mockautodidaqt()
     yield app
     app.cleanup()
 

@@ -1,22 +1,17 @@
-from daquiri.scan import scan
-from tests.common.experiments import UninvertedExperiment
-import pytest
-import inspect
-from daquiri.experiment import (
-    AutoExperiment,
-    Experiment,
-    ExperimentTransitions,
-    ExperimentStates,
-)
-from daquiri.interlock import InterlockException
-from daquiri.experiment.save import ZarrSaver
 from typing import Callable, Union
 
-from .common.experiments import (
-    BasicExperiment,
-    UILessAutoExperiment,
-    UILessExperiment,
-)
+import inspect
+
+import pytest
+from autodidaqt_common.remote.schema import ExperimentStates, ExperimentTransitions
+
+from autodidaqt.experiment import AutoExperiment, Experiment
+from autodidaqt.experiment.save import ZarrSaver
+from autodidaqt.interlock import InterlockException
+from autodidaqt.scan import scan
+from tests.common.experiments import UninvertedExperiment
+
+from .common.experiments import BasicExperiment, UILessAutoExperiment, UILessExperiment
 
 RunUntilCondition = Union[Callable[[Experiment], bool], ExperimentStates]
 

@@ -1,7 +1,7 @@
-from daquiri import Daquiri
-from daquiri.experiment import AutoExperiment
-from daquiri.mock import MockMotionController, MockScalarDetector
-from daquiri.examples.scanning_time_to_completion import TwoAxisScan
+from autodidaqt import AutodiDAQt
+from autodidaqt.examples.scanning_time_to_completion import TwoAxisScan
+from autodidaqt.experiment import AutoExperiment
+from autodidaqt.mock import MockMotionController, MockScalarDetector
 
 
 class MyExperiment(AutoExperiment):
@@ -13,7 +13,7 @@ class MyExperiment(AutoExperiment):
     save_on_main = True
 
 
-app = Daquiri(
+app = AutodiDAQt(
     __name__,
     {},
     {"experiment": MyExperiment},

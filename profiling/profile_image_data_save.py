@@ -1,7 +1,7 @@
-from daquiri import Daquiri
-from daquiri.experiment import AutoExperiment
-from daquiri.mock import MockMotionController, MockImageDetector
-from daquiri.scan import scan
+from autodidaqt import AutodiDAQt
+from autodidaqt.experiment import AutoExperiment
+from autodidaqt.mock import MockImageDetector, MockMotionController
+from autodidaqt.scan import scan
 
 
 class MyExperiment(AutoExperiment):
@@ -18,7 +18,7 @@ class MyExperiment(AutoExperiment):
     discard_data = False
 
 
-app = Daquiri(
+app = AutodiDAQt(
     __name__,
     {},
     {"experiment": MyExperiment},

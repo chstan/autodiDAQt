@@ -2,9 +2,9 @@ Terminology
 ===========
 
 Collected here are some terminology used throughout the documentation
-and in the DAQuiri source. Hopefully they are useful in understanding
+and in the autodidaqt source. Hopefully they are useful in understanding
 the documentation and in appreciating the philosophy behind decisions
-and compromises DAQuiri has made.
+and compromises autodidaqt has made.
 
 ----
 
@@ -16,14 +16,14 @@ spectrometeters, or DAQ cards. Axes can represent logical devices,
 such as coordinate transforms (Kelvin <-> Fahrenheit, XYZ <-> RThetaZ).
 Axes can also represent conveniences that don't exist in actuality:
 waits, virtual motors to repeat experiments, etc. An **axis** is
-formalized in DAQuiri by the **Axis** class and its declarations in
+formalized in autodidaqt by the **Axis** class and its declarations in
 **AxisSpecification** and others.
 
 ----
 
 **property**: A setting or bit of configuration on an instrument or your
 experiment. Properties tend to be discrete rather than continuous (axes tend
-to be continuous) but this is only coincidence. In DAQuiri, you can write and
+to be continuous) but this is only coincidence. In autodidaqt, you can write and
 read from properties as well. Like an axis, a property can be scanned.
 
 ----
@@ -31,8 +31,8 @@ read from properties as well. Like an axis, a property can be scanned.
 **scan**: Informally, a sequence of motions and data collection steps that
 defines a data acquisition routine. A scan fully specifies a data collection
 procedure. By analogy, a loop together with its contents fully describes a
-computation while neither the method of looping (in DAQuiri, a **strategy**)
-nor the loop contents and range (in DAQuiri, the configuration-space or axes)
+computation while neither the method of looping (in autodidaqt, a **strategy**)
+nor the loop contents and range (in autodidaqt, the configuration-space or axes)
 does.
 
 ----

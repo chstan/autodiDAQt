@@ -1,9 +1,11 @@
-from tests.common.experiments import UILessExperiment
-import pytest
 from copy import copy
 
-from daquiri.experiment import Experiment, ScopedAccessRecorder
-from daquiri.scan import scan
+import pytest
+
+from autodidaqt.experiment import Experiment, ScopedAccessRecorder
+from autodidaqt.scan import scan
+from tests.common.experiments import UILessExperiment
+
 from .common.instruments import PropertyInstrument
 
 dsensitivity = PropertyInstrument.scan("ins").sensitivity()

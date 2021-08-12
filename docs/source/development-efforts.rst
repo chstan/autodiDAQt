@@ -1,7 +1,7 @@
 Coming Soon
 ===========
 
-DAQuiri follows roughly a semantic versioning scheme. We will not to break any interfaces
+autodidaqt follows roughly a semantic versioning scheme. We will not to break any interfaces
 following 1.0.0, and if there is a need for backwards incompatible changes they will happen
 on major (X.-.-) release numbers. Bugfixes and documentation changes will occur on bugfix
 (-.-.Z) release numbers. Backwards compatible feature releases will occur on minor (-.Y.-)

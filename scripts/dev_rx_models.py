@@ -1,16 +1,17 @@
-from daquiri.panel import open_appless_panel, Panel
-from daquiri.reactive_utils import Transaction, RxListPattern
-from daquiri.ui import (
-    vertical,
-    label,
+import rx.operators as ops
+
+from autodidaqt.panel import Panel, open_appless_panel
+from autodidaqt.reactive_utils import RxListPattern, Transaction
+from autodidaqt.ui import (
     CollectUI,
+    button,
+    label,
     list_view,
     scroll_area,
-    text_edit,
-    button,
     submit,
+    text_edit,
+    vertical,
 )
-import rx.operators as ops
 
 
 class TestPanel(Panel):

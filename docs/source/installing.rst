@@ -1,4 +1,4 @@
-Installing DAQuiri
+Installing autodidaqt
 ==================
 
 Required software
@@ -21,14 +21,14 @@ if you are interested.
 Instructions
 ------------
 
-DAQuiri is just a Python package, published under the name ``daquiri``. It is listed
-on PyPI (outdated) and conda (eventually), so you can install it like any other package
+autodiDAQt is just a Python package, published under the name ``autodidaqt``. It is listed
+on PyPI and conda, so you can install it like any other package
 
 .. code-block::bash
-   $ conda install daquiri
+   $ conda install autodidaqt
 
    # or...
-   $ pip install daquiri
+   $ pip install autodidaqt
 
 If you opt not to use conda, you will need to make sure you have installed the
 dependencies requiring conda first. Installing ``pyqtgraph`` and ``dask`` should

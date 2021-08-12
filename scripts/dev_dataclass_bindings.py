@@ -1,15 +1,16 @@
 from dataclasses import dataclass, field
-from daquiri.panel import open_appless_panel, Panel
-from daquiri.ui import (
-    vertical,
-    label,
-    layout_dataclass,
-    RenderAs,
-    tabs,
-    horizontal,
+
+from autodidaqt.panel import Panel, open_appless_panel
+from autodidaqt.ui import (
     CollectUI,
+    RenderAs,
     bind_dataclass,
     button,
+    horizontal,
+    label,
+    layout_dataclass,
+    tabs,
+    vertical,
 )
 
 

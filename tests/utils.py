@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
-from daquiri.instrument import LogicalAxisSpecification
-from daquiri.mock import MockMotionController
+from autodidaqt.instrument import LogicalAxisSpecification
+from autodidaqt.mock import MockMotionController
 
 
 @dataclass

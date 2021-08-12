@@ -1,5 +1,5 @@
-from daquiri.experiment import AutoExperiment, Experiment
-from daquiri.scan import scan
+from autodidaqt.experiment import AutoExperiment, Experiment
+from autodidaqt.scan import scan
 
 from .scans import BasicScan, UninvertedScan
 

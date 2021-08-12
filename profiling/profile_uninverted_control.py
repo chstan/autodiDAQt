@@ -1,10 +1,11 @@
-import numpy as np
 import asyncio
 from dataclasses import dataclass
 
-from daquiri import Daquiri
-from daquiri.experiment import AutoExperiment
-from daquiri.mock import MockMotionController, MockScalarDetector
+import numpy as np
+
+from autodidaqt import AutodiDAQt
+from autodidaqt.experiment import AutoExperiment
+from autodidaqt.mock import MockMotionController, MockScalarDetector
 
 
 @dataclass
@@ -53,7 +54,7 @@ class MyExperiment(AutoExperiment):
     discard_data = True
 
 
-app = Daquiri(
+app = AutodiDAQt(
     __name__,
     {},
     {"experiment": MyExperiment},

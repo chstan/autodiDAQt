@@ -18,12 +18,12 @@ Benefits of inverted experiment control
 
 **Inverted control is safer.** As a user, you only specify what actions to take,
 this prevents data loss in the event that you try to do something illegal or that
-would otherwise cause issue (such as by violating an interlock). In this case DAQuiri
+would otherwise cause issue (such as by violating an interlock). In this case autodidaqt
 will try to proceed anyway, will save any data collected so far, and will let you
 know there was an issue.
 
 **Inverted control provides a record of what you intended to do.** Because you are already
-providing a representation of what to do in data as opposed to in code, DAQuiri can just
+providing a representation of what to do in data as opposed to in code, autodidaqt can just
 save the sequence of actions you requested. A huge benefit here is that there is no ambiguity
 as to what happened during the course of data collection, the record of motions and data
 collections is available after the fact together with complete timestamps.
@@ -37,21 +37,21 @@ laser power drift during experiments.
 
 **Inverted control enforces collecting raw data.** It can be tempting to do some data reduction
 at analysis time as a convenience. This is generally a bad idea because these transforms
-are typically one way functions. DAQuiri has uninverted (imperative) data collection modes
+are typically one way functions. autodidaqt has uninverted (imperative) data collection modes
 that let you run arbitrary code, but it prefers you use the inverted interface which
 incentivizes analyzing data after it is collected.
 
-Other benefits of experiments in DAQuiri
+Other benefits of experiments in autodidaqt
 ----------------------------------------
 
 You are welcome to perform experiments that don't follow this inverted control scheme.
-If you do, you can still make use of a variety of other benefits DAQuiri can provide to you.
+If you do, you can still make use of a variety of other benefits autodidaqt can provide to you.
 
-**UI generation:** DAQuiri provides utility wrappers around Qt to make it a bit softer and
+**UI generation:** autodidaqt provides utility wrappers around Qt to make it a bit softer and
 more Pythonic, and can perform full UI generation for you scans if they are straightforward
 enough.
 
 **Handling data IO:** In most cases you don't need to use the inverted control scheme to
-let DAQuiri handle data IO for you. Of course, you are free to collate data on your own and save
+let autodidaqt handle data IO for you. Of course, you are free to collate data on your own and save
 it however you want.
 

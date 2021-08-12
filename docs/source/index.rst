@@ -1,21 +1,21 @@
-DAQuiri: Painless scientific DAQ
+autodidaqt: Painless scientific DAQ
 ================================
 
-**DAQuiri** := DAQ + UI generation + reactivity + instruments
+**autodidaqt** := DAQ + UI generation + reactivity + instruments
 
 You should be spending your time designing and running experiments,
 not your DAQ software.
 
-DAQuiri is a nuts and bolts included framework for scientific data acquisition (DAQ), designed
+autodidaqt is a nuts and bolts included framework for scientific data acquisition (DAQ), designed
 for rapid prototyping and the challenging DAQ environment of angle resolved photoemission
-spectroscopy. If you specify how to *sequence* motions and data collection, daquiri can manage
+spectroscopy. If you specify how to *sequence* motions and data collection, autodidaqt can manage
 the user interface, talking to and managing instruments, plotting interim data, data collation,
-and IO for you. Despite all this, DAQuiri is very low overhead and is profiled before
+and IO for you. Despite all this, autodidaqt is very low overhead and is profiled before
 each release: acquisition rates faster than 100μs are possible on synthetic tasks, meaning
-most reasonable experiments will be IO bound using DAQuiri.
+most reasonable experiments will be IO bound using autodidaqt.
 
-If DAQuiri doesn't do exactly what you need, get in contact with us or check out the
-examples. There's a good chance that if it isn't built in, DAQuiri is flexible enough to support
+If autodidaqt doesn't do exactly what you need, get in contact with us or check out the
+examples. There's a good chance that if it isn't built in, autodidaqt is flexible enough to support
 your use case.
 
 Documention
@@ -23,7 +23,7 @@ Documention
 
 **Getting Started**
 
-* :doc:`why-use-daquiri`
+* :doc:`why-use-autodidaqt`
 * :doc:`faq`
 * :doc:`overview`
 * :doc:`examples`
@@ -34,7 +34,7 @@ Documention
    :hidden:
    :caption: Getting Started
 
-   why-use-daquiri
+   why-use-autodidaqt
    faq
    overview
    examples

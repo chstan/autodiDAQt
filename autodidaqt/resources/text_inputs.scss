@@ -1,0 +1,54 @@
+@import "./vars";
+
+QLineEdit,
+QSpinBox,
+QDoubleSpinBox {
+  border: 1px solid $gray;
+  padding: 12px;
+  border-radius: 4px;
+
+  &:focus {
+    border-color: $primary-600;
+    border-width: 4px;
+  }
+}
+
+QSpinBox:up-button,
+QDoubleSpinBox:up-button {
+  border: 0;
+  max-width: 40px;
+  width: 40px;
+  border-left: $light-border;
+  subcontrol-origin: border;
+  subcontrol-position: top right;
+  position: relative;
+}
+
+QSpinBox:down-button,
+QDoubleSpinBox:down-button {
+  border: 0;
+  width: 32px;
+  max-width: 40px;
+  width: 40px;
+  border-left: $light-border;
+  subcontrol-origin: border;
+  subcontrol-position: bottom right;
+  position: relative;
+}
+
+QSpinBox:down-button:hover,
+QSpinBox:up-button:hover,
+QDoubleSpinBox:down-button:hover,
+QDoubleSpinBox:up-button:hover {
+  background-color: $hover-gray;
+}
+
+QSpinBox::down-arrow,
+QDoubleSpinBox::down-arrow {
+  image: url(autodidaqt/resources/img/angle-down-solid.svg);
+}
+
+QSpinBox::up-arrow,
+QDoubleSpinBox::up-arrow {
+  image: url(autodidaqt/resources/img/angle-up-solid.svg);
+}

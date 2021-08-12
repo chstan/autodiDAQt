@@ -1,17 +1,14 @@
-from dataclasses import dataclass, field
-import pytest
 import asyncio
 import time
+from dataclasses import dataclass, field
 
-from daquiri.instrument.spec import (
-    AxisDescriptor,
-    AxisListSpecification,
-    MockDriver,
-)
-from daquiri.instrument import ManagedInstrument, AxisSpecification
-from daquiri.instrument.axis import Axis, PolledRead, PolledWrite, ProxiedAxis
+import pytest
 
-from .conftest import MockDaquiri
+from autodidaqt.instrument import AxisSpecification, ManagedInstrument
+from autodidaqt.instrument.axis import Axis, PolledRead, PolledWrite, ProxiedAxis
+from autodidaqt.instrument.spec import AxisDescriptor, AxisListSpecification, MockDriver
+
+from .conftest import Mockautodidaqt
 
 
 class A:
@@ -35,6 +32,7 @@ async def test_manual_axis():
         driver.set_value(v)
 
     desc = AxisDescriptor(read, write)
+    desc.schema = int
     axis = desc.realize("b", a, a)
 
     v = await axis.read()
@@ -53,6 +51,7 @@ async def test_manual_axis_mocked():
         return
 
     desc = AxisDescriptor(None, None, mock_read, mock_write)
+    desc.schema = float
     axis = desc.realize("b", MockDriver(), None)
 
     v = await axis.read()
@@ -124,7 +123,7 @@ class PseudoInstrument(ManagedInstrument):
 
 
 @pytest.mark.asyncio
-async def test_proxied_axis_simple_values(app: MockDaquiri):
+async def test_proxied_axis_simple_values(app: Mockautodidaqt):
     app.config._cached_settings["instruments"]["simulate_instruments"] = False
     app.init_with(managed_instruments=dict(p=PseudoInstrument))
 
@@ -156,7 +155,7 @@ async def test_proxied_axis_simple_values(app: MockDaquiri):
 
 
 @pytest.mark.asyncio
-async def test_proxied_axis_list(app: MockDaquiri):
+async def test_proxied_axis_list(app: Mockautodidaqt):
     app.config._cached_settings["instruments"]["simulate_instruments"] = False
     app.init_with(managed_instruments=dict(p=PseudoInstrument))
 
@@ -171,7 +170,7 @@ async def test_proxied_axis_list(app: MockDaquiri):
 
 
 @pytest.mark.asyncio
-async def test_proxied_axis_polling(app: MockDaquiri, mocker):
+async def test_proxied_axis_polling(app: Mockautodidaqt, mocker):
     # TODO: fix this this is gross.
     app.config._cached_settings["instruments"]["simulate_instruments"] = False
     app.init_with(managed_instruments=dict(p=PseudoInstrument))

@@ -1,12 +1,14 @@
 from dataclasses import dataclass
+
 import numpy as np
 
-from daquiri.experiment import Experiment
-from daquiri.mock import MockScalarDetector, MockMotionController
+from autodidaqt.experiment import Experiment
+from autodidaqt.mock import MockMotionController, MockScalarDetector
 
 __all__ = ["BasicScan", "UninvertedScan"]
 
 
+@dataclass
 class BasicScan:
     @property
     def n_points(self) -> int:

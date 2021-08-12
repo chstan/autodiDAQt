@@ -1,14 +1,15 @@
+import datetime
 import enum
 import json
+
 import pytest
-import datetime
-from daquiri.collections import AttrDict
-from daquiri.utils import (
+from autodidaqt_common.enum import enum_mapping, enum_option_names
+from autodidaqt_common.json import RichEncoder
+
+from autodidaqt.collections import AttrDict
+from autodidaqt.utils import (
     AccessRecorder,
-    RichEncoder,
     ScanAccessRecorder,
-    enum_mapping,
-    enum_option_names,
     find_conflict_free_matches,
     temporary_attrs,
 )

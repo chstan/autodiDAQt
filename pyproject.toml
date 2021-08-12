@@ -1,22 +1,129 @@
-[tool.black]
-line-length = 100
-target-version = ['py37']
+[build-system]
+build-backend = "poetry.core.masonry.api"
+requires = ["poetry_core>=1.0.0"]
 
-include = '\.pyi?$'
+[tool.poetry]
+authors = ["chstan <chstansbury@gmail.com>"]
+description = "autodiDAQt is a simple data acquisition framework. For science."
+homepage = "https://github.com/chstan/autodidaqt-common"
+license = "GNU GPL v3.0"
+name = "autodidaqt"
+readme = "README.rst"
+repository = "https://github.com/chstan/autodidaqt"
+version = "1.1.0"
+
+keywords = ["data acquisition", "physics", "instrumentation", "DAQ"]
+
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Science/Research",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: Implementation :: CPython",
+  "Natural Language :: English",
+  "Operating System :: MacOS :: MacOS X",
+  "Operating System :: Microsoft :: Windows :: Windows 7",
+  "Operating System :: Microsoft :: Windows :: Windows 8",
+  "Operating System :: Microsoft :: Windows :: Windows 10",
+  "Operating System :: Unix",
+  "Operating System :: POSIX :: Linux",
+  "Topic :: Scientific/Engineering",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+[tool.poetry.dependencies]
+python = ">=3.8,<3.10"
+
+# comment out before deployment and replace by the equivalent peer-dep
+autodidaqt_common = {path = "../autodidaqt-common", develop = true}
+
+PyQt5 = "~5.13.0"
+Quamash = "~0.6.1"
+appdirs = "~1.4.4"
+asyncqt = "~0.8.0"
+loguru = "~0.3.2"
+matplotlib = "^3.1.1"
+pymeasure = "~0.9.0"
+pyqt-led = "~0.0.6"
+pyqtgraph = "~0.12.1"
+pyrsistent = "~0.17.3"
+python-dotenv = "~0.10.3"
+qtsass = "~0.3.0"
+rx = "^3.0.1"
+slackclient = "^2.1.0"
+
+instrumentkit = "~0.5"
+python-ivi = "~0.14.9"
+pyvisa = "^1.11.0"
+pyvisa-sim = "~0.4.0"
+
+dataclasses_json = "~0.5.0"
+numpy = "^1.20"
+scipy = "^1.7.0"
+
+dask = "^2021"
+fsspec = "^2021"
+pandas = "^1.2.4"
+partd = "^1.2.0"
+pynng = "~0.7.1"
+toolz = "~0.11.1"
+xarray = "~0.18.2"
+zarr = "^2.8.3"
+
+[tool.poetry.dev-dependencies]
+pre-commit = "^2.13.0"
+
+black = {version = "^21.7b0", allow-prereleases = true}
+darglint = "^1.8.0"
+isort = {extras = ["colors"], version = "^5.9.2"}
+pydocstyle = "^6.1.1"
+pylint = "^2.9.5"
+
+pytest = "^6.2.4"
+pytest-asyncio = "~0.15.1"
+pytest-cov = "^2.12.1"
+pytest-env = "~0.6.2"
+pytest-mock = "^3.6.1"
+pytest-qt = "^4.0.2"
+pytest-xvfb = "^2.0.0"
+
+[tool.black]
+color = true
+line-length = 100
+target-version = ["py38"]
 
 exclude = '''
-(
-  /(
-      \.eggs         # exclude a few common directories in the
-    | \.git          # root of the project
-    | build
+/(
+    \.git
+    | \.eggs
+    | \.hg
+    | \.tox
+    | \.venv
+    | _build
     | out
     | htmlcov
     | node_modules
     | pytest-config
+    | buck-out
+    | build
     | dist
-  )/
-  | foo.py           # also separately exclude a file named foo.py in
-                     # the root of the project
-)
+    | env
+    | venv
+)/
 '''
+include = '\.pyi?$'
+
+[tool.isort]
+line_length = 100
+py_version = 38
+
+color_output = true
+include_trailing_comma = true
+indent = 4
+known_typing = ["typing", "types", "typing_extensions", "mypy", "mypy_extensions"]
+multi_line_output = 3
+profile = "black"
+sections = ["FUTURE", "TYPING", "STDLIB", "THIRDPARTY", "FIRSTPARTY", "LOCALFOLDER"]

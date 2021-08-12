@@ -1,7 +1,7 @@
-Contributing to DAQuiri
+Contributing to autodidaqt
 =======================
 
-We would gladly appreciate contributions from users to improve DAQuiri and
+We would gladly appreciate contributions from users to improve autodidaqt and
 the documentation. We also welcome reports of any issues with software or the
 clarity of the documentation, and ideas that might advance the core aims
 of the project: to let scientists write free data acquisition software
@@ -9,24 +9,24 @@ of the project: to let scientists write free data acquisition software
 
 If you want to contribute to the code, get in touch (see the authors page) and
 check out some of the features on our backlog. You'll need a few tools in order
-to work on DAQuiri:
+to work on autodidaqt:
 
 1. git
 2. Python >= 3.7 (Anaconda/Miniconda is best because some dependencies are otherwise
    difficult to install).
 
-Installing a development copy of DAQuiri
+Installing a development copy of autodidaqt
 ----------------------------------------
 
 Clone (or fork) the repository::
-    git clone https://github.com/chstan/daquiri.git
-    cd daquiri
+    git clone https://github.com/chstan/autodidaqt.git
+    cd autodidaqt
 
 Install an environment you can work with using Anaconda or Miniconda (preferably).
 This process is well documented elsewhere, and there's nothing unusual in the process
 for us.
 
-Once in your environment, install DAQuiri and its requirements locally with
+Once in your environment, install autodidaqt and its requirements locally with
 
 .. code-block:: bash
 
@@ -35,9 +35,9 @@ Once in your environment, install DAQuiri and its requirements locally with
    pip install -e .
 
    # ...much time passes...
-   # at this point you should be able to run DAQuiri and the examples.
+   # at this point you should be able to run autodidaqt and the examples.
 
-   python -m daquiri.examples.scanning_experiment
+   python -m autodidaqt.examples.scanning_experiment
 
 
 Working on a new feature

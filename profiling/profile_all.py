@@ -1,5 +1,6 @@
 import datetime
-import subprocess, sys
+import subprocess
+import sys
 from pathlib import Path
 
 profiling_path = Path(__file__).parent

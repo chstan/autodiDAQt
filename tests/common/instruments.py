@@ -2,9 +2,9 @@ import contextlib
 
 from pymeasure.instruments.signalrecovery import DSP7265
 
-from daquiri import ManagedInstrument
-from daquiri.instrument import AxisSpecification
-from daquiri.instrument.spec import ChoicePropertySpecification
+from autodidaqt import ManagedInstrument
+from autodidaqt.instrument import AxisSpecification
+from autodidaqt.instrument.spec import ChoicePropertySpecification
 
 __all__ = ["PropertyInstrument"]
 

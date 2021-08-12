@@ -3,7 +3,7 @@ Panels
 
 Panels are windows, as provided by PyQt5, but simpler to manage:
 
-* Panels are restartable, and DAQuiri gives you another window where you
+* Panels are restartable, and autodidaqt gives you another window where you
   can open closed panels
 * Panels are easily sized, can be opened automatically on start
 * (in 1.0.0) The location and state of panels will be restored

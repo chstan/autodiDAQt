@@ -1,0 +1,37 @@
+@import "./vars";
+
+QComboBox {
+  border: $light-border;
+  border-radius: 6px;
+  padding: 12px;
+  min-width: 6em;
+}
+
+QComboBox:on {
+  border-width: 4px;
+  border-color: $primary-600;
+  padding: 9px;
+}
+
+QComboBox::drop-down {
+  subcontrol-origin: padding;
+  subcontrol-position: top right;
+  max-width: 40px;
+  width: 40px;
+  border: $light-border;
+}
+
+QComboBox::drop-down:hover {
+  background-color: $hover-gray;
+}
+
+QComboBox::down-arrow {
+  image: url(autodidaqt/resources/img/angle-down-solid.svg);
+}
+
+QComboBox QAbstractItemView {
+  background-color: white;
+  padding-top: 0.2em;
+  padding-bottom: 0.2em;
+  min-height: 1.5rem;
+}

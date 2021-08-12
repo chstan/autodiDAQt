@@ -1,10 +1,10 @@
 import pytest
 from matplotlib.figure import Figure
-
 from pytestqt.qtbot import QtBot
-from daquiri.panel import Panel
 
-from .conftest import MockDaquiri
+from autodidaqt.panel import Panel
+
+from .conftest import Mockautodidaqt
 
 
 class FauxParent:
@@ -12,14 +12,14 @@ class FauxParent:
         pass
 
 
-def test_panel_creation(app: MockDaquiri, qtbot: QtBot):
+def test_panel_creation(app: Mockautodidaqt, qtbot: QtBot):
     panel = Panel(FauxParent(), "test", app)
     qtbot.add_widget(panel)
 
     assert panel
 
 
-def test_figure_registration(app: MockDaquiri, qtbot: QtBot):
+def test_figure_registration(app: Mockautodidaqt, qtbot: QtBot):
     panel = Panel(FauxParent(), "test", app)
     qtbot.add_widget(panel)
 

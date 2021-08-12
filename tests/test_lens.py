@@ -1,5 +1,6 @@
-from daquiri.ui.lens import Lens, LensSubject
 import pytest
+
+from autodidaqt.ui.lens import Lens, LensSubject
 
 
 def test_lenses_basic():

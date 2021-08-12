@@ -1,9 +1,10 @@
-import pytest
 import asyncio
 import enum
 
-from daquiri.experiment import FSM
-from tests.conftest import MockDaquiri
+import pytest
+
+from autodidaqt.experiment import FSM
+from tests.conftest import Mockautodidaqt
 
 
 class States(str, enum.Enum):
@@ -74,7 +75,7 @@ class InvalidStartingStateFSM(MisconfiguredFSM):
 
 
 @pytest.mark.asyncio
-async def test_fsm_missing_starting_state(app: MockDaquiri):
+async def test_fsm_missing_starting_state(app: Mockautodidaqt):
     with pytest.raises(AssertionError) as assert_exc:
         _ = MissingStartingStateFSM(app)
 
@@ -82,7 +83,7 @@ async def test_fsm_missing_starting_state(app: MockDaquiri):
 
 
 @pytest.mark.asyncio
-async def test_fsm_bad_initial_state(app: MockDaquiri):
+async def test_fsm_bad_initial_state(app: Mockautodidaqt):
     with pytest.raises(AssertionError) as assert_exc:
         _ = InvalidStartingStateFSM(app)
 
@@ -90,7 +91,7 @@ async def test_fsm_bad_initial_state(app: MockDaquiri):
 
 
 @pytest.mark.asyncio
-async def test_bad_fsm_transition(app: MockDaquiri):
+async def test_bad_fsm_transition(app: Mockautodidaqt):
     fsm = ExampleFSM(app)
     # A -> C -> D
     await fsm.fsm_handle_message(Transitions.Dec)
@@ -102,11 +103,11 @@ async def test_bad_fsm_transition(app: MockDaquiri):
     with pytest.raises(Exception) as exc:
         await fsm.fsm_handle_message(Transitions.Dec)
 
-    assert "Dec" in str(exc.value)
+    assert "decrement" in str(exc.value)
 
 
 @pytest.mark.asyncio
-async def test_fsm_transitions_called(app: MockDaquiri, mocker):
+async def test_fsm_transitions_called(app: Mockautodidaqt, mocker):
     fsm = ExampleFSM(app)
 
     spy_leave_a = mocker.spy(fsm, "leave_a")

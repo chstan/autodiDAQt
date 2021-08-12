@@ -1,6 +1,6 @@
 import pyrsistent as pr
 
-from daquiri.reactive_utils import RxListPattern, Transaction
+from autodidaqt.reactive_utils import RxListPattern, Transaction
 
 
 class Sink:

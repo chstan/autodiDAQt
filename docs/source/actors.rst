@@ -20,11 +20,11 @@ meaningful for it to happen.
 Declaring Actors
 ----------------
 
-DAQuiri provides an Actor class (``daquiri.actors.Actor``) which you can use to write
+autodidaqt provides an Actor class (``autodidaqt.actors.Actor``) which you can use to write
 asynchronous bits of code that run alongside the rest of your program. Because an Actor is
-a Python object, it can have any internal state it requires. An ``Actor`` in DAQuiri is
-distinguished by the presence of two asynchronous methods :py:meth:`~daquiri.actors.Actor.prepare`
-and :py:meth:`~daquiri.actors.Actor.run`.
+a Python object, it can have any internal state it requires. An ``Actor`` in autodidaqt is
+distinguished by the presence of two asynchronous methods :py:meth:`~autodidaqt.actors.Actor.prepare`
+and :py:meth:`~autodidaqt.actors.Actor.run`.
 
 .. code-block:: python
 
@@ -38,12 +38,12 @@ and :py:meth:`~daquiri.actors.Actor.run`.
             # do any useful work here, either once and quit,
             # or read messages continually
 
-When you start DAQuiri you can specify any additional actors your program uses together
-with unique IDs and DAQuiri will handle configuring and scheduling them to run for you.
+When you start autodidaqt you can specify any additional actors your program uses together
+with unique IDs and autodidaqt will handle configuring and scheduling them to run for you.
 
 You can see a full example of using actors in the examples.
 
 
 
-**Technical note**: *Actors* in DAQuiri are actually closer to *agents* as
+**Technical note**: *Actors* in autodidaqt are actually closer to *agents* as
 described by most concurrent programming frameworks.

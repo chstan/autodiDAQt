@@ -10,7 +10,7 @@ More uniform structure and API:
 
 * ``Specification`` for an axis or property specifies a relationship
   to an instrument that will be made at time of instrument ``__init__``.
-* ``ScanDegreeOfFreedom`` helper class for ``daquiri.scan.scan``
+* ``ScanDegreeOfFreedom`` helper class for ``autodidaqt.scan.scan``
   useful in constructing scans over instrument axes and properties.
 
 General improvements

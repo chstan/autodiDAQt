@@ -2,12 +2,12 @@ import asyncio
 
 import pytest
 
-from daquiri.mock import MockMotionController, MockScalarDetector
-from tests.conftest import MockDaquiri
+from autodidaqt.mock import MockMotionController, MockScalarDetector
+from tests.conftest import Mockautodidaqt
 
 
 @pytest.mark.asyncio
-async def test_mock_motion_controller(app: MockDaquiri):
+async def test_mock_motion_controller(app: Mockautodidaqt):
     app.init_with(managed_instruments={"mc": MockMotionController})
 
     # test writing
@@ -22,7 +22,7 @@ async def test_mock_motion_controller(app: MockDaquiri):
 
 
 @pytest.mark.asyncio
-async def test_mock_detector(app: MockDaquiri):
+async def test_mock_detector(app: Mockautodidaqt):
     app.init_with(managed_instruments={"det": MockScalarDetector})
     det = app.instruments.det
 

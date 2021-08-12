@@ -5,7 +5,7 @@ For usage examples, explore the scripts in the examples folder. You can run them
 
 ::
 
-  $ python -m daquiri.examples.[example_name]
+  $ python -m autodidaqt.examples.[example_name]
 
 
 replacing [example_name] with one of:
@@ -26,7 +26,7 @@ You can also get a list of all the available examples by running
 
 ::
 
-  $ python -m daquiri.examples
+  $ python -m autodidaqt.examples
 
 
 Granular Examples
@@ -51,7 +51,7 @@ PropertiesSpecification
 
 We can also wrap discrete configuration (Properties) of our instruments, which allows us to
 scan over, read, and write from these bits of configuration during our experiment. This is
-exceptionally useful because it allows DAQuiri to generate scans for us that allow us to determine
+exceptionally useful because it allows autodidaqt to generate scans for us that allow us to determine
 optimal configuration conditions for our experiments, and to automatically log the state
 of our hardware on startup and shutdown, and before and after each run of our experiment.
 
@@ -139,7 +139,7 @@ There are many different ways of defining types of scans your experiment should 
 Make sure you're familiar with the scan documentation, and then you can have a look below.
 
 In order to use a scan, you need to make sure it's registered with your experiment by adding it
-to the python:attr:``daquiri.experiment.Experiment.scan_methods`` attribute.
+to the python:attr:``autodidaqt.experiment.Experiment.scan_methods`` attribute.
 
 .. code-block:: python
 
@@ -154,12 +154,12 @@ The most direct way to specify a scan is to sequence the
 actions explicitly yourself. This amounts to making a class with a ``sequence``
 generator providing the motion and DAQ steps.
 
-DAQuiri insists on classes for this purpose because typically your scan will
+autodidaqt insists on classes for this purpose because typically your scan will
 require some configuration (conditions under which to collect data, desired ranges,
 etc.).
 
 You should use the dataclass decorator (``@dataclasses.dataclass``) for now,
-so that DAQuiri can render UI for you to populate the configuration of the scan.
+so that autodidaqt can render UI for you to populate the configuration of the scan.
 In the future, you will be able to specify how to render fields if you need to.
 
 .. code-block:: python
@@ -186,21 +186,21 @@ to think that these are the values we wrote to the ``location`` axis and read fr
 axis respectively, but they are not. Instead, they are Python objects that describe
 the intent we would like to accomplish: in the first case, setting ``location`` to  ``next_point``'s
 value, and in the second reading a value from ``value_reader.value``. These are collected by an
-Experiment runtime inside DAQuiri and handled asynchronously.
+Experiment runtime inside autodidaqt and handled asynchronously.
 
 Despite looking like clean imperative code, this provides a fully declarative way of sequencing
-scans, and this some huge advantages: DAQuiri can record every action taken during the course
-of our experiment and save it transparently for us with our data. Additionally, DAQuiri takes
+scans, and this some huge advantages: autodidaqt can record every action taken during the course
+of our experiment and save it transparently for us with our data. Additionally, autodidaqt takes
 care of the difficulty of dealing with asynchronous code for us. Any values we ``yield``
 together will happen at the same time, and everything in that ``yield`` will finish before
-DAQuiri moves onto the next step in the sequence.
+autodidaqt moves onto the next step in the sequence.
 
 
 Automated Products
 ------------------
 
 You can also generate scans by forming products over axes. This is what is provided by
-python:func:``daquiri.scan.scan``, which constructs a class with a ``.sequence`` method for you
+python:func:``autodidaqt.scan.scan``, which constructs a class with a ``.sequence`` method for you
 by scanning over the axes provided and reading from the axes specified in the ``read=`` keyword.
 
 .. code-block:: python
@@ -213,7 +213,7 @@ by scanning over the axes provided and reading from the axes specified in the ``
 Manually Sequencing Scans
 -------------------------
 
-In addition to the declarative interface DAQuiri allows you to take full control if you need.
+In addition to the declarative interface autodidaqt allows you to take full control if you need.
 Here's an example entirely equivalent to the one above, except that we write the
 async code ourselves and have direct access to the instruments.
 
@@ -234,9 +234,9 @@ async code ourselves and have direct access to the instruments.
                yield {'point_mover.location': next_point, 'value_reader.value': value}
 
 
-We still ``yield`` back to DAQuiri, but now it is with the actual data.
+We still ``yield`` back to autodidaqt, but now it is with the actual data.
 This also allows us to do some computation on the data if necessary. You might notice that
-DAQuiri does not make it very simple to compute values to be saved in the standard (declarative)
+autodidaqt does not make it very simple to compute values to be saved in the standard (declarative)
 interface. This is intentional: it is better to save the data in as close a format as it was
 recorded as possible, together with as much metadata about the process as possible, and push
 computations to your data analysis. Saving partially analyzed adds opacity to the DAQ process
