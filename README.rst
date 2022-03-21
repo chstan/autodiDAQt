@@ -70,6 +70,13 @@ Installation
 
   $ pip install autodidaqt
 
+Installation from Source
+========================
+
+1. Clone this repository
+2. Install `make` if you are on a Windows system
+3. Install `poetry` (the alternative Python package manager)
+4. Run `make install` from the directory containing this README
 
 Usage
 =====
@@ -94,6 +101,7 @@ replacing [example_name] with one of:
 9. scanning_custom_plots
 10. scanning_setup_and_teardown
 11. scanning_properties_and_profiles
+12. manuscript_fig4
 
 You can also get a list of all the available examples by running
 
@@ -102,3 +110,6 @@ You can also get a list of all the available examples by running
   $ python -m autodidaqt.examples
 
 
+Examples for "remote control", including a "virtual nanoXPS lab" 
+are available in integration_tests folder of AutodiDAQt receiver in 
+its companion repository.
