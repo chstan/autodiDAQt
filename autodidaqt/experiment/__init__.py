@@ -1,4 +1,4 @@
-from typing import List, Optional, Tuple, Union
+from typing import Any, List, Optional, Tuple, Union
 
 import asyncio
 import contextlib
@@ -13,6 +13,7 @@ from functools import lru_cache
 from autodidaqt_common.collation import Collation, CollationInfo
 from autodidaqt_common.path import AxisPath
 from autodidaqt_common.remote import schema
+from autodidaqt_common.remote.schema import Value
 from autodidaqt_common.remote.command import (
     PauseRunCommand,
     ReadAxisCommand,
@@ -20,8 +21,11 @@ from autodidaqt_common.remote.command import (
     RequestShutdown,
     SetScanConfigCommand,
     StartRunCommand,
+    StartManualRunCommand,
     StopRunCommand,
     WriteAxisCommand,
+    PointCommand,
+    StepCommand,
 )
 from loguru import logger
 
@@ -112,7 +116,7 @@ class Experiment(FSM):
             fsm_state=self.state,
         )
 
-    def build_manual_run(self, config) -> Run:
+    def build_manual_run(self) -> Run:
         return Run(
             number=self.run_number,
             user=self.app.user.user,
@@ -158,7 +162,7 @@ class Experiment(FSM):
 
         if trigger == T.StartManual:
             self.running_manually = True
-            self.clear_command_queue()
+            # ideally we should discard prior messages here
 
         interlocks_passed = True
         try:
@@ -274,43 +278,80 @@ class Experiment(FSM):
     async def running_to_shutdown(self, *_):
         await self.save()
 
+    @staticmethod
+    def remote_command_path_to_simple_read(axis_path: str):
+        path = AxisPath.to_tuple(axis_path)
+        return {
+            "read": None,
+            "path": path[1:],
+            "scope": path[0],
+        }
+
+    @staticmethod
+    def remote_command_path_to_simple_write(axis_path: str, value: Value):
+        if not isinstance(value, Value):
+            # this is kind of inscrutable, at some point this gets turned
+            # back into a dict representation even though it should have been
+            # derserialized already
+            value = Value.from_dict(value)
+
+        path = AxisPath.to_tuple(axis_path)
+        return {
+            "write": value.to_instance(),
+            "path": path[1:],
+            "scope": path[0],
+        }
+
     async def take_remote_command_step(self):
         remote_command = None
         try:
             remote_command = self.remote_commands.get_nowait()
+            logger.info(f"Remote command: {remote_command}")
         except asyncio.QueueEmpty:
-            return
+            return False
 
         logger.info("Received remote command {}.")
-        if isinstance(remote_command, ReadAxisCommand):
+        if isinstance(remote_command, PointCommand):
+            # if it is the first point of the run, this will have no effect
+            self.close_point() 
+            self.open_point()
+        elif isinstance(remote_command, StepCommand):
+            reads = [
+                self.remote_command_path_to_simple_read(path)
+                for path in remote_command.reads
+            ]
+            writes = [
+                self.remote_command_path_to_simple_write(path, v)
+                for path, v in remote_command.writes
+            ]
+            await self.take_step([
+                *reads,
+                *writes
+            ])
+        elif isinstance(remote_command, ReadAxisCommand):
             # format into the step format and then use that
-            path = AxisPath.to_tuple(remote_command.axis_path)
-            await self.take_step(
-                [
-                    {
-                        "read": None,
-                        "path": path[1:],
-                        "scope": path[0],
-                    }
-                ]
-            )
+            await self.take_step([
+                self.remote_command_path_to_simple_read(remote_command.axis_path),
+            ])
         elif isinstance(remote_command, WriteAxisCommand):
-            path = AxisPath.to_tuple(remote_command.axis_path)
-            await self.take_step(
-                [
-                    {
-                        "write": remote_command.value.to_instance(),
-                        "path": path[1:],
-                        "scope": path[0],
-                    }
-                ]
-            )
+            await self.take_step([
+                self.remote_command_path_to_simple_write(
+                    remote_command.axis_path, 
+                    remote_command.value
+                )
+            ])
         else:
             logger.error(f"Unknown remote command: {remote_command}. Skipping...")
+            return False
+        
+        return True
+
 
     async def run_running(self, *_):
         if self.running_manually:
-            await self.take_remote_command_step()
+            while await self.take_remote_command_step():
+                pass
+
             return
 
         if self.current_run.is_inverted:
@@ -511,16 +552,29 @@ class Experiment(FSM):
     def scan_configuration(self):
         return self.scan_configurations[self.use_method]
 
-    @contextlib.contextmanager
-    def point(self):
+    def open_point(self):
+        # start a point defining a single configuration of the experiment
+        # `open_point` and `close_point` are available as methods
+        # because of the remote API
         logger.trace(f"Start point {self.current_run.point}")
         self.current_run.point_started.append(datetime.datetime.now())
-        yield
+
+    def close_point(self):
+        # finalize a point defining a single configuration of the experiment
+        if not len(self.current_run.point_started):
+            return
+
         self.current_run.point += 1
         self.current_run.point_ended.append(datetime.datetime.now())
 
         if self.ui is not None:
             self.ui.soft_update()
+
+    @contextlib.contextmanager
+    def point(self):
+        self.open_point()
+        yield
+        self.close_point()
 
     # QUEUE MANAGEMENT
     def enqueue(self, index=None):
@@ -563,11 +617,13 @@ class Experiment(FSM):
             await self.messages.put(T.Stop)
         elif isinstance(message, StartRunCommand):
             await self.messages.put(T.Start)
+        elif isinstance(message, StartManualRunCommand):
+            await self.messages.put(T.StartManual)
         elif isinstance(message, SetScanConfigCommand):
             scan_config = message.scan_config.to_instance()
             self.scan_configurations[type(scan_config).__name__] = scan_config
             self.use_method = type(scan_config).__name__
-        elif isinstance(message, (WriteAxisCommand, ReadAxisCommand)):
+        elif isinstance(message, (WriteAxisCommand, ReadAxisCommand, PointCommand, StepCommand)):
             await self.remote_commands.put(message)
         else:
             logger.info(f"Unhandled message: {message}")
