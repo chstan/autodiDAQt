@@ -19,11 +19,12 @@ __all__ = [
 
 
 def save_on_separate_thread(run, directory, collation, extra_attrs=None, save_format="zarr"):
+    collated = None
     if collation:
         try:
             collated = collation.to_xarray(run.daq_values)
         except:
-            collated = None
+            pass
 
     run.save(
         directory,
