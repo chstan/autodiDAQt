@@ -2,6 +2,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 
 from inspect import Parameter
 
+import warnings
 import numpy as np
 from autodidaqt_common.path import AxisPath
 from autodidaqt_common.schema import make_logical_axis_schema
@@ -245,9 +246,9 @@ class AxisSpecification(Specification):
             f"validator={self.validator!r},"
             f"is_axis={self.is_axis!r},"
             f"read={self.read},"
-            f"write={self.write}",
-            f"shutdown={self.shutdown}",
-            f"settle={self.settle}" ")",
+            f"write={self.write},"
+            f"shutdown={self.shutdown},"
+            f"settle={self.settle}" ")"
         )
 
     def realize(self, key_name, driver_instance, instrument) -> Axis:
@@ -258,17 +259,22 @@ class AxisSpecification(Specification):
             axis_cls = ProxiedAxis
             init_kwargs = {}
 
-        return axis_cls(
-            name=key_name,
-            schema=self.schema,
-            where=self.where,
-            driver=driver_instance,
-            read=self.read,
-            write=self.write,
-            shutdown=self.shutdown,
-            settle=self.settle,
-            **init_kwargs,
-        )
+        try:
+            axis = axis_cls(
+                name=key_name,
+                schema=self.schema,
+                where=self.where,
+                driver=driver_instance,
+                read=self.read,
+                write=self.write,
+                shutdown=self.shutdown,
+                settle=self.settle,
+                **init_kwargs,
+            )
+            return axis
+        except Exception as e:
+            warnings.warn(f"Failed to instantiate axis specified by {repr(self)}")
+            raise e 
 
     def to_scan_axis(self, over, path, rest, *args, **kwargs):
         from autodidaqt.scan import ScanAxis
