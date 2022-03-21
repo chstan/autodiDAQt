@@ -1,6 +1,6 @@
-=========
- autodidaqt
-=========
+==========
+autodidaqt
+==========
 
 |test_status| |coverage| |docs_status| 
 
